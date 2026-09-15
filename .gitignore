@@ -73,3 +73,12 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# ============================================================
+# GUN KEEPER: игнорируемые папки проекта
+# ============================================================
+# Тяжёлая графика огнестрела — хранится локально, не в репо
+/Assets/02_ART/Firearms/
+/Assets/02_ART/Firearms.meta
+Assets/02_ART/Models
+Assets/02_ART/Models.meta
