@@ -12,8 +12,14 @@ public class EquippedItemHolder : MonoBehaviour
     public Transform handPoint;
     public InventorySystem inventory;
 
-    [Tooltip("Необязательно: CharacterController игрока, чтобы читать скорость движения для bobbing.")]
-    public CharacterController playerController;
+    [Tooltip("Дочерний pivot HandPoint для sway/bobbing. HandPoint остаётся неподвижным якорем.")]
+    public Transform heldItemVisualRoot;
+
+    [Tooltip("Rigidbody игрока: его скорость используется для bobbing.")]
+    public Rigidbody playerBody;
+
+    [Tooltip("Контейнер для подобранных, но сейчас не отображаемых физических объектов.")]
+    public Transform carriedItemsStorage;
 
     [Header("Покачивание от мыши (sway)")]
     public float swayAmount = 4f;
@@ -27,13 +33,27 @@ public class EquippedItemHolder : MonoBehaviour
     [Tooltip("Минимальная скорость игрока, при которой начинается покачивание.")]
     public float moveThreshold = 0.1f;
 
-    private GameObject currentModel;
     private float bobTimer;
     private Vector3 targetLocalPos;
     private Quaternion targetLocalRot;
+    private bool presentationEnabled = true;
+    private Vector3 visualRootBaseLocalPosition;
+    private Quaternion visualRootBaseLocalRotation;
+    private bool visualRootBasePoseInitialized;
+
+    /// <summary>Точка, под которой находятся видимые предметы в руках.</summary>
+    public Transform HeldItemTransform
+    {
+        get
+        {
+            EnsureHeldItemVisualRoot();
+            return heldItemVisualRoot;
+        }
+    }
 
     private void OnEnable()
     {
+        EnsureHeldItemVisualRoot();
         if (inventory != null)
         {
             inventory.OnActiveSlotChanged += HandleActiveChanged;
@@ -56,34 +76,65 @@ public class EquippedItemHolder : MonoBehaviour
         RefreshCurrent();
     }
 
-    /// <summary>Пересоздаёт модель предмета в руке в соответствии с активным слотом инвентаря.</summary>
-    private void RefreshCurrent()
+    /// <summary>Перемещает существующие физические предметы между рукой и скрытым контейнером.</summary>
+    public void RefreshCurrent()
     {
-        if (currentModel != null)
+        if (inventory == null || !EnsureHeldItemVisualRoot()) return;
+        if (carriedItemsStorage == null)
         {
-            Destroy(currentModel);
-            currentModel = null;
+            var storage = new GameObject("CarriedItemsStorage");
+            storage.transform.SetParent(transform, false);
+            carriedItemsStorage = storage.transform;
         }
 
-        ItemData item = inventory != null ? inventory.GetActiveItem() : null;
-        if (item != null && item.worldPrefab != null && handPoint != null)
+        foreach (var entry in inventory.entries)
         {
-            currentModel = Instantiate(item.worldPrefab, handPoint);
-            currentModel.transform.localPosition = item.handPositionOffset;
-            currentModel.transform.localEulerAngles = item.handRotationOffset;
+            foreach (var instance in entry.instances)
+                if (instance != null) instance.SetCarriedHidden(carriedItemsStorage);
+        }
 
-            // В руке предмету не нужны коллайдеры и логика подбора/полки.
-            foreach (var col in currentModel.GetComponentsInChildren<Collider>())
-                col.enabled = false;
+        InventoryEntry active = inventory.GetActiveEntry();
+        if (active == null || !presentationEnabled) return;
 
-            var worldItemComp = currentModel.GetComponent<WorldItem>();
-            if (worldItemComp != null) Destroy(worldItemComp);
+        int visibleCount = active.item.showAsVisualStack ? active.instances.Count : Mathf.Min(1, active.instances.Count);
+        for (int i = 0; i < visibleCount; i++)
+        {
+            WorldItem instance = active.instances[i];
+            if (instance == null) continue;
+            Vector3 localPosition = active.item.handPositionOffset + Vector3.up * (active.item.heldStackSpacing * i);
+            instance.SetHeldVisible(heldItemVisualRoot, localPosition, Quaternion.Euler(active.item.handRotationOffset));
         }
     }
 
-    private void Update()
+    public void SetPresentationEnabled(bool enabled)
     {
-        if (handPoint == null) return;
+        presentationEnabled = enabled;
+        RefreshCurrent();
+    }
+
+    private bool EnsureHeldItemVisualRoot()
+    {
+        if (handPoint == null) return false;
+        if (heldItemVisualRoot == null)
+        {
+            var root = new GameObject("HeldItemVisualRoot");
+            root.transform.SetParent(handPoint, false);
+            heldItemVisualRoot = root.transform;
+            visualRootBasePoseInitialized = false;
+        }
+
+        if (!visualRootBasePoseInitialized)
+        {
+            visualRootBaseLocalPosition = heldItemVisualRoot.localPosition;
+            visualRootBaseLocalRotation = heldItemVisualRoot.localRotation;
+            visualRootBasePoseInitialized = true;
+        }
+        return true;
+    }
+
+    private void LateUpdate()
+    {
+        if (!EnsureHeldItemVisualRoot()) return;
         ApplySway();
         ApplyBob();
     }
@@ -97,17 +148,21 @@ public class EquippedItemHolder : MonoBehaviour
         mouseX = Mathf.Clamp(mouseX, -maxSwayAngle, maxSwayAngle);
         mouseY = Mathf.Clamp(mouseY, -maxSwayAngle, maxSwayAngle);
 
-        targetLocalRot = Quaternion.Euler(-mouseY, mouseX, mouseX * 0.5f);
-        handPoint.localRotation = Quaternion.Slerp(handPoint.localRotation, targetLocalRot, Time.deltaTime * swaySmooth);
+        Quaternion swayRotation = Quaternion.Euler(-mouseY, mouseX, mouseX * 0.5f);
+        targetLocalRot = visualRootBaseLocalRotation * swayRotation;
+        heldItemVisualRoot.localRotation = Quaternion.Slerp(
+            heldItemVisualRoot.localRotation,
+            targetLocalRot,
+            Time.deltaTime * swaySmooth);
     }
 
     /// <summary>Лёгкое покачивание позиции предмета в такт шагам игрока.</summary>
     private void ApplyBob()
     {
         float speed = 0f;
-        if (playerController != null)
+        if (playerBody != null)
         {
-            Vector3 horizontalVelocity = playerController.velocity;
+            Vector3 horizontalVelocity = playerBody.linearVelocity;
             horizontalVelocity.y = 0f;
             speed = horizontalVelocity.magnitude;
         }
@@ -125,6 +180,10 @@ public class EquippedItemHolder : MonoBehaviour
             targetLocalPos = Vector3.zero;
         }
 
-        handPoint.localPosition = Vector3.Lerp(handPoint.localPosition, targetLocalPos, Time.deltaTime * bobSmooth);
+        Vector3 desiredPosition = visualRootBaseLocalPosition + targetLocalPos;
+        heldItemVisualRoot.localPosition = Vector3.Lerp(
+            heldItemVisualRoot.localPosition,
+            desiredPosition,
+            Time.deltaTime * bobSmooth);
     }
 }

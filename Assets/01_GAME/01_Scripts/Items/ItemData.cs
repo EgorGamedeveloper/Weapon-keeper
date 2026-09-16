@@ -16,6 +16,16 @@ public class ItemData : ScriptableObject
 
     public Sprite icon;
 
+    [Header("Инвентарь tidy-up")]
+    [Tooltip("Если включено, все единицы выбранного типа видны в руке стопкой. Отключите для оружия и крупных предметов.")]
+    public bool showAsVisualStack = false;
+
+    [Tooltip("Предмет можно перенести из tidy-up в слот экипировки клавишей Q.")]
+    public bool canEquip = false;
+
+    [Tooltip("Расстояние между предметами в визуальной стопке в руке.")]
+    [Min(0f)] public float heldStackSpacing = 0.08f;
+
     [Header("Визуал предмета")]
     [Tooltip("Префаб визуальной модели предмета. Используется и в мире, и на полке, и в руке игрока.")]
     public GameObject worldPrefab;
