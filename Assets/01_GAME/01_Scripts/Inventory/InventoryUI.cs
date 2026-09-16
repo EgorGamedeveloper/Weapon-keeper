@@ -34,11 +34,10 @@ public class InventoryUI : MonoBehaviour
 
     private void Refresh()
     {
-        if (inventory.slots == null) return;
-
-        for (int i = 0; i < inventory.slots.Length; i++)
+        int visualSlotCount = Mathf.Max(slotIcons != null ? slotIcons.Length : 0, slotHighlights != null ? slotHighlights.Length : 0);
+        for (int i = 0; i < visualSlotCount; i++)
         {
-            var item = inventory.slots[i].item;
+            ItemData item = i < inventory.entries.Count ? inventory.entries[i].item : null;
 
             if (slotIcons != null && i < slotIcons.Length && slotIcons[i] != null)
             {
@@ -47,7 +46,7 @@ public class InventoryUI : MonoBehaviour
             }
 
             if (slotHighlights != null && i < slotHighlights.Length && slotHighlights[i] != null)
-                slotHighlights[i].SetActive(i == inventory.activeSlotIndex);
+                slotHighlights[i].SetActive(i == inventory.activeSlotIndex && i < inventory.entries.Count);
         }
     }
 }
