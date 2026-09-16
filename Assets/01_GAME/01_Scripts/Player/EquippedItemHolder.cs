@@ -82,6 +82,7 @@ public class EquippedItemHolder : MonoBehaviour
             Vector3 localPosition = active.item.handPositionOffset + Vector3.up * (active.item.heldStackSpacing * i);
             instance.SetHeldVisible(heldItemVisualRoot, localPosition, Quaternion.Euler(active.item.handRotationOffset));
         }
+        return true;
     }
 
     public void SetPresentationEnabled(bool enabled)
