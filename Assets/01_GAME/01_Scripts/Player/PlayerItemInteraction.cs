@@ -130,7 +130,7 @@ public class PlayerItemInteraction : MonoBehaviour
 
     private void PickUpWorldItem(WorldItem worldItem)
     {
-        if (inventory == null || itemHolder == null || itemHolder.handPoint == null) return;
+        if (inventory == null || itemHolder == null || itemHolder.HeldItemTransform == null) return;
         if (!inventory.CanAddWorldItem(worldItem)) return;
 
         ShelfSlot source = worldItem.GetSourceSlot();
@@ -140,7 +140,7 @@ public class PlayerItemInteraction : MonoBehaviour
         worldItem.BeginPickup();
         // Интерполируем в локальных координатах руки: предмет следует за игроком во время анимации
         // и не отстаёт от движущейся камеры.
-        worldItem.transform.SetParent(itemHolder.handPoint, true);
+        worldItem.transform.SetParent(itemHolder.HeldItemTransform, true);
         itemBeingPickedUp = worldItem;
         pickupVelocity = Vector3.zero;
 

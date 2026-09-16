@@ -12,6 +12,9 @@ public class EquippedItemHolder : MonoBehaviour
     public Transform handPoint;
     public InventorySystem inventory;
 
+    [Tooltip("Дочерний pivot HandPoint для sway/bobbing. HandPoint остаётся неподвижным якорем.")]
+    public Transform heldItemVisualRoot;
+
     [Tooltip("Rigidbody игрока: его скорость используется для bobbing.")]
     public Rigidbody playerBody;
 
@@ -34,12 +37,23 @@ public class EquippedItemHolder : MonoBehaviour
     private Vector3 targetLocalPos;
     private Quaternion targetLocalRot;
     private bool presentationEnabled = true;
-    private Vector3 handPointBaseLocalPosition;
+    private Vector3 visualRootBaseLocalPosition;
+    private Quaternion visualRootBaseLocalRotation;
+    private bool visualRootBasePoseInitialized;
+
+    /// <summary>Точка, под которой находятся видимые предметы в руках.</summary>
+    public Transform HeldItemTransform
+    {
+        get
+        {
+            EnsureHeldItemVisualRoot();
+            return heldItemVisualRoot;
+        }
+    }
 
     private void OnEnable()
     {
-        if (handPoint != null)
-            handPointBaseLocalPosition = handPoint.localPosition;
+        EnsureHeldItemVisualRoot();
         if (inventory != null)
         {
             inventory.OnActiveSlotChanged += HandleActiveChanged;
@@ -65,7 +79,7 @@ public class EquippedItemHolder : MonoBehaviour
     /// <summary>Перемещает существующие физические предметы между рукой и скрытым контейнером.</summary>
     public void RefreshCurrent()
     {
-        if (inventory == null || handPoint == null) return;
+        if (inventory == null || !EnsureHeldItemVisualRoot()) return;
         if (carriedItemsStorage == null)
         {
             var storage = new GameObject("CarriedItemsStorage");
@@ -88,7 +102,7 @@ public class EquippedItemHolder : MonoBehaviour
             WorldItem instance = active.instances[i];
             if (instance == null) continue;
             Vector3 localPosition = active.item.handPositionOffset + Vector3.up * (active.item.heldStackSpacing * i);
-            instance.SetHeldVisible(handPoint, localPosition, Quaternion.Euler(active.item.handRotationOffset));
+            instance.SetHeldVisible(heldItemVisualRoot, localPosition, Quaternion.Euler(active.item.handRotationOffset));
         }
     }
 
@@ -98,9 +112,29 @@ public class EquippedItemHolder : MonoBehaviour
         RefreshCurrent();
     }
 
-    private void Update()
+    private bool EnsureHeldItemVisualRoot()
     {
-        if (handPoint == null) return;
+        if (handPoint == null) return false;
+        if (heldItemVisualRoot == null)
+        {
+            var root = new GameObject("HeldItemVisualRoot");
+            root.transform.SetParent(handPoint, false);
+            heldItemVisualRoot = root.transform;
+            visualRootBasePoseInitialized = false;
+        }
+
+        if (!visualRootBasePoseInitialized)
+        {
+            visualRootBaseLocalPosition = heldItemVisualRoot.localPosition;
+            visualRootBaseLocalRotation = heldItemVisualRoot.localRotation;
+            visualRootBasePoseInitialized = true;
+        }
+        return true;
+    }
+
+    private void LateUpdate()
+    {
+        if (!EnsureHeldItemVisualRoot()) return;
         ApplySway();
         ApplyBob();
     }
@@ -114,8 +148,12 @@ public class EquippedItemHolder : MonoBehaviour
         mouseX = Mathf.Clamp(mouseX, -maxSwayAngle, maxSwayAngle);
         mouseY = Mathf.Clamp(mouseY, -maxSwayAngle, maxSwayAngle);
 
-        targetLocalRot = Quaternion.Euler(-mouseY, mouseX, mouseX * 0.5f);
-        handPoint.localRotation = Quaternion.Slerp(handPoint.localRotation, targetLocalRot, Time.deltaTime * swaySmooth);
+        Quaternion swayRotation = Quaternion.Euler(-mouseY, mouseX, mouseX * 0.5f);
+        targetLocalRot = visualRootBaseLocalRotation * swayRotation;
+        heldItemVisualRoot.localRotation = Quaternion.Slerp(
+            heldItemVisualRoot.localRotation,
+            targetLocalRot,
+            Time.deltaTime * swaySmooth);
     }
 
     /// <summary>Лёгкое покачивание позиции предмета в такт шагам игрока.</summary>
@@ -142,7 +180,10 @@ public class EquippedItemHolder : MonoBehaviour
             targetLocalPos = Vector3.zero;
         }
 
-        Vector3 desiredPosition = handPointBaseLocalPosition + targetLocalPos;
-        handPoint.localPosition = Vector3.Lerp(handPoint.localPosition, desiredPosition, Time.deltaTime * bobSmooth);
+        Vector3 desiredPosition = visualRootBaseLocalPosition + targetLocalPos;
+        heldItemVisualRoot.localPosition = Vector3.Lerp(
+            heldItemVisualRoot.localPosition,
+            desiredPosition,
+            Time.deltaTime * bobSmooth);
     }
 }
