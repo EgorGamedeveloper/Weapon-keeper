@@ -14,6 +14,7 @@ public class PlayerItemInteraction : MonoBehaviour
     public Camera playerCamera;
     public InventorySystem inventory;
     public ItemInfoUI infoUI;
+    public EquippedItemHolder itemHolder;
 
     [Header("Настройки луча")]
     [Tooltip("Слои, по которым бьёт луч (предметы и ячейки полок).")]
@@ -25,15 +26,26 @@ public class PlayerItemInteraction : MonoBehaviour
     [Tooltip("Максимальная дистанция взаимодействия с полкой.")]
     public float shelfInteractRange = 3f;
 
+    [Header("Подбор и бросок")]
+    public float pickupAnimationSpeed = 12f;
+    public float dropDistance = 1.25f;
+    public float dropSpeed = 4f;
+
     private WorldItem currentHighlighted;
     private ShelfSlot currentHoveredSlot;
+    private WorldItem itemBeingPickedUp;
+    private Vector3 pickupVelocity;
 
     private void Update()
     {
         HandleRaycast();
 
-        if (Input.GetMouseButtonDown(0))
+        UpdatePickupAnimation();
+
+        if (itemBeingPickedUp == null && Input.GetMouseButtonDown(0))
             HandleClick();
+        if (itemBeingPickedUp == null && Input.GetMouseButtonDown(1))
+            DropActiveItem();
     }
 
     private void HandleRaycast()
@@ -118,16 +130,19 @@ public class PlayerItemInteraction : MonoBehaviour
 
     private void PickUpWorldItem(WorldItem worldItem)
     {
-        if (inventory == null) return;
-
-        bool added = inventory.AddItem(worldItem.itemData);
-        if (!added) return; // инвентарь полон
+        if (inventory == null || itemHolder == null || itemHolder.HeldItemTransform == null) return;
+        if (!inventory.CanAddWorldItem(worldItem)) return;
 
         ShelfSlot source = worldItem.GetSourceSlot();
         if (source != null)
-            source.RemoveItem(); // предмет стоял на полке — освобождаем ячейку
-        else
-            Destroy(worldItem.gameObject); // предмет лежал в мире — убираем его
+            source.RemoveItem();
+
+        worldItem.BeginPickup();
+        // Интерполируем в локальных координатах руки: предмет следует за игроком во время анимации
+        // и не отстаёт от движущейся камеры.
+        worldItem.transform.SetParent(itemHolder.HeldItemTransform, true);
+        itemBeingPickedUp = worldItem;
+        pickupVelocity = Vector3.zero;
 
         currentHighlighted = null;
         if (infoUI != null) infoUI.Hide();
@@ -140,10 +155,44 @@ public class PlayerItemInteraction : MonoBehaviour
         ItemData active = inventory.GetActiveItem();
         if (active == null || !slot.CanAccept(active)) return;
 
-        slot.PlaceItem(active);
-        inventory.RemoveActiveItem();
+        WorldItem item = inventory.RemoveActiveWorldItem();
+        if (item == null) return;
+        slot.PlaceItem(item);
 
         currentHoveredSlot = null;
+        if (infoUI != null) infoUI.Hide();
+    }
+
+    private void UpdatePickupAnimation()
+    {
+        if (itemBeingPickedUp == null) return;
+        Vector3 targetLocalPosition = itemBeingPickedUp.itemData.handPositionOffset;
+        Quaternion targetLocalRotation = Quaternion.Euler(itemBeingPickedUp.itemData.handRotationOffset);
+        itemBeingPickedUp.transform.localPosition = Vector3.SmoothDamp(
+            itemBeingPickedUp.transform.localPosition,
+            targetLocalPosition,
+            ref pickupVelocity,
+            1f / Mathf.Max(0.01f, pickupAnimationSpeed),
+            Mathf.Infinity,
+            Time.deltaTime);
+        itemBeingPickedUp.transform.localRotation = Quaternion.Slerp(
+            itemBeingPickedUp.transform.localRotation,
+            targetLocalRotation,
+            1f - Mathf.Exp(-pickupAnimationSpeed * Time.deltaTime));
+        if (Vector3.Distance(itemBeingPickedUp.transform.localPosition, targetLocalPosition) > 0.01f) return;
+
+        if (!inventory.AddWorldItem(itemBeingPickedUp))
+            itemBeingPickedUp.Drop(itemBeingPickedUp.transform.position, itemBeingPickedUp.transform.rotation, Vector3.zero);
+        itemBeingPickedUp = null;
+    }
+
+    private void DropActiveItem()
+    {
+        if (inventory == null || playerCamera == null) return;
+        WorldItem item = inventory.RemoveActiveWorldItem();
+        if (item == null) return;
+        Vector3 direction = playerCamera.transform.forward.normalized;
+        item.Drop(playerCamera.transform.position + direction * dropDistance, playerCamera.transform.rotation, direction * dropSpeed);
         if (infoUI != null) infoUI.Hide();
     }
 }

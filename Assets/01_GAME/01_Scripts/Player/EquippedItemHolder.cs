@@ -2,8 +2,8 @@ using UnityEngine;
 
 /// <summary>
 /// Точка в руке игрока, куда устанавливается модель активного предмета из инвентаря.
-/// При смене активного слота обновляет 3D-модель, при ходьбе добавляет лёгкое покачивание
-/// по инерции (sway) и покачивание от шагов (bobbing).
+/// При смене активного слота обновляет 3D-модель. Точка в руке намеренно остаётся
+/// неподвижной: sway и bobbing временно отключены для стабильной отладки удержания.
 /// </summary>
 public class EquippedItemHolder : MonoBehaviour
 {
@@ -12,28 +12,26 @@ public class EquippedItemHolder : MonoBehaviour
     public Transform handPoint;
     public InventorySystem inventory;
 
-    [Tooltip("Необязательно: CharacterController игрока, чтобы читать скорость движения для bobbing.")]
-    public CharacterController playerController;
+    [Tooltip("Дочерний visual root HandPoint. Во время отладки он остаётся неподвижным.")]
+    public Transform heldItemVisualRoot;
 
-    [Header("Покачивание от мыши (sway)")]
-    public float swayAmount = 4f;
-    public float swaySmooth = 6f;
-    public float maxSwayAngle = 8f;
+    [Tooltip("Контейнер для подобранных, но сейчас не отображаемых физических объектов.")]
+    public Transform carriedItemsStorage;
+    private bool presentationEnabled = true;
 
-    [Header("Покачивание при ходьбе (bobbing)")]
-    public float bobFrequency = 6f;
-    public float bobAmount = 0.03f;
-    public float bobSmooth = 8f;
-    [Tooltip("Минимальная скорость игрока, при которой начинается покачивание.")]
-    public float moveThreshold = 0.1f;
-
-    private GameObject currentModel;
-    private float bobTimer;
-    private Vector3 targetLocalPos;
-    private Quaternion targetLocalRot;
+    /// <summary>Точка, под которой находятся видимые предметы в руках.</summary>
+    public Transform HeldItemTransform
+    {
+        get
+        {
+            EnsureHeldItemVisualRoot();
+            return heldItemVisualRoot;
+        }
+    }
 
     private void OnEnable()
     {
+        EnsureHeldItemVisualRoot();
         if (inventory != null)
         {
             inventory.OnActiveSlotChanged += HandleActiveChanged;
@@ -56,75 +54,51 @@ public class EquippedItemHolder : MonoBehaviour
         RefreshCurrent();
     }
 
-    /// <summary>Пересоздаёт модель предмета в руке в соответствии с активным слотом инвентаря.</summary>
-    private void RefreshCurrent()
+    /// <summary>Перемещает существующие физические предметы между рукой и скрытым контейнером.</summary>
+    public void RefreshCurrent()
     {
-        if (currentModel != null)
+        if (inventory == null || !EnsureHeldItemVisualRoot()) return;
+        if (carriedItemsStorage == null)
         {
-            Destroy(currentModel);
-            currentModel = null;
+            var storage = new GameObject("CarriedItemsStorage");
+            storage.transform.SetParent(transform, false);
+            carriedItemsStorage = storage.transform;
         }
 
-        ItemData item = inventory != null ? inventory.GetActiveItem() : null;
-        if (item != null && item.worldPrefab != null && handPoint != null)
+        foreach (var entry in inventory.entries)
         {
-            currentModel = Instantiate(item.worldPrefab, handPoint);
-            currentModel.transform.localPosition = item.handPositionOffset;
-            currentModel.transform.localEulerAngles = item.handRotationOffset;
+            foreach (var instance in entry.instances)
+                if (instance != null) instance.SetCarriedHidden(carriedItemsStorage);
+        }
 
-            // В руке предмету не нужны коллайдеры и логика подбора/полки.
-            foreach (var col in currentModel.GetComponentsInChildren<Collider>())
-                col.enabled = false;
+        InventoryEntry active = inventory.GetActiveEntry();
+        if (active == null || !presentationEnabled) return;
 
-            var worldItemComp = currentModel.GetComponent<WorldItem>();
-            if (worldItemComp != null) Destroy(worldItemComp);
+        int visibleCount = active.item.showAsVisualStack ? active.instances.Count : Mathf.Min(1, active.instances.Count);
+        for (int i = 0; i < visibleCount; i++)
+        {
+            WorldItem instance = active.instances[i];
+            if (instance == null) continue;
+            Vector3 localPosition = active.item.handPositionOffset + Vector3.up * (active.item.heldStackSpacing * i);
+            instance.SetHeldVisible(heldItemVisualRoot, localPosition, Quaternion.Euler(active.item.handRotationOffset));
         }
     }
 
-    private void Update()
+    public void SetPresentationEnabled(bool enabled)
     {
-        if (handPoint == null) return;
-        ApplySway();
-        ApplyBob();
+        presentationEnabled = enabled;
+        RefreshCurrent();
     }
 
-    /// <summary>Покачивание руки в сторону движения мыши, создающее ощущение инерции.</summary>
-    private void ApplySway()
+    private bool EnsureHeldItemVisualRoot()
     {
-        float mouseX = Input.GetAxis("Mouse X") * swayAmount;
-        float mouseY = Input.GetAxis("Mouse Y") * swayAmount;
-
-        mouseX = Mathf.Clamp(mouseX, -maxSwayAngle, maxSwayAngle);
-        mouseY = Mathf.Clamp(mouseY, -maxSwayAngle, maxSwayAngle);
-
-        targetLocalRot = Quaternion.Euler(-mouseY, mouseX, mouseX * 0.5f);
-        handPoint.localRotation = Quaternion.Slerp(handPoint.localRotation, targetLocalRot, Time.deltaTime * swaySmooth);
-    }
-
-    /// <summary>Лёгкое покачивание позиции предмета в такт шагам игрока.</summary>
-    private void ApplyBob()
-    {
-        float speed = 0f;
-        if (playerController != null)
+        if (handPoint == null) return false;
+        if (heldItemVisualRoot == null)
         {
-            Vector3 horizontalVelocity = playerController.velocity;
-            horizontalVelocity.y = 0f;
-            speed = horizontalVelocity.magnitude;
+            var root = new GameObject("HeldItemVisualRoot");
+            root.transform.SetParent(handPoint, false);
+            heldItemVisualRoot = root.transform;
         }
-
-        if (speed > moveThreshold)
-        {
-            bobTimer += Time.deltaTime * bobFrequency;
-            float x = Mathf.Cos(bobTimer) * bobAmount;
-            float y = Mathf.Abs(Mathf.Sin(bobTimer)) * bobAmount;
-            targetLocalPos = new Vector3(x, y, 0f);
-        }
-        else
-        {
-            bobTimer = 0f;
-            targetLocalPos = Vector3.zero;
-        }
-
-        handPoint.localPosition = Vector3.Lerp(handPoint.localPosition, targetLocalPos, Time.deltaTime * bobSmooth);
+        return true;
     }
 }

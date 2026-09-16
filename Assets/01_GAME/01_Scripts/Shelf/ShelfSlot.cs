@@ -14,6 +14,7 @@ public class ShelfSlot : MonoBehaviour
     private GameObject ghostInstance;
     private ItemData ghostItem;
     private GameObject placedInstance;
+    private WorldItem placedWorldItem;
 
     public bool IsEmpty => currentItem == null;
 
@@ -92,37 +93,24 @@ public class ShelfSlot : MonoBehaviour
         m.renderQueue = 3000;
     }
 
-    /// <summary>Поставить предмет в ячейку (создаёт визуальную модель на полке).</summary>
-    public void PlaceItem(ItemData item)
+    /// <summary>Поставить существующий физический предмет в ячейку.</summary>
+    public void PlaceItem(WorldItem worldItem)
     {
+        if (worldItem == null || worldItem.itemData == null || !CanAccept(worldItem.itemData)) return;
         HideGhost();
-        currentItem = item;
-
-        if (item.worldPrefab != null)
-        {
-            placedInstance = Instantiate(item.worldPrefab, transform.position, transform.rotation, transform);
-
-            var worldItem = placedInstance.GetComponent<WorldItem>();
-            if (worldItem == null) worldItem = placedInstance.AddComponent<WorldItem>();
-            worldItem.itemData = item;
-            worldItem.SetSourceSlot(this);
-
-            if (placedInstance.GetComponentInChildren<Collider>() == null)
-                placedInstance.AddComponent<BoxCollider>();
-        }
+        currentItem = worldItem.itemData;
+        placedWorldItem = worldItem;
+        placedInstance = worldItem.gameObject;
+        worldItem.PlaceOnShelf(transform, this);
     }
 
-    /// <summary>Убрать предмет из ячейки (например при подборе обратно в инвентарь). Возвращает данные предмета.</summary>
-    public ItemData RemoveItem()
+    /// <summary>Освободить ячейку и вернуть существующий предмет для подбора.</summary>
+    public WorldItem RemoveItem()
     {
-        ItemData item = currentItem;
         currentItem = null;
-
-        if (placedInstance != null)
-        {
-            Destroy(placedInstance);
-            placedInstance = null;
-        }
-        return item;
+        WorldItem result = placedWorldItem;
+        placedWorldItem = null;
+        placedInstance = null;
+        return result;
     }
 }
