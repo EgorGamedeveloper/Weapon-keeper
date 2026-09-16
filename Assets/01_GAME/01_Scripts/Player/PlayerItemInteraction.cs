@@ -34,6 +34,7 @@ public class PlayerItemInteraction : MonoBehaviour
     private WorldItem currentHighlighted;
     private ShelfSlot currentHoveredSlot;
     private WorldItem itemBeingPickedUp;
+    private Vector3 pickupVelocity;
 
     private void Update()
     {
@@ -129,14 +130,19 @@ public class PlayerItemInteraction : MonoBehaviour
 
     private void PickUpWorldItem(WorldItem worldItem)
     {
-        if (inventory == null) return;
+        if (inventory == null || itemHolder == null || itemHolder.handPoint == null) return;
+        if (!inventory.CanAddWorldItem(worldItem)) return;
 
         ShelfSlot source = worldItem.GetSourceSlot();
         if (source != null)
             source.RemoveItem();
 
         worldItem.BeginPickup();
+        // Интерполируем в локальных координатах руки: предмет следует за игроком во время анимации
+        // и не отстаёт от движущейся камеры.
+        worldItem.transform.SetParent(itemHolder.handPoint, true);
         itemBeingPickedUp = worldItem;
+        pickupVelocity = Vector3.zero;
 
         currentHighlighted = null;
         if (infoUI != null) infoUI.Hide();
@@ -160,12 +166,23 @@ public class PlayerItemInteraction : MonoBehaviour
     private void UpdatePickupAnimation()
     {
         if (itemBeingPickedUp == null) return;
-        Transform target = itemHolder != null ? itemHolder.handPoint : transform;
-        itemBeingPickedUp.transform.position = Vector3.Lerp(itemBeingPickedUp.transform.position, target.position, Time.deltaTime * pickupAnimationSpeed);
-        itemBeingPickedUp.transform.rotation = Quaternion.Slerp(itemBeingPickedUp.transform.rotation, target.rotation, Time.deltaTime * pickupAnimationSpeed);
-        if (Vector3.Distance(itemBeingPickedUp.transform.position, target.position) > 0.03f) return;
+        Vector3 targetLocalPosition = itemBeingPickedUp.itemData.handPositionOffset;
+        Quaternion targetLocalRotation = Quaternion.Euler(itemBeingPickedUp.itemData.handRotationOffset);
+        itemBeingPickedUp.transform.localPosition = Vector3.SmoothDamp(
+            itemBeingPickedUp.transform.localPosition,
+            targetLocalPosition,
+            ref pickupVelocity,
+            1f / Mathf.Max(0.01f, pickupAnimationSpeed),
+            Mathf.Infinity,
+            Time.deltaTime);
+        itemBeingPickedUp.transform.localRotation = Quaternion.Slerp(
+            itemBeingPickedUp.transform.localRotation,
+            targetLocalRotation,
+            1f - Mathf.Exp(-pickupAnimationSpeed * Time.deltaTime));
+        if (Vector3.Distance(itemBeingPickedUp.transform.localPosition, targetLocalPosition) > 0.01f) return;
 
-        inventory.AddWorldItem(itemBeingPickedUp);
+        if (!inventory.AddWorldItem(itemBeingPickedUp))
+            itemBeingPickedUp.Drop(itemBeingPickedUp.transform.position, itemBeingPickedUp.transform.rotation, Vector3.zero);
         itemBeingPickedUp = null;
     }
 

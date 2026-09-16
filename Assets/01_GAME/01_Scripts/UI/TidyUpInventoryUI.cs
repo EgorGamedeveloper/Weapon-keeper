@@ -9,6 +9,14 @@ public class TidyUpInventoryUI : MonoBehaviour
     public TidyUpInventoryRowUI rowPrefab;
     private readonly List<TidyUpInventoryRowUI> rows = new List<TidyUpInventoryRowUI>();
 
+    private void Awake()
+    {
+        // Если строку по ошибке оставили в сцене как шаблон, не показываем её как "лишнюю" запись.
+        // Prefab asset не является дочерним объектом contentRoot, поэтому это не влияет на него.
+        if (rowPrefab != null && contentRoot != null && rowPrefab.transform.parent == contentRoot)
+            rowPrefab.gameObject.SetActive(false);
+    }
+
     private void OnEnable()
     {
         if (inventory == null) return;

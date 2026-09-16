@@ -34,9 +34,12 @@ public class EquippedItemHolder : MonoBehaviour
     private Vector3 targetLocalPos;
     private Quaternion targetLocalRot;
     private bool presentationEnabled = true;
+    private Vector3 handPointBaseLocalPosition;
 
     private void OnEnable()
     {
+        if (handPoint != null)
+            handPointBaseLocalPosition = handPoint.localPosition;
         if (inventory != null)
         {
             inventory.OnActiveSlotChanged += HandleActiveChanged;
@@ -139,6 +142,7 @@ public class EquippedItemHolder : MonoBehaviour
             targetLocalPos = Vector3.zero;
         }
 
-        handPoint.localPosition = Vector3.Lerp(handPoint.localPosition, targetLocalPos, Time.deltaTime * bobSmooth);
+        Vector3 desiredPosition = handPointBaseLocalPosition + targetLocalPos;
+        handPoint.localPosition = Vector3.Lerp(handPoint.localPosition, desiredPosition, Time.deltaTime * bobSmooth);
     }
 }

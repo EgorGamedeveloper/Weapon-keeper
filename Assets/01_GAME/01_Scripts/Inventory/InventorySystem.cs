@@ -23,6 +23,10 @@ public class InventoryEntry
 /// </summary>
 public class InventorySystem : MonoBehaviour
 {
+    [Header("Ограничения")]
+    [Tooltip("Максимальное общее число физических предметов в tidy-up инвентаре. Увеличивайте при прогрессии игрока.")]
+    [Min(1)] public int maxItemCount = 5;
+
     [Tooltip("Список типов подобранных предметов. Каждый экземпляр остаётся существующим WorldItem.")]
     public System.Collections.Generic.List<InventoryEntry> entries = new System.Collections.Generic.List<InventoryEntry>();
 
@@ -72,10 +76,28 @@ public class InventorySystem : MonoBehaviour
         return GetActiveEntry() != null;
     }
 
+    public int TotalItemCount
+    {
+        get
+        {
+            int total = 0;
+            foreach (var entry in entries)
+                total += entry.Count;
+            return total;
+        }
+    }
+
+    public bool CanAddWorldItem(WorldItem worldItem)
+    {
+        if (worldItem == null || worldItem.itemData == null) return false;
+        InventoryEntry existingEntry = entries.Find(candidate => candidate.item == worldItem.itemData);
+        return (existingEntry != null && existingEntry.instances.Contains(worldItem)) || TotalItemCount < maxItemCount;
+    }
+
     /// <summary>Добавляет существующий физический экземпляр в запись его типа.</summary>
     public bool AddWorldItem(WorldItem worldItem)
     {
-        if (worldItem == null || worldItem.itemData == null) return false;
+        if (!CanAddWorldItem(worldItem)) return false;
         InventoryEntry entry = entries.Find(candidate => candidate.item == worldItem.itemData);
         if (entry == null)
         {
