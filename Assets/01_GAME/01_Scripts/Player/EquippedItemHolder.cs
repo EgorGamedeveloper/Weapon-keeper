@@ -12,8 +12,11 @@ public class EquippedItemHolder : MonoBehaviour
     public Transform handPoint;
     public InventorySystem inventory;
 
-    [Tooltip("Необязательно: CharacterController игрока, чтобы читать скорость движения для bobbing.")]
-    public CharacterController playerController;
+    [Tooltip("Rigidbody игрока: его скорость используется для bobbing.")]
+    public Rigidbody playerBody;
+
+    [Tooltip("Контейнер для подобранных, но сейчас не отображаемых физических объектов.")]
+    public Transform carriedItemsStorage;
 
     [Header("Покачивание от мыши (sway)")]
     public float swayAmount = 4f;
@@ -27,10 +30,10 @@ public class EquippedItemHolder : MonoBehaviour
     [Tooltip("Минимальная скорость игрока, при которой начинается покачивание.")]
     public float moveThreshold = 0.1f;
 
-    private GameObject currentModel;
     private float bobTimer;
     private Vector3 targetLocalPos;
     private Quaternion targetLocalRot;
+    private bool presentationEnabled = true;
 
     private void OnEnable()
     {
@@ -56,29 +59,40 @@ public class EquippedItemHolder : MonoBehaviour
         RefreshCurrent();
     }
 
-    /// <summary>Пересоздаёт модель предмета в руке в соответствии с активным слотом инвентаря.</summary>
-    private void RefreshCurrent()
+    /// <summary>Перемещает существующие физические предметы между рукой и скрытым контейнером.</summary>
+    public void RefreshCurrent()
     {
-        if (currentModel != null)
+        if (inventory == null || handPoint == null) return;
+        if (carriedItemsStorage == null)
         {
-            Destroy(currentModel);
-            currentModel = null;
+            var storage = new GameObject("CarriedItemsStorage");
+            storage.transform.SetParent(transform, false);
+            carriedItemsStorage = storage.transform;
         }
 
-        ItemData item = inventory != null ? inventory.GetActiveItem() : null;
-        if (item != null && item.worldPrefab != null && handPoint != null)
+        foreach (var entry in inventory.entries)
         {
-            currentModel = Instantiate(item.worldPrefab, handPoint);
-            currentModel.transform.localPosition = item.handPositionOffset;
-            currentModel.transform.localEulerAngles = item.handRotationOffset;
-
-            // В руке предмету не нужны коллайдеры и логика подбора/полки.
-            foreach (var col in currentModel.GetComponentsInChildren<Collider>())
-                col.enabled = false;
-
-            var worldItemComp = currentModel.GetComponent<WorldItem>();
-            if (worldItemComp != null) Destroy(worldItemComp);
+            foreach (var instance in entry.instances)
+                if (instance != null) instance.SetCarriedHidden(carriedItemsStorage);
         }
+
+        InventoryEntry active = inventory.GetActiveEntry();
+        if (active == null || !presentationEnabled) return;
+
+        int visibleCount = active.item.showAsVisualStack ? active.instances.Count : Mathf.Min(1, active.instances.Count);
+        for (int i = 0; i < visibleCount; i++)
+        {
+            WorldItem instance = active.instances[i];
+            if (instance == null) continue;
+            Vector3 localPosition = active.item.handPositionOffset + Vector3.up * (active.item.heldStackSpacing * i);
+            instance.SetHeldVisible(handPoint, localPosition, Quaternion.Euler(active.item.handRotationOffset));
+        }
+    }
+
+    public void SetPresentationEnabled(bool enabled)
+    {
+        presentationEnabled = enabled;
+        RefreshCurrent();
     }
 
     private void Update()
@@ -105,9 +119,9 @@ public class EquippedItemHolder : MonoBehaviour
     private void ApplyBob()
     {
         float speed = 0f;
-        if (playerController != null)
+        if (playerBody != null)
         {
-            Vector3 horizontalVelocity = playerController.velocity;
+            Vector3 horizontalVelocity = playerBody.linearVelocity;
             horizontalVelocity.y = 0f;
             speed = horizontalVelocity.magnitude;
         }
