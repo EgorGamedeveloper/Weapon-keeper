@@ -2,8 +2,8 @@ using UnityEngine;
 
 /// <summary>
 /// Точка в руке игрока, куда устанавливается модель активного предмета из инвентаря.
-/// При смене активного слота обновляет 3D-модель, при ходьбе добавляет лёгкое покачивание
-/// по инерции (sway) и покачивание от шагов (bobbing).
+/// При смене активного слота обновляет 3D-модель. Точка в руке намеренно остаётся
+/// неподвижной: sway и bobbing временно отключены для стабильной отладки удержания.
 /// </summary>
 public class EquippedItemHolder : MonoBehaviour
 {
@@ -12,34 +12,12 @@ public class EquippedItemHolder : MonoBehaviour
     public Transform handPoint;
     public InventorySystem inventory;
 
-    [Tooltip("Дочерний pivot HandPoint для sway/bobbing. HandPoint остаётся неподвижным якорем.")]
+    [Tooltip("Дочерний visual root HandPoint. Во время отладки он остаётся неподвижным.")]
     public Transform heldItemVisualRoot;
-
-    [Tooltip("Rigidbody игрока: его скорость используется для bobbing.")]
-    public Rigidbody playerBody;
 
     [Tooltip("Контейнер для подобранных, но сейчас не отображаемых физических объектов.")]
     public Transform carriedItemsStorage;
-
-    [Header("Покачивание от мыши (sway)")]
-    public float swayAmount = 4f;
-    public float swaySmooth = 6f;
-    public float maxSwayAngle = 8f;
-
-    [Header("Покачивание при ходьбе (bobbing)")]
-    public float bobFrequency = 6f;
-    public float bobAmount = 0.03f;
-    public float bobSmooth = 8f;
-    [Tooltip("Минимальная скорость игрока, при которой начинается покачивание.")]
-    public float moveThreshold = 0.1f;
-
-    private float bobTimer;
-    private Vector3 targetLocalPos;
-    private Quaternion targetLocalRot;
     private bool presentationEnabled = true;
-    private Vector3 visualRootBaseLocalPosition;
-    private Quaternion visualRootBaseLocalRotation;
-    private bool visualRootBasePoseInitialized;
 
     /// <summary>Точка, под которой находятся видимые предметы в руках.</summary>
     public Transform HeldItemTransform
@@ -104,6 +82,7 @@ public class EquippedItemHolder : MonoBehaviour
             Vector3 localPosition = active.item.handPositionOffset + Vector3.up * (active.item.heldStackSpacing * i);
             instance.SetHeldVisible(heldItemVisualRoot, localPosition, Quaternion.Euler(active.item.handRotationOffset));
         }
+        return true;
     }
 
     public void SetPresentationEnabled(bool enabled)
@@ -120,70 +99,7 @@ public class EquippedItemHolder : MonoBehaviour
             var root = new GameObject("HeldItemVisualRoot");
             root.transform.SetParent(handPoint, false);
             heldItemVisualRoot = root.transform;
-            visualRootBasePoseInitialized = false;
-        }
-
-        if (!visualRootBasePoseInitialized)
-        {
-            visualRootBaseLocalPosition = heldItemVisualRoot.localPosition;
-            visualRootBaseLocalRotation = heldItemVisualRoot.localRotation;
-            visualRootBasePoseInitialized = true;
         }
         return true;
-    }
-
-    private void LateUpdate()
-    {
-        if (!EnsureHeldItemVisualRoot()) return;
-        ApplySway();
-        ApplyBob();
-    }
-
-    /// <summary>Покачивание руки в сторону движения мыши, создающее ощущение инерции.</summary>
-    private void ApplySway()
-    {
-        float mouseX = Input.GetAxis("Mouse X") * swayAmount;
-        float mouseY = Input.GetAxis("Mouse Y") * swayAmount;
-
-        mouseX = Mathf.Clamp(mouseX, -maxSwayAngle, maxSwayAngle);
-        mouseY = Mathf.Clamp(mouseY, -maxSwayAngle, maxSwayAngle);
-
-        Quaternion swayRotation = Quaternion.Euler(-mouseY, mouseX, mouseX * 0.5f);
-        targetLocalRot = visualRootBaseLocalRotation * swayRotation;
-        heldItemVisualRoot.localRotation = Quaternion.Slerp(
-            heldItemVisualRoot.localRotation,
-            targetLocalRot,
-            Time.deltaTime * swaySmooth);
-    }
-
-    /// <summary>Лёгкое покачивание позиции предмета в такт шагам игрока.</summary>
-    private void ApplyBob()
-    {
-        float speed = 0f;
-        if (playerBody != null)
-        {
-            Vector3 horizontalVelocity = playerBody.linearVelocity;
-            horizontalVelocity.y = 0f;
-            speed = horizontalVelocity.magnitude;
-        }
-
-        if (speed > moveThreshold)
-        {
-            bobTimer += Time.deltaTime * bobFrequency;
-            float x = Mathf.Cos(bobTimer) * bobAmount;
-            float y = Mathf.Abs(Mathf.Sin(bobTimer)) * bobAmount;
-            targetLocalPos = new Vector3(x, y, 0f);
-        }
-        else
-        {
-            bobTimer = 0f;
-            targetLocalPos = Vector3.zero;
-        }
-
-        Vector3 desiredPosition = visualRootBaseLocalPosition + targetLocalPos;
-        heldItemVisualRoot.localPosition = Vector3.Lerp(
-            heldItemVisualRoot.localPosition,
-            desiredPosition,
-            Time.deltaTime * bobSmooth);
     }
 }
