@@ -47,53 +47,65 @@ public class PlayerItemInteraction : MonoBehaviour
         if (itemBeingPickedUp == null && Input.GetMouseButtonDown(1))
             DropActiveItem();
     }
+    
+        
+       private void HandleRaycast()
+{
+    ClearHighlight();
+    ClearGhost();
 
-    private void HandleRaycast()
+    if (playerCamera == null) return;
+
+    Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+    float maxDist = Mathf.Max(pickupRange, shelfInteractRange);
+
+    if (!Physics.Raycast(ray, out RaycastHit hit, maxDist, interactableLayers, QueryTriggerInteraction.Collide))
     {
-        ClearHighlight();
-        ClearGhost();
-
-        if (playerCamera == null) return;
-
-        Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-        float maxDist = Mathf.Max(pickupRange, shelfInteractRange);
-
-        if (Physics.Raycast(ray, out RaycastHit hit, maxDist, interactableLayers, QueryTriggerInteraction.Collide))
-        {
-            // 1) Проверяем, не предмет ли это (лежащий, либо уже стоящий на полке).
-            WorldItem worldItem = hit.collider.GetComponentInParent<WorldItem>();
-            if (worldItem != null)
-            {
-                if (hit.distance <= pickupRange)
-                {
-                    currentHighlighted = worldItem;
-                    worldItem.SetHighlight(true);
-                    if (infoUI != null) infoUI.Show(worldItem.itemData);
-                }
-                return;
-            }
-
-            // 2) Проверяем, не пустая ли ячейка полки.
-            ShelfSlot slot = hit.collider.GetComponent<ShelfSlot>();
-            if (slot != null && hit.distance <= shelfInteractRange)
-            {
-                ItemData active = inventory != null ? inventory.GetActiveItem() : null;
-
-                if (slot.IsEmpty && active != null && slot.CanAccept(active))
-                {
-                    slot.ShowGhost(active);
-                    currentHoveredSlot = slot;
-                    if (infoUI != null) infoUI.ShowPlacementHint(active, true);
-                }
-                else if (infoUI != null)
-                {
-                    infoUI.Hide();
-                }
-                return;
-            }
-        }
-
         if (infoUI != null) infoUI.Hide();
+        return;
+    }
+
+    ItemData active = inventory != null ? inventory.GetActiveItem() : null;
+
+    // ── Шаг 1. Резолвим, на ЧТО смотрим: предмет и/или слот (колонну) ──
+    WorldItem hitItem = hit.collider.GetComponentInParent<WorldItem>();
+    ShelfSlot slot = hit.collider.GetComponent<ShelfSlot>();
+
+    // Луч попал в предмет, который уже стоит на полке (в стопке) —
+    // нас интересует ЕГО колонна, а не он сам как точка установки.
+    bool hitPlacedItem = hitItem != null && hitItem.State == WorldItem.ItemState.PlacedOnShelf;
+    if (hitPlacedItem && slot == null)
+        slot = hitItem.GetSourceSlot();
+
+    // ── Шаг 2. РЕЖИМ УСТАНОВКИ (приоритет): в руке есть предмет и колонна готова его принять ──
+    // Сюда попадаем в трёх случаях: пустая колонна, неполная стопка (даже если луч задел
+    // стоящую пачку), одиночный пустой слот. CanAccept сам проверит всё: категорию,
+    // заполненность, совпадение типа со стопкой.
+    if (slot != null && active != null
+        && hit.distance <= shelfInteractRange
+        && slot.CanAccept(active))
+    {
+        slot.ShowGhost(active); // призрак рисуется наверху стопки через GetNextPlacementLocalPosition()
+        currentHoveredSlot = slot;
+        if (infoUI != null) infoUI.ShowPlacementHint(active, true);
+        return;
+    }
+
+    // ── Шаг 3. РЕЖИМ ПОДБОРА: луч попал в предмет — в мире ИЛИ в стопке на полке ──
+    // Срабатывает, когда руки пустые (active == null) или активный предмет этой колонне
+    // не подходит. Подсвечиваем именно тот предмет, в который смотрим: клик заберёт его
+    // из стопки (верхний, средний — любой), остальные «оседают».
+    if (hitItem != null && hit.distance <= pickupRange)
+    {
+        currentHighlighted = hitItem;
+        hitItem.SetHighlight(true);
+        if (infoUI != null) infoUI.Show(hitItem.itemData);
+        return;
+    }
+
+    // ── Шаг 4. Ничего интересного под лучом ──
+    if (infoUI != null) infoUI.Hide();
+
     }
 
     private void ClearHighlight()
@@ -130,12 +142,20 @@ public class PlayerItemInteraction : MonoBehaviour
 
     private void PickUpWorldItem(WorldItem worldItem)
     {
+        if (itemBeingPickedUp != null)
+        {
+            var stuck = itemBeingPickedUp;
+            itemBeingPickedUp = null;
+            if (inventory.AddWorldItem(stuck)) { /* ок */ }
+            else stuck.Drop(stuck.transform.position, stuck.transform.rotation, Vector3.zero);
+        }
+        
         if (inventory == null || itemHolder == null || itemHolder.HeldItemTransform == null) return;
         if (!inventory.CanAddWorldItem(worldItem)) return;
 
         ShelfSlot source = worldItem.GetSourceSlot();
         if (source != null)
-            source.RemoveItem();
+            source.RemoveItem(worldItem);
 
         worldItem.BeginPickup();
         // Интерполируем в локальных координатах руки: предмет следует за игроком во время анимации
@@ -166,8 +186,11 @@ public class PlayerItemInteraction : MonoBehaviour
     private void UpdatePickupAnimation()
     {
         if (itemBeingPickedUp == null) return;
-        Vector3 targetLocalPosition = itemBeingPickedUp.itemData.handPositionOffset;
+
+        // Цель полёта — СРАЗУ финальная позиция: для стакающихся предметов — свой «этаж» стопки
+        Vector3 targetLocalPosition = GetPickupTargetLocalPosition(itemBeingPickedUp);
         Quaternion targetLocalRotation = Quaternion.Euler(itemBeingPickedUp.itemData.handRotationOffset);
+
         itemBeingPickedUp.transform.localPosition = Vector3.SmoothDamp(
             itemBeingPickedUp.transform.localPosition,
             targetLocalPosition,
@@ -184,6 +207,28 @@ public class PlayerItemInteraction : MonoBehaviour
         if (!inventory.AddWorldItem(itemBeingPickedUp))
             itemBeingPickedUp.Drop(itemBeingPickedUp.transform.position, itemBeingPickedUp.transform.rotation, Vector3.zero);
         itemBeingPickedUp = null;
+    }
+    
+    /// <summary>
+    /// Локальная цель полёта предмета в руку.
+    /// Для визуально стакающихся (showAsVisualStack) — сразу «этаж» стопки,
+    /// чтобы второй и последующие предметы летели наверх стопки, минуя базовую точку.
+    /// Формула совпадает с EquippedItemHolder.RefreshCurrent — поэтому приземление происходит без щёлчка.
+    /// </summary>
+    private Vector3 GetPickupTargetLocalPosition(WorldItem item)
+    {
+        ItemData data = item.itemData;
+        Vector3 baseOffset = data.handPositionOffset;
+
+        if (!data.showAsVisualStack || inventory == null)
+            return baseOffset;
+
+        // При AddWorldItem предмет станет последним в entry.instances,
+        // значит его будущий индекс = текущее число таких же предметов уже в руке.
+        InventoryEntry entry = inventory.entries.Find(candidate => candidate.item == data);
+        int stackIndex = entry != null ? entry.instances.Count : 0;
+
+        return baseOffset + Vector3.up * (data.heldStackSpacing * stackIndex);
     }
 
     private void DropActiveItem()

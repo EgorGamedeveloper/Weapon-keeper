@@ -1,4 +1,7 @@
 using UnityEngine;
+using System.Collections.Generic;
+using DG;
+using DG.Tweening;
 
 /// <summary>
 /// Одна ячейка на полке — точка (Transform), в которую можно поставить предмет.
@@ -8,6 +11,15 @@ using UnityEngine;
 [RequireComponent(typeof(Collider))]
 public class ShelfSlot : MonoBehaviour
 {
+    
+    [Header("Режим стопки (колонна)")]
+    public bool isStackSlot = false;
+    [Min(1)] public int maxStack = 4;        // максимум пачек в колонне
+    public float stackSpacing = 0.08f;       // высота одной пачки
+
+    public readonly List<WorldItem> placedItems = new(); // вместо одиночного placedWorldItem
+    public int StackCount => placedItems.Count;
+    
     [HideInInspector] public Shelf parentShelf;
     [HideInInspector] public ItemData currentItem;
 
@@ -24,11 +36,16 @@ public class ShelfSlot : MonoBehaviour
         if (col != null) col.isTrigger = true;
     }
 
-    /// <summary>Может ли эта ячейка принять данный предмет прямо сейчас.</summary>
+    /// Позиция, куда встанет СЛЕДУЮЩИЙ предмет = верх стопки. Пустая колонна → база (0).
+    public Vector3 GetNextPlacementLocalPosition()
+        => isStackSlot ? Vector3.up * (stackSpacing * StackCount) : Vector3.zero;
+
     public bool CanAccept(ItemData item)
     {
-        if (item == null || !IsEmpty || parentShelf == null) return false;
-        return parentShelf.AcceptsItem(item);
+        if (item == null || parentShelf == null || !parentShelf.AcceptsItem(item)) return false;
+        if (!isStackSlot) return IsEmpty;                    // старое поведение — одиночный слот
+        if (StackCount >= maxStack) return false;
+        return StackCount == 0 || placedItems[StackCount - 1].itemData == item; // стопка одного типа
     }
 
     /// <summary>Показать полупрозрачный "призрак" предмета в ячейке (подсказка игроку).</summary>
@@ -40,6 +57,7 @@ public class ShelfSlot : MonoBehaviour
         HideGhost();
 
         ghostInstance = Instantiate(item.worldPrefab, transform.position, transform.rotation, transform);
+        ghostInstance.transform.localPosition = GetNextPlacementLocalPosition();
         ghostInstance.name = "Ghost_" + item.itemName;
         ghostItem = item;
         MakeGhostVisual(ghostInstance);
@@ -105,12 +123,18 @@ public class ShelfSlot : MonoBehaviour
     }
 
     /// <summary>Освободить ячейку и вернуть существующий предмет для подбора.</summary>
-    public WorldItem RemoveItem()
+    public WorldItem RemoveItem(WorldItem item)
     {
-        currentItem = null;
-        WorldItem result = placedWorldItem;
-        placedWorldItem = null;
-        placedInstance = null;
-        return result;
+        int idx = placedItems.IndexOf(item);
+        if (idx < 0) return null;
+
+        placedItems.RemoveAt(idx);
+        currentItem = StackCount > 0 ? placedItems[StackCount - 1].itemData : null;
+
+        // Оседание: все, кто стоял выше вынятого, опускаем на «этаж» вниз
+        for (int i = idx; i < StackCount; i++)
+            placedItems[i].transform.DOLocalMove(Vector3.up * (stackSpacing * i), 0.25f); // DOTween уже есть
+
+        return item;
     }
 }

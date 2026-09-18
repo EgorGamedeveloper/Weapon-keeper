@@ -134,9 +134,9 @@ public class EquippedItemHolder : MonoBehaviour
 
     private void LateUpdate()
     {
-        // if (!EnsureHeldItemVisualRoot()) return;
-        // ApplySway();
-        // ApplyBob();
+        if (!EnsureHeldItemVisualRoot()) return;
+        ApplySway();
+        ApplyBob();
     }
 
     /// <summary>Покачивание руки в сторону движения мыши, создающее ощущение инерции.</summary>
