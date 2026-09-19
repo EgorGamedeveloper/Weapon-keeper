@@ -125,6 +125,10 @@ public class Weapon : MonoBehaviour
 	// Range
 	public float range = 9999.0f;						// How far this weapon can shoot (for raycast and beam)
 
+	// Layers
+	public LayerMask hittableLayers = ~(1 << 9);		// Слои, по которым бьёт raycast/beam (по умолчанию все, кроме "IgnoreBullets" — на нём подбираемые
+														// предметы и триггеры полок, чтобы стрельба их не толкала и не давала "попадание").
+
 	// Rate of Fire
 	public float rateOfFire = 10;						// The number of rounds this weapon fires per second
 	private float actualROF;							// The frequency between shots based on the rateOfFire
@@ -207,6 +211,9 @@ public class Weapon : MonoBehaviour
 
 	// Other
 	private bool canFire = true;						// Whether or not the weapon can currently fire (used for semi-auto weapons)
+
+	// Внешняя блокировка стрельбы (например, прицел наведён на предмет/полку — см. EquipmentWeaponBridge).
+	[HideInInspector] public bool fireBlocked = false;
 
 
 	// Use this for initialization
@@ -320,6 +327,10 @@ public class Weapon : MonoBehaviour
 	// Checks for user input to use the weapons - only if this weapon is player-controlled
 	void CheckForUserInput()
 	{
+		// Полностью блокирует стрельбу (и перезарядку), пока прицел наведён на предмет/полку —
+		// в этом случае клик должен подбирать/ставить предмет, а не стрелять.
+		if (fireBlocked)
+			return;
 
 		// Fire if this is a raycast type weapon and the user presses the fire button
 		if (type == WeaponType.Raycast)
@@ -604,7 +615,7 @@ public class Weapon : MonoBehaviour
 			Ray ray = new Ray(raycastStartSpot.position, direction);
 			RaycastHit hit;
 
-			if (Physics.Raycast(ray, out hit, range))
+			if (Physics.Raycast(ray, out hit, range, hittableLayers))
 			{
 				// Warmup heat
 				float damage = power;
@@ -929,7 +940,7 @@ public class Weapon : MonoBehaviour
 			// Initialize the next point.  If a raycast hit is not returned, this will be the forward direction * range
 			Vector3 nextPoint = ray.direction * range;
 
-			if (Physics.Raycast(ray, out hit, range))
+			if (Physics.Raycast(ray, out hit, range, hittableLayers))
 			{
 				// Set the next point to the hit location from the raycast
 				nextPoint = hit.point;

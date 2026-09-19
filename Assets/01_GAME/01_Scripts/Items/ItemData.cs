@@ -39,4 +39,15 @@ public class ItemData : ScriptableObject
     [Header("Совместимость с полками")]
     [Tooltip("На какую категорию полки можно поставить этот предмет.")]
     public ShelfCategory shelfType;
+
+    [Header("Оружие (Easy Weapons)")]
+    [Tooltip("Если задано — при экипировке предмет становится настоящим оружием Easy Weapons (стреляет). Ссылка на префаб с компонентом Weapon.")]
+    public GameObject weaponPrefab;
+
+    /// <summary>Признак того, что предмет — оружие (можно экипировать и оно стреляет через Easy Weapons).</summary>
+    public bool IsWeapon => weaponPrefab != null;
+
+    [Header("Инструмент (разбор Breakable)")]
+    [Tooltip("Инструмент для разбора Breakable-объектов (например, лом). Не оружие — weaponPrefab не участвует.")]
+    public bool canBreakObjects = false;
 }

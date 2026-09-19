@@ -1,0 +1,84 @@
+# Unity-кэш и сборочные артефакты
+Library/
+Temp/
+Logs/
+UserSettings/
+obj/
+Build/
+Builds/
+.vs/
+.idea/
+
+# Автогенерируемые файлы IDE
+*.csproj
+*.sln
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.suo
+
+# Бинарно-сериализованные ассеты Unity (не текст, смотреть только в редакторе)
+*.unity
+*.prefab
+*.mat
+*.asset
+*.anim
+*.controller
+*.overrideController
+*.playable
+*.mask
+*.preset
+*.guiskin
+*.fontsettings
+*.renderTexture
+*.cubemap
+*.flare
+*.brush
+*.terrainlayer
+*.shadervariants
+*.spriteatlas
+*.physicMaterial
+*.physicsMaterial2D
+
+# Meta-файлы (только GUID/настройки импорта)
+*.meta
+
+# Бинарные арт/аудио/шрифтовые ассеты
+*.fbx
+*.obj
+*.blend
+*.png
+*.psd
+*.psb
+*.tga
+*.tif
+*.tiff
+*.jpg
+*.jpeg
+*.exr
+*.hdr
+*.gif
+*.bmp
+*.wav
+*.mp3
+*.ogg
+*.aiff
+*.mov
+*.mp4
+*.ttf
+*.otf
+*.unitypackage
+
+# Крупные сторонние паки — скрипты оставляем читаемыми, демки/контент скрываем
+Assets/Easy Weapons/Demo/
+Assets/Easy Weapons/Textures/
+Assets/Easy Weapons/Sounds/
+Assets/Easy Weapons/Models/
+Assets/Ultimate 10 Plus Shaders/Scenes/
+Assets/Standard Assets/
+Assets/TextMesh Pro/Examples & Extras/
+
+# Уже исключено из git — незачем индексировать и локально
+Assets/02_ART/Firearms/
+Assets/02_ART/Models/

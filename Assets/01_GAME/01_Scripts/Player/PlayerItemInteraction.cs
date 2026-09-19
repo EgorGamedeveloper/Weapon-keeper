@@ -7,7 +7,10 @@ using UnityEngine;
 /// - ЛКМ на предмете — подбирает его в инвентарь;
 /// - при наведении на пустую ячейку полки (держа подходящий предмет) — показывает "призрак";
 /// - ЛКМ на ячейке полки — устанавливает активный предмет инвентаря на полку.
+/// Выполняется раньше EquipmentWeaponBridge/Weapon (см. DefaultExecutionOrder), чтобы
+/// IsAimingAtInteractable этого кадра успевал долететь до проверки блокировки стрельбы.
 /// </summary>
+[DefaultExecutionOrder(-200)]
 public class PlayerItemInteraction : MonoBehaviour
 {
     [Header("Ссылки")]
@@ -15,6 +18,9 @@ public class PlayerItemInteraction : MonoBehaviour
     public InventorySystem inventory;
     public ItemInfoUI infoUI;
     public EquippedItemHolder itemHolder;
+
+    [Tooltip("Опционально: вне режима TidyUp (оружие или лом в руках) выбросить предмет из tidy-up нельзя — его не видно.")]
+    public PlayerInventoryModeController modeController;
 
     [Header("Настройки луча")]
     [Tooltip("Слои, по которым бьёт луч (предметы и ячейки полок).")]
@@ -26,19 +32,33 @@ public class PlayerItemInteraction : MonoBehaviour
     [Tooltip("Максимальная дистанция взаимодействия с полкой.")]
     public float shelfInteractRange = 3f;
 
+    [Tooltip("Максимальная дистанция разбора объектов ломом (режим Tool).")]
+    public float toolInteractRange = 2.5f;
+
     [Header("Подбор и бросок")]
     public float pickupAnimationSpeed = 12f;
     public float dropDistance = 1.25f;
     public float dropSpeed = 4f;
 
     private WorldItem currentHighlighted;
-    private ShelfSlot currentHoveredSlot;
+    private IPlaceableSlot currentHoveredSlot;
+    private CleanableStain currentHoveredStain;
+    private Breakable currentHoveredBreakable;
     private WorldItem itemBeingPickedUp;
     private Vector3 pickupVelocity;
+    private bool aimingAtInteractableThisFrame;
+
+    /// <summary>Прицел был наведён на предмет, точку установки (полка/ремонт) или пятно в момент
+    /// луча этого кадра — по ним нельзя стрелять (см. EquipmentWeaponBridge). Снимок делается сразу
+    /// после HandleRaycast, ДО обработки клика — сам подбор (PickUpWorldItem) обнуляет
+    /// currentHighlighted при успехе, и если читать его позже, блокировка стрельбы снималась бы
+    /// в тот же кадр, что и клик.</summary>
+    public bool IsAimingAtInteractable => aimingAtInteractableThisFrame;
 
     private void Update()
     {
         HandleRaycast();
+        aimingAtInteractableThisFrame = currentHighlighted != null || currentHoveredSlot != null || currentHoveredStain != null;
 
         UpdatePickupAnimation();
 
@@ -56,7 +76,19 @@ public class PlayerItemInteraction : MonoBehaviour
 
     if (playerCamera == null) return;
 
+    // ── Экипировано оружие: только бой, никакого взаимодействия с миром — иначе прицел на
+    // предмете/полке блокировал бы выстрел (см. IsAimingAtInteractable). С оружием в руках
+    // игрок либо стреляет, либо ничего не делает; подбор/установка — только без оружия (TidyUp)
+    // или с ломом (см. ниже).
+    if (modeController != null && modeController.IsWeaponEquipped()) return;
+
     Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+
+    // ── Лом в руках: ищем, что можно разобрать, но НЕ прерываем обычную логику ниже — лом не
+    // мешает подбирать предметы и расставлять их по полкам, это просто дополнительный инструмент.
+    if (modeController != null && modeController.IsBreakToolEquipped())
+        HandleToolRaycast(ray);
+
     float maxDist = Mathf.Max(pickupRange, shelfInteractRange);
 
     if (!Physics.Raycast(ray, out RaycastHit hit, maxDist, interactableLayers, QueryTriggerInteraction.Collide))
@@ -67,9 +99,9 @@ public class PlayerItemInteraction : MonoBehaviour
 
     ItemData active = inventory != null ? inventory.GetActiveItem() : null;
 
-    // ── Шаг 1. Резолвим, на ЧТО смотрим: предмет и/или слот (колонну) ──
+    // ── Шаг 1. Резолвим, на ЧТО смотрим: предмет и/или точка установки (полка/ремонт) ──
     WorldItem hitItem = hit.collider.GetComponentInParent<WorldItem>();
-    ShelfSlot slot = hit.collider.GetComponent<ShelfSlot>();
+    IPlaceableSlot slot = hit.collider.GetComponent<IPlaceableSlot>();
 
     // Луч попал в предмет, который уже стоит на полке (в стопке) —
     // нас интересует ЕГО колонна, а не он сам как точка установки.
@@ -77,10 +109,10 @@ public class PlayerItemInteraction : MonoBehaviour
     if (hitPlacedItem && slot == null)
         slot = hitItem.GetSourceSlot();
 
-    // ── Шаг 2. РЕЖИМ УСТАНОВКИ (приоритет): в руке есть предмет и колонна готова его принять ──
+    // ── Шаг 2. РЕЖИМ УСТАНОВКИ (приоритет): в руке есть предмет и точка готова его принять ──
     // Сюда попадаем в трёх случаях: пустая колонна, неполная стопка (даже если луч задел
     // стоящую пачку), одиночный пустой слот. CanAccept сам проверит всё: категорию,
-    // заполненность, совпадение типа со стопкой.
+    // заполненность, совпадение типа со стопкой. Для RepairPoint — совпадение с requiredItem.
     if (slot != null && active != null
         && hit.distance <= shelfInteractRange
         && slot.CanAccept(active))
@@ -103,9 +135,32 @@ public class PlayerItemInteraction : MonoBehaviour
         return;
     }
 
+    // ── Шаг 3.5. ПЯТНО: оттирается кликом, предмет в руках не нужен ──
+    CleanableStain stain = hit.collider.GetComponentInParent<CleanableStain>();
+    if (stain != null && !stain.IsClean && hit.distance <= pickupRange)
+    {
+        currentHoveredStain = stain;
+        stain.SetHighlight(true);
+        return;
+    }
+
     // ── Шаг 4. Ничего интересного под лучом ──
     if (infoUI != null) infoUI.Hide();
 
+    }
+
+    /// <summary>Дополнительный луч, пока в руках лом: ищет Breakable. Вызывается перед обычной
+    /// логикой подбора/установки (не вместо неё) — см. HandleRaycast.</summary>
+    private void HandleToolRaycast(Ray ray)
+    {
+        if (!Physics.Raycast(ray, out RaycastHit hit, toolInteractRange, interactableLayers, QueryTriggerInteraction.Collide))
+            return;
+
+        Breakable breakable = hit.collider.GetComponentInParent<Breakable>();
+        if (breakable == null || breakable.IsBroken) return;
+
+        currentHoveredBreakable = breakable;
+        breakable.SetHighlight(true);
     }
 
     private void ClearHighlight()
@@ -114,6 +169,18 @@ public class PlayerItemInteraction : MonoBehaviour
         {
             currentHighlighted.SetHighlight(false);
             currentHighlighted = null;
+        }
+
+        if (currentHoveredStain != null)
+        {
+            currentHoveredStain.SetHighlight(false);
+            currentHoveredStain = null;
+        }
+
+        if (currentHoveredBreakable != null)
+        {
+            currentHoveredBreakable.SetHighlight(false);
+            currentHoveredBreakable = null;
         }
     }
 
@@ -136,7 +203,21 @@ public class PlayerItemInteraction : MonoBehaviour
 
         if (currentHoveredSlot != null)
         {
-            PlaceActiveItemOnShelf(currentHoveredSlot);
+            PlaceActiveItem(currentHoveredSlot);
+            return;
+        }
+
+        if (currentHoveredStain != null)
+        {
+            currentHoveredStain.Clean();
+            currentHoveredStain = null;
+            return;
+        }
+
+        if (currentHoveredBreakable != null)
+        {
+            currentHoveredBreakable.Break();
+            currentHoveredBreakable = null;
         }
     }
 
@@ -168,7 +249,7 @@ public class PlayerItemInteraction : MonoBehaviour
         if (infoUI != null) infoUI.Hide();
     }
 
-    private void PlaceActiveItemOnShelf(ShelfSlot slot)
+    private void PlaceActiveItem(IPlaceableSlot slot)
     {
         if (inventory == null) return;
 
@@ -234,6 +315,8 @@ public class PlayerItemInteraction : MonoBehaviour
     private void DropActiveItem()
     {
         if (inventory == null || playerCamera == null) return;
+        // Вне TidyUp-режима предмет и так не виден в руке (оружие или лом) — бросать его вслепую нельзя.
+        if (modeController != null && modeController.CurrentMode != PlayerInventoryModeController.InventoryMode.TidyUp) return;
         WorldItem item = inventory.RemoveActiveWorldItem();
         if (item == null) return;
         Vector3 direction = playerCamera.transform.forward.normalized;

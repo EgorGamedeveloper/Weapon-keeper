@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>Динамический UI tidy-up. Выбранный тип предмета всегда рисуется последней строкой.</summary>
+/// <summary>Динамический UI tidy-up. Строки — фиксированная стопка по индексу слота инвентаря,
+/// порядок никогда не меняется; при смене выбора анимируются только подсветка и масштаб строки
+/// (см. TidyUpInventoryRowUI.BindCore), сама она никуда не едет.</summary>
 public class TidyUpInventoryUI : MonoBehaviour
 {
     public InventorySystem inventory;
@@ -43,14 +45,7 @@ public class TidyUpInventoryUI : MonoBehaviour
         if (count == 0) return;
 
         int selected = inventory.activeSlotIndex;
-        int rowIndex = 0;
         for (int i = 0; i < count; i++)
-        {
-            if (i == selected) continue;
-            rows[rowIndex].Bind(inventory.entries[i], false);
-            rows[rowIndex++].transform.SetSiblingIndex(rowIndex - 1);
-        }
-        rows[rowIndex].Bind(inventory.entries[selected], true);
-        rows[rowIndex].transform.SetSiblingIndex(rowIndex);
+            rows[i].Bind(inventory.entries[i], i == selected);
     }
 }

@@ -76,11 +76,16 @@ public class WorldItem : MonoBehaviour
         State = ItemState.CarriedHidden;
     }
 
+    /// Старая сигнатура оставлена для совместимости — ставит в базу слота.
     public void PlaceOnShelf(Transform slotTransform, ShelfSlot slot)
+        => PlaceOnShelf(slotTransform, slot, Vector3.zero, Quaternion.identity);
+
+    /// Полная версия: позиция «этажа» стопки передаётся снаружи.
+    public void PlaceOnShelf(Transform slotTransform, ShelfSlot slot, Vector3 localPosition, Quaternion localRotation)
     {
         transform.SetParent(slotTransform, false);
-        transform.localPosition = Vector3.zero;
-        transform.localRotation = Quaternion.identity;
+        transform.localPosition = localPosition;
+        transform.localRotation = localRotation;
         sourceSlot = slot;
         SetPhysicsEnabled(false);
         SetCollidersEnabled(true);
