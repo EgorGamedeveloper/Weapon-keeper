@@ -15,11 +15,15 @@ public class EquippedItemHolder : MonoBehaviour
     [Tooltip("Дочерний pivot HandPoint для sway/bobbing. HandPoint остаётся неподвижным якорем.")]
     public Transform heldItemVisualRoot;
 
-    [Tooltip("Rigidbody игрока: его скорость используется для bobbing.")]
-    public Rigidbody playerBody;
+    [Tooltip("Контроллер игрока: его горизонтальная скорость используется для покачивания предмета при ходьбе.")]
+    public PlayerCharacterController playerController;
 
     [Tooltip("Контейнер для подобранных, но сейчас не отображаемых физических объектов.")]
     public Transform carriedItemsStorage;
+
+    [Header("Конфиг")]
+    [Tooltip("Если задан — значения покачивания ниже перекрываются из GameConfig при старте.")]
+    public GameConfig config;
 
     [Header("Покачивание от мыши (sway)")]
     public float swayAmount = 4f;
@@ -49,6 +53,20 @@ public class EquippedItemHolder : MonoBehaviour
             EnsureHeldItemVisualRoot();
             return heldItemVisualRoot;
         }
+    }
+
+    private void Awake()
+    {
+        if (config == null) return;
+
+        HeldItemSwaySettings s = config.heldItem;
+        swayAmount = s.swayAmount;
+        swaySmooth = s.swaySmooth;
+        maxSwayAngle = s.maxSwayAngle;
+        bobFrequency = s.bobFrequency;
+        bobAmount = s.bobAmount;
+        bobSmooth = s.bobSmooth;
+        moveThreshold = s.moveThreshold;
     }
 
     private void OnEnable()
@@ -159,13 +177,7 @@ public class EquippedItemHolder : MonoBehaviour
     /// <summary>Лёгкое покачивание позиции предмета в такт шагам игрока.</summary>
     private void ApplyBob()
     {
-        float speed = 0f;
-        if (playerBody != null)
-        {
-            Vector3 horizontalVelocity = playerBody.linearVelocity;
-            horizontalVelocity.y = 0f;
-            speed = horizontalVelocity.magnitude;
-        }
+        float speed = playerController != null ? playerController.HorizontalSpeed : 0f;
 
         if (speed > moveThreshold)
         {

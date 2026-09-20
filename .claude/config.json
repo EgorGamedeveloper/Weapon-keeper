@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "mcpServers": {
+    "unity": {
+      "command": "npx",
+      "args": ["-y", "@coplay/unity-mcp"],
+      "env": {
+        "UNITY_PROJECT_PATH": "/Users/macbook/Unity Projects/Weapon keeper"
+      }
+    }
+  }
+}

@@ -24,6 +24,15 @@ public static class GhostPreviewUtility
         foreach (var col in ghost.GetComponentsInChildren<Collider>())
             col.enabled = false;
 
+        // worldPrefab — это полноценный подбираемый префаб (WorldItem сам добавляет себе
+        // Rigidbody в Awake), поэтому призраку обязательно глушим физику: иначе он
+        // отвязывается от родителя и падает под гравитацией.
+        foreach (var body in ghost.GetComponentsInChildren<Rigidbody>())
+        {
+            body.isKinematic = true;
+            body.detectCollisions = false;
+        }
+
         foreach (var rend in ghost.GetComponentsInChildren<Renderer>())
         {
             Material[] sourceMats = rend.materials;

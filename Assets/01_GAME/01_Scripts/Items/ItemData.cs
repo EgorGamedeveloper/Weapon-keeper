@@ -8,6 +8,11 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "NewItem", menuName = "Inventory/Item Data", order = 0)]
 public class ItemData : ScriptableObject
 {
+    [Header("Идентификация")]
+    [Tooltip("Стабильный id для сохранений (например ammobox_556). Заполняется автоматически из имени ассета. " +
+             "После выхода игры менять НЕЛЬЗЯ — сейвы игроков перестанут находить предмет.")]
+    public string itemId;
+
     [Header("Основная информация")]
     public string itemName = "Новый предмет";
 
@@ -50,4 +55,22 @@ public class ItemData : ScriptableObject
     [Header("Инструмент (разбор Breakable)")]
     [Tooltip("Инструмент для разбора Breakable-объектов (например, лом). Не оружие — weaponPrefab не участвует.")]
     public bool canBreakObjects = false;
+
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (!string.IsNullOrEmpty(itemId)) return;
+
+        // Автозаполнение один раз, из имени ассета: Item_AmmoBox_556 -> ammobox_556.
+        // Дальше id живёт отдельно от имени — переименование ассета его не трогает,
+        // иначе у игроков поехали бы сейвы.
+        string source = name.StartsWith("Item_") ? name.Substring("Item_".Length) : name;
+        var builder = new System.Text.StringBuilder(source.Length);
+        foreach (char c in source.ToLowerInvariant())
+            builder.Append(char.IsLetterOrDigit(c) ? c : '_');
+
+        itemId = builder.ToString();
+        UnityEditor.EditorUtility.SetDirty(this);
+    }
+#endif
 }

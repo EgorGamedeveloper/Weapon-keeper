@@ -31,8 +31,6 @@ public class ShelfSlot : MonoBehaviour, IPlaceableSlot
 
     private GameObject ghostInstance;
     private ItemData ghostItem;
-    private GameObject placedInstance;
-    private WorldItem placedWorldItem;
 
     public bool IsEmpty => currentItem == null;
 
@@ -59,22 +57,33 @@ public class ShelfSlot : MonoBehaviour, IPlaceableSlot
     {
         if (!CanAccept(item) || item.worldPrefab == null) return;
 
-        if (ghostInstance != null && ghostItem == item) return; // уже показан этот же предмет
-        HideGhost();
+        // Пока предмет тот же — переиспользуем готовый призрак. PlayerItemInteraction дёргает
+        // Hide/Show каждый кадр, и пересоздание с клонированием материалов на каждый кадр
+        // наведения — это мусор в GC на ровном месте. Позицию обновляем: стопка могла подрасти.
+        if (ghostInstance != null && ghostItem == item)
+        {
+            ghostInstance.transform.localPosition = GetNextPlacementLocalPosition();
+            ghostInstance.SetActive(true);
+            return;
+        }
 
+        DestroyGhost();
         ghostInstance = GhostPreviewUtility.Create(item, transform, GetNextPlacementLocalPosition(), Quaternion.identity);
         ghostItem = item;
     }
 
-    /// <summary>Скрыть призрак предмета.</summary>
+    /// <summary>Скрыть призрак: экземпляр остаётся, чтобы не пересоздавать его каждый кадр.</summary>
     public void HideGhost()
     {
-        if (ghostInstance != null)
-        {
-            Destroy(ghostInstance);
-            ghostInstance = null;
-            ghostItem = null;
-        }
+        if (ghostInstance != null) ghostInstance.SetActive(false);
+    }
+
+    private void DestroyGhost()
+    {
+        if (ghostInstance == null) return;
+        Destroy(ghostInstance);
+        ghostInstance = null;
+        ghostItem = null;
     }
 
      /// <summary>Поставить существующий физический предмет в ячейку (наверх стопки для isStackSlot).</summary>
@@ -88,8 +97,6 @@ public class ShelfSlot : MonoBehaviour, IPlaceableSlot
 
         placedItems.Add(worldItem);              // ← стопка теперь реально растёт
         currentItem = worldItem.itemData;
-        placedWorldItem = worldItem;
-        placedInstance = worldItem.gameObject;
 
         worldItem.PlaceOnShelf(transform, this, localPos, Quaternion.identity);
 

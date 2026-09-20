@@ -23,6 +23,10 @@ public class InventoryEntry
 /// </summary>
 public class InventorySystem : MonoBehaviour
 {
+    [Header("Конфиг")]
+    [Tooltip("Если задан — вместимость и инверсия колеса берутся из GameConfig при старте.")]
+    public GameConfig config;
+
     [Header("Ограничения")]
     [Tooltip("Максимальное общее число физических предметов в tidy-up инвентаре. Увеличивайте при прогрессии игрока.")]
     [Min(1)] public int maxItemCount = 5;
@@ -46,6 +50,12 @@ public class InventorySystem : MonoBehaviour
     private void Awake()
     {
         if (entries == null) entries = new System.Collections.Generic.List<InventoryEntry>();
+
+        if (config != null)
+        {
+            maxItemCount = config.tidyUpInventory.maxItemCount;
+            invertScroll = config.tidyUpInventory.invertScroll;
+        }
     }
 
     private void Update()

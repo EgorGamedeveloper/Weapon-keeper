@@ -62,21 +62,31 @@ public class RepairPoint : MonoBehaviour, IPlaceableSlot
     public void ShowGhost(ItemData item)
     {
         if (!CanAccept(item) || item.worldPrefab == null) return;
-        if (ghostInstance != null && ghostItem == item) return;
-        HideGhost();
 
+        // Как и в ShelfSlot: призрак переиспользуется, пока предмет тот же — иначе он
+        // пересоздавался бы каждый кадр наведения (см. комментарий там).
+        if (ghostInstance != null && ghostItem == item)
+        {
+            ghostInstance.SetActive(true);
+            return;
+        }
+
+        DestroyGhost();
         ghostInstance = GhostPreviewUtility.Create(item, transform, Vector3.zero, Quaternion.identity);
         ghostItem = item;
     }
 
     public void HideGhost()
     {
-        if (ghostInstance != null)
-        {
-            Destroy(ghostInstance);
-            ghostInstance = null;
-            ghostItem = null;
-        }
+        if (ghostInstance != null) ghostInstance.SetActive(false);
+    }
+
+    private void DestroyGhost()
+    {
+        if (ghostInstance == null) return;
+        Destroy(ghostInstance);
+        ghostInstance = null;
+        ghostItem = null;
     }
 
     public void PlaceItem(WorldItem worldItem)

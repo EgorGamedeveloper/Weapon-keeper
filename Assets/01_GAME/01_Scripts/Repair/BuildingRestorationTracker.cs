@@ -14,6 +14,9 @@ public class BuildingRestorationTracker : MonoBehaviour
     /// будущим несвязанным системам (UI, магазин, терминал) нужно читать текущий % без цепочки ссылок.</summary>
     public static BuildingRestorationTracker Instance { get; private set; }
 
+    [Tooltip("Если задан — пороги берутся из GameConfig при старте.")]
+    public GameConfig config;
+
     [Tooltip("Пороги в процентах, на которых поднимается OnThresholdReached (например 25, 50, 75, 100).")]
     [SerializeField] private float[] thresholds = { 25f, 50f, 75f, 100f };
 
@@ -39,6 +42,9 @@ public class BuildingRestorationTracker : MonoBehaviour
     {
         Instance = this;
 
+        if (config != null && config.restoration.thresholds != null && config.restoration.thresholds.Length > 0)
+            thresholds = config.restoration.thresholds;
+
         repairPoints.AddRange(FindObjectsByType<RepairPoint>(FindObjectsSortMode.None));
         stains.AddRange(FindObjectsByType<CleanableStain>(FindObjectsSortMode.None));
 
@@ -55,6 +61,13 @@ public class BuildingRestorationTracker : MonoBehaviour
             stain.OnCleaned += HandleStainDone;
             if (stain.IsClean) RepairedCount++;
         }
+
+        // Пороги, уже перекрытые стартовым состоянием сцены (часть точек починена изначально
+        // или восстановлена из сейва), считаем отработанными — иначе первая же починка
+        // выстрелит их все разом, как будто игрок прошёл их прямо сейчас.
+        float startPercent = ProgressPercent;
+        foreach (float threshold in thresholds)
+            if (startPercent >= threshold) firedThresholds.Add(threshold);
     }
 
     private void OnDestroy()

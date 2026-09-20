@@ -22,8 +22,12 @@ public class PlayerItemInteraction : MonoBehaviour
     [Tooltip("Опционально: вне режима TidyUp (оружие или лом в руках) выбросить предмет из tidy-up нельзя — его не видно.")]
     public PlayerInventoryModeController modeController;
 
+    [Header("Конфиг")]
+    [Tooltip("Если задан — значения ниже перекрываются из GameConfig при старте. Пусто — работаем на значениях инспектора.")]
+    public GameConfig config;
+
     [Header("Настройки луча")]
-    [Tooltip("Слои, по которым бьёт луч (предметы и ячейки полок).")]
+    [Tooltip("Слои, по которым бьёт луч (предметы и ячейки полок). Не из конфига: зависит от разметки слоёв сцены.")]
     public LayerMask interactableLayers = ~0;
 
     [Tooltip("Максимальная дистанция, на которой можно подобрать предмет.")]
@@ -54,6 +58,19 @@ public class PlayerItemInteraction : MonoBehaviour
     /// currentHighlighted при успехе, и если читать его позже, блокировка стрельбы снималась бы
     /// в тот же кадр, что и клик.</summary>
     public bool IsAimingAtInteractable => aimingAtInteractableThisFrame;
+
+    private void Awake()
+    {
+        if (config == null) return;
+
+        InteractionSettings s = config.interaction;
+        pickupRange = s.pickupRange;
+        shelfInteractRange = s.shelfInteractRange;
+        toolInteractRange = s.toolInteractRange;
+        pickupAnimationSpeed = s.pickupAnimationSpeed;
+        dropDistance = s.dropDistance;
+        dropSpeed = s.dropSpeed;
+    }
 
     private void Update()
     {

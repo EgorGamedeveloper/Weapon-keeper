@@ -7,6 +7,9 @@ public class PlayerInventoryModeController : MonoBehaviour
 {
     public enum InventoryMode { TidyUp, Equipment }
 
+    [Tooltip("Если задан — клавиши ниже перекрываются из GameConfig при старте.")]
+    public GameConfig config;
+
     public InventorySystem tidyUpInventory;
     public EquipmentInventory equipmentInventory;
     public EquippedItemHolder tidyUpHolder;
@@ -21,6 +24,13 @@ public class PlayerInventoryModeController : MonoBehaviour
 
     private void Awake()
     {
+        if (config != null)
+        {
+            tidyUpKey = config.input.tidyUpKey;
+            equipmentKey = config.input.equipmentKey;
+            equipKey = config.input.equipKey;
+        }
+
         if (equipmentStorage == null)
         {
             GameObject storage = new GameObject("EquipmentStorage");

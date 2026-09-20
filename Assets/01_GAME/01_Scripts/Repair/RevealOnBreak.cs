@@ -15,7 +15,13 @@ public class RevealOnBreak : MonoBehaviour
 
     private void OnEnable()
     {
-        if (board != null) board.OnBroken += HandleBroken;
+        if (board == null) return;
+        board.OnBroken += HandleBroken;
+
+        // Доска могла быть сломана до того, как мы включились (в том числе восстановлена
+        // из сейва) — перечитываем состояние, а не ждём события, которого уже не будет.
+        // По аналогии с LightsActivator, который так же перечитывает wiringPoint.IsRepaired.
+        if (board.IsBroken) ApplyRevealed();
     }
 
     private void OnDisable()
@@ -23,7 +29,9 @@ public class RevealOnBreak : MonoBehaviour
         if (board != null) board.OnBroken -= HandleBroken;
     }
 
-    private void HandleBroken(Breakable broken)
+    private void HandleBroken(Breakable broken) => ApplyRevealed();
+
+    private void ApplyRevealed()
     {
         foreach (var go in revealOnBreak)
             if (go != null) go.SetActive(true);
