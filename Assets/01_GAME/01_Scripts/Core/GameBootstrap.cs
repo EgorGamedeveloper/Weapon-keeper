@@ -32,6 +32,9 @@ public class GameBootstrap : MonoBehaviour
     /// <summary>Сейв, прочитанный и проверенный в ContinueGame; забирается SaveLoadService.</summary>
     private SaveGameData pendingSave;
 
+    /// <summary>Сцена меню — та, в которой лежит бутстрап (запоминается до DontDestroyOnLoad).</summary>
+    private string menuSceneName;
+
     private void Awake()
     {
         if (active != null && active != this)
@@ -41,6 +44,7 @@ public class GameBootstrap : MonoBehaviour
         }
 
         active = this;
+        menuSceneName = gameObject.scene.name;
         DontDestroyOnLoad(gameObject);
     }
 
@@ -86,6 +90,30 @@ public class GameBootstrap : MonoBehaviour
             : gameplaySceneName;
         SceneManager.LoadScene(sceneName);
         return true;
+    }
+
+    /// <summary>
+    /// Выйти из уровня в главное меню (меню паузы). Прогресс сохраняется тем же SaveLoadService.SaveNow, что
+    /// и автосейв при закрытии игры (без Bootstrap сохранение выключено — это делает сам SaveLoadService).
+    ///
+    /// Сцена меню содержит свой GameBootstrap, поэтому этот уходит: иначе новый уничтожил бы себя как
+    /// дубликат, а кнопки меню остались бы со ссылкой на него. Уничтожение отложено до конца кадра, а
+    /// загрузка сцены — до следующего, так что меню встретит уже нового, живого бутстрапа.
+    /// </summary>
+    public void ReturnToMainMenu()
+    {
+        SaveLoadService saveLoad = FindAnyObjectByType<SaveLoadService>();
+        if (saveLoad != null) saveLoad.SaveNow();
+
+        LoadSaveOnStart = false;
+        pendingSave = null;
+        if (active == this) active = null;
+
+        if (!string.IsNullOrEmpty(menuSceneName) && Application.CanStreamedLevelBeLoaded(menuSceneName))
+            SceneManager.LoadScene(menuSceneName);
+        else
+            SceneManager.LoadScene(0);
+        Destroy(gameObject);
     }
 
     /// <summary>Отдать сейв, прочитанный в ContinueGame (один раз — повторный вызов вернёт null).</summary>

@@ -10,3 +10,96 @@ common.close,Закрыть,Close
 common.apply,Применить,Apply
 common.on,Вкл,On
 common.off,Выкл,Off
+# Главное меню,,
+menu.settings,Настройки,Settings
+# Окно настроек,,
+settings.title,Настройки,Settings
+settings.tab.graphics,Графика,Graphics
+settings.tab.controls,Управление,Controls
+settings.tab.audio,Звук,Audio
+settings.tab.game,Игра,Game
+settings.reset,По умолчанию,Defaults
+settings.section.display,Экран,Display
+settings.section.quality,Качество,Quality
+settings.section.image,Изображение,Image
+settings.section.mouse,Мышь,Mouse
+settings.section.camera,Камера,Camera
+settings.graphics.resolution,Разрешение,Resolution
+settings.graphics.window_mode,Режим окна,Window mode
+settings.graphics.vsync,Вертикальная синхронизация,V-Sync
+settings.graphics.fps_limit,Ограничение FPS,Frame rate limit
+settings.graphics.quality,Пресет качества,Quality preset
+settings.graphics.render_scale,Масштаб рендеринга,Render scale
+settings.graphics.antialiasing,Сглаживание,Anti-aliasing
+settings.graphics.aa_quality,Качество сглаживания,Anti-aliasing quality
+settings.graphics.msaa,MSAA,MSAA
+settings.graphics.shadows,Тени,Shadows
+settings.graphics.shadow_distance,Дальность теней,Shadow distance
+settings.graphics.fov,Поле зрения,Field of view
+settings.graphics.brightness,Яркость,Brightness
+settings.graphics.bloom,Свечение (Bloom),Bloom
+settings.graphics.motion_blur,Размытие в движении,Motion blur
+settings.window_mode.exclusive,Полный экран,Fullscreen
+settings.window_mode.borderless,Окно без рамки,Borderless window
+settings.window_mode.windowed,В окне,Windowed
+settings.aa.off,Выкл,Off
+settings.aa.fxaa,FXAA (быстрое),FXAA (fast)
+settings.aa.smaa,SMAA,SMAA
+settings.aa.taa,TAA (временное),TAA (temporal)
+settings.level.low,Низкое,Low
+settings.level.medium,Среднее,Medium
+settings.level.high,Высокое,High
+settings.fps.unlimited,Без ограничения,Unlimited
+settings.unit.meters,{0:0} м,{0:0} m
+settings.unit.degrees,{0:0}°,{0:0}°
+settings.unit.seconds,{0:0.00} с,{0:0.00} s
+settings.quality.fastest,Самое быстрое,Fastest
+settings.quality.fast,Быстрое,Fast
+settings.quality.simple,Простое,Simple
+settings.quality.good,Хорошее,Good
+settings.quality.beautiful,Красивое,Beautiful
+settings.quality.fantastic,Максимальное,Fantastic
+settings.quality.very_low,Очень низкое,Very Low
+settings.quality.low,Низкое,Low
+settings.quality.medium,Среднее,Medium
+settings.quality.high,Высокое,High
+settings.quality.very_high,Очень высокое,Very High
+settings.quality.ultra,Ультра,Ultra
+settings.quality.performant,Производительность,Performant
+settings.quality.balanced,Баланс,Balanced
+settings.quality.high_fidelity,Высокое качество,High Fidelity
+settings.controls.sensitivity,Чувствительность мыши,Mouse sensitivity
+settings.controls.separate_y,Отдельно по вертикали,Separate vertical sensitivity
+settings.controls.sensitivity_y,Чувствительность по вертикали,Vertical sensitivity
+settings.controls.invert_y,Инверсия оси Y,Invert Y axis
+settings.controls.smoothing,Сглаживание мыши,Mouse smoothing
+settings.controls.head_bob,Покачивание камеры,Camera bobbing
+settings.audio.master,Общая громкость,Master volume
+settings.audio.music,Музыка,Music
+settings.audio.sfx,Эффекты,Sound effects
+settings.audio.ui,Интерфейс,Interface
+settings.audio.ambience,Окружение,Ambience
+settings.audio.background,Звук в фоне,Play audio in background
+settings.game.language,Язык,Language
+settings.game.hints,Подсказки,Hints
+settings.unsaved.title,Несохранённые изменения,Unsaved changes
+settings.unsaved.message,Применить изменения перед выходом?,Apply your changes before leaving?
+settings.unsaved.discard,Не сохранять,Discard
+settings.display.title,Оставить настройки экрана?,Keep these display settings?
+settings.display.message,Изображение в порядке? Без подтверждения прежние настройки вернутся через {0} с.,Does everything look right? The previous settings will be restored in {0} s.
+settings.display.keep,Оставить,Keep
+settings.display.revert,Вернуть,Revert
+# Меню паузы,,
+pause.title,Пауза,Paused
+pause.resume,Продолжить,Resume
+pause.settings,Настройки,Settings
+pause.achievements,Достижения,Achievements
+pause.main_menu,Выйти в главное меню,Main menu
+pause.quit,Выйти из игры,Quit game
+pause.to_menu.title,Выйти в главное меню?,Return to the main menu?
+pause.to_menu.message,Прогресс будет сохранён.,Your progress will be saved.
+pause.to_menu.message_no_save,"Сцена запущена без главного меню (Bootstrap), поэтому сохранение выключено: прогресс этой сессии не сохранится.","The scene was started without the main menu (Bootstrap), so saving is disabled: progress from this session will be lost."
+pause.to_menu.confirm,Выйти в меню,Leave
+pause.quit.title,Выйти из игры?,Quit the game?
+pause.quit.message,Прогресс сохранится автоматически.,Your progress will be saved automatically.
+pause.quit.confirm,Выйти,Quit

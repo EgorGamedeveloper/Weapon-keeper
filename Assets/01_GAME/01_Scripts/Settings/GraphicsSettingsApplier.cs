@@ -97,7 +97,7 @@ public static class GraphicsSettingsApplier
     /// сцене есть игрок (камеру меню не трогаем).</summary>
     public static void ApplyCameras(GameSettingsData settings)
     {
-        bool hasPlayer = Object.FindFirstObjectByType<PlayerCharacterController>() != null;
+        bool hasPlayer = Object.FindAnyObjectByType<PlayerCharacterController>() != null;
         AntialiasingMode mode = ToUrpMode(settings.postAntialiasing);
         var quality = (AntialiasingQuality)Mathf.Clamp(settings.antialiasingQuality, 0, 2);
         TemporalAAQuality taaQuality = ToTaaQuality(settings.antialiasingQuality);

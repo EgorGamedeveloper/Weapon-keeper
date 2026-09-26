@@ -18,6 +18,13 @@ public class MainMenuUI : MonoBehaviour
     [Tooltip("Кнопка «Выход».")]
     public Button quitButton;
 
+    [Header("Настройки")]
+    [Tooltip("Кнопка «Настройки». Пусто — кнопки нет.")]
+    public Button settingsButton;
+
+    [Tooltip("Окно настроек в сцене меню.")]
+    public SettingsWindow settingsWindow;
+
     [Header("Кнопка «Продолжить»: явный серый, когда сейва нет")]
     [Tooltip("Стандартный ColorBlock.disabledColor тонирует УМНОЖЕНИЕМ поверх обычного цвета кнопки — " +
              "на тёмном фоне разница почти не видна. Красим фон кнопки напрямую, а не полагаемся на него.")]
@@ -58,6 +65,7 @@ public class MainMenuUI : MonoBehaviour
 
         if (newGameButton != null) newGameButton.onClick.AddListener(HandleNewGame);
         if (quitButton != null) quitButton.onClick.AddListener(HandleQuit);
+        if (settingsButton != null) settingsButton.onClick.AddListener(HandleSettings);
 
         if (confirmNewGamePanel != null) confirmNewGamePanel.SetActive(false);
         if (confirmYesButton != null) confirmYesButton.onClick.AddListener(HandleConfirmNewGame);
@@ -69,6 +77,7 @@ public class MainMenuUI : MonoBehaviour
         if (newGameButton != null) newGameButton.onClick.RemoveListener(HandleNewGame);
         if (continueButton != null) continueButton.onClick.RemoveListener(HandleContinue);
         if (quitButton != null) quitButton.onClick.RemoveListener(HandleQuit);
+        if (settingsButton != null) settingsButton.onClick.RemoveListener(HandleSettings);
         if (confirmYesButton != null) confirmYesButton.onClick.RemoveListener(HandleConfirmNewGame);
         if (confirmNoButton != null) confirmNoButton.onClick.RemoveListener(HandleCancelNewGame);
     }
@@ -108,6 +117,11 @@ public class MainMenuUI : MonoBehaviour
         // Сейв битый или из более новой версии игры — уровень не грузится, кнопка гаснет.
         if (bootstrap != null && !bootstrap.ContinueGame() && continueButton != null)
             SetContinueAvailable(false);
+    }
+
+    private void HandleSettings()
+    {
+        if (settingsWindow != null) settingsWindow.Open();
     }
 
     private void HandleQuit()

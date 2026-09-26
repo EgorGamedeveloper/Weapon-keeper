@@ -22,6 +22,11 @@ public class CursorLockController : MonoBehaviour
     [Tooltip("Клавиша освобождения курсора.")]
     public KeyCode releaseKey = KeyCode.Escape;
 
+    [Header("Пауза")]
+    [Tooltip("Меню паузы сцены. Пока оно открыто, клик по его кнопкам не захватывает курсор, а Esc, которым " +
+             "паузу закрыли, не освобождает его снова. Пусто — поведение как без паузы.")]
+    public PauseMenu pauseMenu;
+
     private void Start()
     {
         if (lockOnStart) SetLocked(true);
@@ -29,6 +34,9 @@ public class CursorLockController : MonoBehaviour
 
     private void Update()
     {
+        // Курсором на паузе управляет меню паузы (см. PauseMenu.HandledEscapeThisFrame).
+        if (pauseMenu != null && (pauseMenu.IsOpen || pauseMenu.HandledEscapeThisFrame)) return;
+
         if (Input.GetKeyDown(releaseKey))
         {
             SetLocked(false);
