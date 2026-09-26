@@ -15,7 +15,7 @@ public class DeliveryRowUI : MonoBehaviour
 
     public void Bind(SupplyDelivery delivery)
     {
-        if (title != null) title.text = delivery.box.title.ToUpperInvariant();
+        if (title != null) title.text = delivery.box.DisplayTitle.ToUpperInvariant();
         if (time != null)
         {
             int seconds = Mathf.CeilToInt(Mathf.Max(0f, delivery.remaining));

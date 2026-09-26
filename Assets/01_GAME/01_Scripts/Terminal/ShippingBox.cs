@@ -81,15 +81,15 @@ public class ShippingBox : MonoBehaviour, IPlaceableSlot, IInteractable
 
     // ───────── разбор отменённого заказа (IInteractable) ─────────
 
-    public string InteractTitle => "Коробка заказа";
+    public string InteractTitle => Loc.Get("interact.box.title");
 
     public string InteractHint
     {
         get
         {
             if (service == null) return "";
-            if (service.BoxCancelled) return "ЛКМ — достать предмет (осталось " + service.BoxContents.Count + ")";
-            return service.IsPacked ? "Запечатана — отнесите на крышу в зону отправки" : "Уложите товар по заказу (см. терминал)";
+            if (service.BoxCancelled) return Loc.Get("interact.box.take_item", service.BoxContents.Count);
+            return service.IsPacked ? Loc.Get("interact.box.sealed") : Loc.Get("interact.box.pack");
         }
     }
 

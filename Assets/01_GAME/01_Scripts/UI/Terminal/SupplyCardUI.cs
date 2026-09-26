@@ -35,13 +35,13 @@ public class SupplyCardUI : TerminalHoverItem
     {
         Box = box;
         if (icon != null) { icon.sprite = box.icon; icon.enabled = box.icon != null; }
-        if (title != null) title.text = box.title.ToUpperInvariant();
-        if (description != null) description.text = box.description;
+        if (title != null) title.text = box.DisplayTitle.ToUpperInvariant();
+        if (description != null) description.text = box.DisplayDescription;
         if (price != null) price.text = priceText;
         if (oldPrice != null) { oldPrice.gameObject.SetActive(!string.IsNullOrEmpty(oldPriceText)); oldPrice.text = oldPriceText; }
         if (deliveryTime != null) deliveryTime.text = timeText;
         if (status != null) { status.text = reason; status.color = badColor; }
-        if (buyLabel != null) buyLabel.text = canBuy ? "[ ЗАКАЗАТЬ ]" : "[ НЕДОСТУПНО ]";
+        if (buyLabel != null) buyLabel.text = canBuy ? Loc.Get("terminal.supply.buy") : Loc.Get("terminal.supply.unavailable");
         if (buyBackground != null) buyBackground.color = canBuy ? new Color(okColor.r, okColor.g, okColor.b, 0.25f) : new Color(1f, 1f, 1f, 0.05f);
         if (buyLabel != null) buyLabel.color = canBuy ? okColor : new Color(okColor.r, okColor.g, okColor.b, 0.35f);
     }

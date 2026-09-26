@@ -23,6 +23,7 @@ public class QuestHudUI : MonoBehaviour
     private readonly Dictionary<QuestProgress, QuestRowUI> rows = new Dictionary<QuestProgress, QuestRowUI>();
 
     private Image background;
+    private LocalizationService localization;
 
     private void Awake()
     {
@@ -53,10 +54,17 @@ public class QuestHudUI : MonoBehaviour
             HandleQuestStarted(progress);
 
         RefreshBackground();
+
+        // Язык сменили в настройках — названия квестов на экране перерисовываются сразу.
+        localization = LocalizationService.Instance;
+        if (localization != null) localization.OnLanguageChanged += HandleLanguageChanged;
     }
 
     private void OnDisable()
     {
+        if (localization != null) localization.OnLanguageChanged -= HandleLanguageChanged;
+        localization = null;
+
         if (questManager == null) return;
 
         questManager.OnQuestStarted -= HandleQuestStarted;
@@ -73,6 +81,12 @@ public class QuestHudUI : MonoBehaviour
         row.Bind(progress);
         rows[progress] = row;
         RefreshBackground();
+    }
+
+    private void HandleLanguageChanged()
+    {
+        foreach (var pair in rows)
+            if (pair.Value != null) pair.Value.Bind(pair.Key);
     }
 
     private void HandleQuestProgressChanged(QuestProgress progress)

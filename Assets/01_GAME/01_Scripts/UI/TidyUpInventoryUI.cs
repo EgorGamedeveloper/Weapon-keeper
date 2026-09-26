@@ -28,14 +28,23 @@ public class TidyUpInventoryUI : MonoBehaviour
         inventory.OnInventoryChanged += Refresh;
         inventory.OnActiveSlotChanged += HandleSelectionChanged;
         Refresh();
+
+        // Язык сменили в настройках — названия предметов перерисовываются сразу.
+        localization = LocalizationService.Instance;
+        if (localization != null) localization.OnLanguageChanged += Refresh;
     }
 
     private void OnDisable()
     {
+        if (localization != null) localization.OnLanguageChanged -= Refresh;
+        localization = null;
+
         if (inventory == null) return;
         inventory.OnInventoryChanged -= Refresh;
         inventory.OnActiveSlotChanged -= HandleSelectionChanged;
     }
+
+    private LocalizationService localization;
 
     private void HandleSelectionChanged(int _) => Refresh();
 

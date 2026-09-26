@@ -13,7 +13,10 @@ using UnityEngine.UI;
 /// Инструменты локализации (меню Tools/Weapon Keeper/Localization):
 /// - Extract Texts From Open Scene — тексты открытых сцен без LocalizedText уходят в strings.csv
 ///   (ключ scene.путь_к_объекту, текущий текст — в столбец ru, en пустой), на объект вешается LocalizedText;
-/// - Validate — пустые ячейки, повторы ключей, ключи из сцен/префабов/данных/кода, которых нет в таблице;
+/// - Export Data Texts — названия и описания из ассетов данных (предметы, квесты, навыки, ящики, заказы) —
+///   в strings.csv, ключи из id ассетов;
+/// - Validate — пустые ячейки, готовность языков, повторы ключей, ключи из сцен/префабов/данных/кода,
+///   которых нет в таблице, невыгруженные тексты данных;
 /// - Check Font — есть ли в шрифте TMP по умолчанию (с запасными) все символы таблицы;
 /// - Reload Strings — перечитать таблицу в Play Mode после правки CSV.
 ///
@@ -28,7 +31,7 @@ public static class LocalizationEditorTools
     // Префиксы ключей, которые код передаёт строковыми литералами (Loc.Get("settings.title") и т.п.) —
     // по ним Validate ищет в .cs ключи, которых нет в таблице.
     private static readonly Regex CodeKeyPattern =
-        new Regex("\"((?:settings|pause|ach|achievements|menu|common|dialog|toast|lang|debug)\\.[a-z0-9_.]+)\"");
+        new Regex("\"((?:settings|pause|ach|achievements|menu|common|dialog|toast|lang|debug|skills|terminal|hud|interact)\\.[a-z0-9_.]+)\"");
 
     // ───────────────────────── Extract ─────────────────────────
 
@@ -116,10 +119,17 @@ public static class LocalizationEditorTools
                                                    "и сохраните сцену.", "OK");
     }
 
-    /// <summary>Тексты, на которые ссылаются поля скриптов игры, — их содержимое задаёт код.</summary>
+    /// <summary>
+    /// Тексты, содержимое которых задаёт код: на них ссылается поле скрипта игры, и исходник этого скрипта
+    /// пишет в поле текст (field.text = ..., SetText(field ...), передаёт поле в метод). Надпись, которую код
+    /// только показывает и прячет (field.gameObject.SetActive — «Нет доставок» в терминале), остаётся
+    /// статичной — её экстрактор переводит. Если исходник скрипта не нашёлся, текст на всякий случай
+    /// считается кодовым.
+    /// </summary>
     private static HashSet<Component> CollectCodeDrivenTexts()
     {
         var result = new HashSet<Component>();
+        var sources = new Dictionary<System.Type, string>();
         foreach (GameObject root in EnumerateSceneRoots())
         {
             foreach (MonoBehaviour behaviour in root.GetComponentsInChildren<MonoBehaviour>(true))
@@ -127,6 +137,7 @@ public static class LocalizationEditorTools
                 if (behaviour == null || behaviour is LocalizedText) continue;
                 if (behaviour.GetType().Assembly.GetName().Name != "Assembly-CSharp") continue;
 
+                string source = GetSourceChain(behaviour.GetType(), sources);
                 var serialized = new SerializedObject(behaviour);
                 SerializedProperty property = serialized.GetIterator();
                 bool enterChildren = true;
@@ -134,12 +145,56 @@ public static class LocalizationEditorTools
                 {
                     enterChildren = property.propertyType != SerializedPropertyType.String;
                     if (property.propertyType != SerializedPropertyType.ObjectReference) continue;
-                    if (property.objectReferenceValue is TMP_Text tmp) result.Add(tmp);
-                    else if (property.objectReferenceValue is Text legacy) result.Add(legacy);
+
+                    Component text = property.objectReferenceValue as TMP_Text;
+                    if (text == null) text = property.objectReferenceValue as Text;
+                    if (text == null) continue;
+
+                    string field = property.propertyPath.Split('.')[0];
+                    if (source == null || WritesText(source, field)) result.Add(text);
                 }
             }
         }
         return result;
+    }
+
+    /// <summary>Исходники класса и его базовых классов из Assembly-CSharp (null — какой-то не нашёлся).</summary>
+    private static string GetSourceChain(System.Type type, Dictionary<System.Type, string> cache)
+    {
+        if (cache.TryGetValue(type, out string cached)) return cached;
+
+        var builder = new StringBuilder();
+        for (System.Type current = type; current != null && current.Assembly == type.Assembly; current = current.BaseType)
+        {
+            string text = null;
+            foreach (string guid in AssetDatabase.FindAssets(current.Name + " t:MonoScript"))
+            {
+                var script = AssetDatabase.LoadAssetAtPath<MonoScript>(AssetDatabase.GUIDToAssetPath(guid));
+                if (script == null || script.GetClass() != current) continue;
+                text = script.text;
+                break;
+            }
+
+            if (text == null)
+            {
+                builder = null;
+                break;
+            }
+            builder.Append(text).Append('\n');
+        }
+
+        string result = builder?.ToString();
+        cache[type] = result;
+        return result;
+    }
+
+    /// <summary>Пишет ли код в текст поля: field.text = / field.SetText( / SetText(field / field передаётся
+    /// аргументом метода (Bind(title, ...), SetText(label, ...)).</summary>
+    private static bool WritesText(string source, string field)
+    {
+        string name = Regex.Escape(field);
+        return Regex.IsMatch(source, @"\b" + name + @"\s*(\[[^\]]*\])?\s*\.\s*(text\s*\+?=[^=]|SetText\s*\()")
+               || Regex.IsMatch(source, @"[(,]\s*" + name + @"\s*[,)]");
     }
 
     // ───────────────────────── Validate ─────────────────────────
@@ -166,17 +221,26 @@ public static class LocalizationEditorTools
             problems++;
         }
 
-        // Пустые ячейки по языкам.
+        // Заполненность по языкам. Пустые ru/en — ошибки (это базовые языки игры); у остальных языков пустая
+        // ячейка — ещё не переведено (в игре покажется английский), это только процент готовности.
+        var completion = new StringBuilder();
         for (int column = 1; column < table.ColumnCount; column++)
         {
             var empty = new List<string>();
             foreach (string[] row in table.Rows)
-                if (column >= row.Length || string.IsNullOrWhiteSpace(row[column])) empty.Add(row[0]);
+                if (string.IsNullOrWhiteSpace(row[column])) empty.Add(row[0]);
 
+            string language = table.Header[column].Trim();
+            int filled = table.Rows.Count - empty.Count;
+            int percent = table.Rows.Count > 0 ? filled * 100 / table.Rows.Count : 100;
+            completion.Append($"{language}: {filled}/{table.Rows.Count} ({percent}%)\n");
             if (empty.Count == 0) continue;
-            problems += empty.Count;
-            report.Append($"• Пустые ячейки «{table.Header[column]}» ({empty.Count}): ")
-                  .Append(string.Join(", ", empty)).Append('\n');
+
+            string code = GameLanguages.ColumnToSteamCode(language);
+            bool required = code == GameLanguages.Russian || code == GameLanguages.English;
+            if (required) problems += empty.Count;
+            report.Append(required ? "• Пустые ячейки «" : "• Не переведено на «").Append(language)
+                  .Append($"» ({empty.Count}): ").Append(string.Join(", ", empty)).Append('\n');
         }
 
         // Ключи, которые где-то используются, но которых нет в таблице.
@@ -191,15 +255,33 @@ public static class LocalizationEditorTools
             report.Append($"• Ключи, которых нет в таблице ({missing.Count}):\n    ").Append(string.Join("\n    ", missing)).Append('\n');
         }
 
-        string text = problems == 0
-            ? $"strings.csv в порядке: {table.Rows.Count} ключей, языки: {string.Join(", ", table.LanguageColumns())}."
-            : $"Найдено проблем: {problems}.\n\n{report}";
+        // Тексты данных (предметы, квесты...), которые ещё не выгружены.
+        var dataProblems = new List<string>();
+        var notExported = new List<string>();
+        foreach (DataText dataText in CollectDataTexts(dataProblems))
+            if (!keySet.Contains(dataText.key)) notExported.Add($"{dataText.key}  ({dataText.assetPath})");
+
+        if (notExported.Count > 0)
+        {
+            problems += notExported.Count;
+            report.Append($"• Тексты данных не выгружены ({notExported.Count}) — Localization/Export Data Texts:\n    ")
+                  .Append(string.Join("\n    ", notExported)).Append('\n');
+        }
+
+        foreach (string problem in dataProblems)
+        {
+            problems++;
+            report.Append("• ").Append(problem).Append('\n');
+        }
+
+        string header = $"Ключей: {table.Rows.Count}. Готовность языков:\n{completion}";
+        string text = problems == 0 ? "strings.csv в порядке. " + header : $"Найдено проблем: {problems}. {header}\n{report}";
 
         if (problems == 0) Debug.Log("[Localization] " + text);
         else Debug.LogWarning("[Localization] " + text);
 
         EditorUtility.DisplayDialog("Проверка локализации",
-            problems == 0 ? text : $"Найдено проблем: {problems}. Подробности — в консоли.", "OK");
+            problems == 0 ? text : $"Найдено проблем: {problems}. Подробности — в консоли.\n\n{header}", "OK");
     }
 
     /// <summary>Ключи из LocalizedText открытых сцен и префабов игры, из строковых полей *Key у данных
@@ -255,6 +337,195 @@ public static class LocalizationEditorTools
         string extension = Path.GetExtension(literal);
         return extension == ".cfg" || extension == ".sav" || extension == ".csv" || extension == ".json"
                || extension == ".txt" || extension == ".asset" || extension == ".prefab" || extension == ".tmp";
+    }
+
+    // ───────────────────────── Export Data Texts ─────────────────────────
+
+    /// <summary>Один текст данных: ключ таблицы, текст из ассета, раздел таблицы и откуда он.</summary>
+    private readonly struct DataText
+    {
+        public readonly string key;
+        public readonly string value;
+        public readonly string section;
+        public readonly string assetPath;
+
+        public DataText(string key, string value, string section, string assetPath)
+        {
+            this.key = key;
+            this.value = value;
+            this.section = section;
+            this.assetPath = assetPath;
+        }
+    }
+
+    /// <summary>
+    /// Названия и описания из ассетов данных (предметы, квесты, навыки, ветки навыков, ящики, заказы) —
+    /// в strings.csv: ключ из id ассета (как у ItemData.DisplayName и т.п.), текст ассета — в столбец ru,
+    /// остальные языки пустые. Каждый тип данных — в своём разделе таблицы. Уже выгруженные ключи не
+    /// дублируются; если текст в ассете изменился, спрашивает, что считать правильным — ассет или таблицу.
+    /// Повторный запуск безопасен: запускайте после добавления новых предметов/квестов.
+    /// </summary>
+    [MenuItem(MenuRoot + "Export Data Texts")]
+    private static void ExportDataTexts()
+    {
+        StringsTable table = StringsTable.Load(StringsPath);
+        int russianColumn = table.FindLanguageColumn(GameLanguages.Russian);
+        if (russianColumn < 0)
+        {
+            EditorUtility.DisplayDialog("Локализация", $"В {StringsPath} нет столбца ru.", "OK");
+            return;
+        }
+
+        var problems = new List<string>();
+        var added = new List<DataText>();
+        var changed = new List<(DataText text, string tableValue)>();
+        foreach (DataText text in CollectDataTexts(problems))
+        {
+            string[] row = table.FindRow(text.key);
+            if (row == null) added.Add(text);
+            else if (row[russianColumn] != text.value) changed.Add((text, row[russianColumn]));
+        }
+
+        if (problems.Count > 0)
+            Debug.LogWarning("[Localization] Проблемы данных:\n" + string.Join("\n", problems));
+
+        string summary = $"Новых текстов: {added.Count}.\nТекст в ассете не совпадает с ru в таблице: {changed.Count}." +
+                         (problems.Count > 0 ? $"\nПроблем с id: {problems.Count} (подробности — в консоли)." : "");
+        if (added.Count == 0 && changed.Count == 0)
+        {
+            EditorUtility.DisplayDialog("Тексты данных", "Все тексты данных уже в таблице.\n" + summary, "OK");
+            return;
+        }
+
+        bool takeFromAssets = false;
+        if (changed.Count > 0)
+        {
+            var diff = new StringBuilder("[Localization] Текст в ассете ≠ ru в таблице:\n");
+            foreach ((DataText text, string tableValue) in changed)
+                diff.Append(text.key).Append("\n    ассет:   ").Append(text.value.Replace("\n", "\\n"))
+                    .Append("\n    таблица: ").Append(tableValue.Replace("\n", "\\n")).Append('\n');
+            Debug.Log(diff.ToString());
+
+            int choice = EditorUtility.DisplayDialogComplex("Тексты данных",
+                summary + "\n\nДля несовпавших (список — в консоли): взять русский текст из ассетов (переводы " +
+                "этих строк стоит проверить) или оставить таблицу как есть?",
+                "Взять из ассетов", "Отмена", "Оставить таблицу");
+            if (choice == 1) return;
+            takeFromAssets = choice == 0;
+        }
+        else if (!EditorUtility.DisplayDialog("Тексты данных", summary + "\n\nДописать их в strings.csv?", "Дописать", "Отмена"))
+            return;
+
+        foreach (DataText text in added)
+        {
+            var row = new string[table.ColumnCount];
+            row[0] = text.key;
+            row[russianColumn] = text.value;
+            table.AddToSection(text.section, row);
+        }
+
+        if (takeFromAssets)
+            foreach ((DataText text, string _) in changed)
+                table.SetCell(text.key, russianColumn, text.value);
+
+        table.Save();
+        AssetDatabase.ImportAsset(StringsPath, ImportAssetOptions.ForceUpdate);
+
+        var log = new StringBuilder("[Localization] Тексты данных в strings.csv:\n");
+        foreach (DataText text in added) log.Append("+ ").Append(text.key).Append(" = ").Append(text.value.Replace("\n", "\\n")).Append('\n');
+        if (takeFromAssets)
+            foreach ((DataText text, string _) in changed) log.Append("~ ").Append(text.key).Append(" (ru обновлён — проверьте переводы)\n");
+        Debug.Log(log.ToString());
+
+        EditorUtility.DisplayDialog("Тексты данных",
+            $"Добавлено: {added.Count}" + (takeFromAssets ? $", обновлено ru: {changed.Count}" : "") +
+            ".\nВпишите переводы в остальные столбцы strings.csv и проверьте Localization/Validate.", "OK");
+    }
+
+    /// <summary>Все тексты данных игры. Ассеты без id или с повторяющимся id попадают в problems.</summary>
+    private static List<DataText> CollectDataTexts(List<string> problems)
+    {
+        var result = new List<DataText>();
+        var ids = new Dictionary<string, string>();
+
+        foreach ((ItemData item, string path) in LoadAll<ItemData>())
+        {
+            if (!CheckId("item", item.itemId, path, ids, problems)) continue;
+            AddDataText(result, "item", item.itemId, "name", item.itemName, "Данные: предметы", path);
+            AddDataText(result, "item", item.itemId, "desc", item.description, "Данные: предметы", path);
+        }
+
+        foreach ((QuestData quest, string path) in LoadAll<QuestData>())
+        {
+            if (!CheckId("quest", quest.questId, path, ids, problems)) continue;
+            AddDataText(result, "quest", quest.questId, "title", quest.title, "Данные: квесты", path);
+            AddDataText(result, "quest", quest.questId, "desc", quest.description, "Данные: квесты", path);
+        }
+
+        foreach ((SkillBranch branch, string path) in LoadAll<SkillBranch>())
+        {
+            if (!CheckId("skillbranch", branch.LocalizationId, path, ids, problems)) continue;
+            AddDataText(result, "skillbranch", branch.LocalizationId, "name", branch.displayName, "Данные: ветки навыков", path);
+        }
+
+        foreach ((SkillData skill, string path) in LoadAll<SkillData>())
+        {
+            if (!CheckId("skill", skill.skillId, path, ids, problems)) continue;
+            AddDataText(result, "skill", skill.skillId, "title", skill.title, "Данные: навыки", path);
+            AddDataText(result, "skill", skill.skillId, "desc", skill.description, "Данные: навыки", path);
+        }
+
+        foreach ((LootBoxData box, string path) in LoadAll<LootBoxData>())
+        {
+            if (!CheckId("lootbox", box.lootBoxId, path, ids, problems)) continue;
+            AddDataText(result, "lootbox", box.lootBoxId, "title", box.title, "Данные: ящики терминала", path);
+            AddDataText(result, "lootbox", box.lootBoxId, "desc", box.description, "Данные: ящики терминала", path);
+        }
+
+        foreach ((ShippingOrderData order, string path) in LoadAll<ShippingOrderData>())
+        {
+            if (!CheckId("order", order.orderId, path, ids, problems)) continue;
+            AddDataText(result, "order", order.orderId, "customer", order.customer, "Данные: заказы", path);
+            AddDataText(result, "order", order.orderId, "message", order.message, "Данные: заказы", path);
+        }
+
+        return result;
+    }
+
+    private static IEnumerable<(T asset, string path)> LoadAll<T>() where T : ScriptableObject
+    {
+        foreach (string guid in AssetDatabase.FindAssets("t:" + typeof(T).Name, new[] { "Assets/01_GAME" }))
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            var asset = AssetDatabase.LoadAssetAtPath<T>(path);
+            if (asset != null) yield return (asset, path);
+        }
+    }
+
+    private static bool CheckId(string kind, string id, string path, Dictionary<string, string> ids, List<string> problems)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            problems.Add($"{path}: пустой id — тексты не переводятся (заполните id в инспекторе).");
+            return false;
+        }
+
+        string fullId = kind + "." + id.Trim();
+        if (ids.TryGetValue(fullId, out string other))
+        {
+            problems.Add($"{path}: id «{id}» уже занят ассетом {other} — у двух ассетов были бы одни и те же строки.");
+            return false;
+        }
+
+        ids[fullId] = path;
+        return true;
+    }
+
+    private static void AddDataText(List<DataText> result, string kind, string id, string field, string value, string section, string path)
+    {
+        // Пустой текст не выгружаем: в игре и так покажется пустота, а в таблице была бы вечная «пустая ячейка».
+        if (string.IsNullOrWhiteSpace(value)) return;
+        result.Add(new DataText(Loc.DataKey(kind, id, field), value, section, path));
     }
 
     // ───────────────────────── Font ─────────────────────────
@@ -405,13 +676,20 @@ public static class LocalizationEditorTools
         if (PrefabUtility.IsPartOfPrefabInstance(target)) PrefabUtility.RecordPrefabInstancePropertyModifications(target);
     }
 
-    /// <summary>strings.csv как таблица: чтение, добавление строк в конец, запись UTF-8 без BOM.
-    /// Существующие строки файла при записи не переформатируются — новые дописываются в конец.</summary>
+    /// <summary>
+    /// strings.csv как таблица для редакторских инструментов. Разделитель — тот, что в файле (запятая, «;» из
+    /// Excel или табуляция); запись — весь файл заново тем же разделителем, UTF-8 с BOM (без BOM Excel
+    /// открывает кириллицу кракозябрами). Разделы и комментарии («# ...») сохраняются на своих местах; каждая
+    /// строка дополняется пустыми ячейками до числа столбцов заголовка — новый язык достаточно дописать в
+    /// заголовок, ячейки под него появятся у всех строк при следующей записи.
+    /// </summary>
     private class StringsTable
     {
         public List<string> Header { get; private set; } = new List<string>();
+        /// <summary>Строки с ключами (без комментариев и заголовка).</summary>
         public List<string[]> Rows { get; } = new List<string[]>();
         public int ColumnCount => Header.Count;
+        public char Delimiter { get; private set; } = CsvUtility.DefaultDelimiter;
 
         public IEnumerable<string> Keys
         {
@@ -419,34 +697,44 @@ public static class LocalizationEditorTools
         }
 
         private string path;
-        private string originalText = "";
-        private readonly List<string[]> appended = new List<string[]>();
+        // Все строки файла по порядку: заголовок, комментарии, строки с ключами.
+        private readonly List<string[]> lines = new List<string[]>();
 
         public static StringsTable Load(string assetPath)
         {
             var table = new StringsTable { path = assetPath };
             string fullPath = Path.Combine(Directory.GetCurrentDirectory(), assetPath);
-            if (File.Exists(fullPath)) table.originalText = File.ReadAllText(fullPath, Encoding.UTF8);
-            if (table.originalText.Length == 0) table.originalText = "key,ru,en\n";
+            string text = File.Exists(fullPath) ? File.ReadAllText(fullPath, Encoding.UTF8) : "";
+            if (text.Trim().Length == 0) text = "key,ru,en\n";
 
-            List<List<string>> parsed = CsvUtility.Parse(table.originalText);
-            if (parsed.Count > 0) table.Header = parsed[0];
-            for (int i = 1; i < parsed.Count; i++)
+            table.Delimiter = CsvUtility.DetectDelimiter(text);
+            foreach (List<string> parsed in CsvUtility.Parse(text, table.Delimiter)) table.lines.Add(parsed.ToArray());
+            table.Header = new List<string>(table.lines[0]);
+
+            for (int i = 0; i < table.lines.Count; i++)
             {
-                string key = parsed[i][0].Trim();
-                if (key.Length == 0 || key[0] == '#') continue;
-                var row = parsed[i].ToArray();
-                row[0] = key;
-                table.Rows.Add(row);
+                if (table.lines[i].Length < table.ColumnCount)
+                {
+                    string[] padded = table.lines[i];
+                    System.Array.Resize(ref padded, table.ColumnCount);
+                    for (int c = 0; c < padded.Length; c++) padded[c] = padded[c] ?? "";
+                    table.lines[i] = padded;
+                }
+
+                if (i == 0 || IsComment(table.lines[i])) continue;
+                table.lines[i][0] = table.lines[i][0].Trim();
+                table.Rows.Add(table.lines[i]);
             }
             return table;
         }
 
-        public bool HasKey(string key)
+        public bool HasKey(string key) => FindRow(key) != null;
+
+        public string[] FindRow(string key)
         {
             foreach (string[] row in Rows)
-                if (row[0] == key) return true;
-            return false;
+                if (row[0] == key) return row;
+            return null;
         }
 
         public int FindLanguageColumn(string steamCode)
@@ -461,24 +749,63 @@ public static class LocalizationEditorTools
             for (int column = 1; column < Header.Count; column++) yield return Header[column];
         }
 
-        public void AppendRow(string[] row)
+        /// <summary>Добавить строку в конец таблицы.</summary>
+        public void AppendRow(string[] row) => AddToSection(null, row);
+
+        /// <summary>Добавить строку в конец раздела «# section» (раздела нет — он создаётся в конце таблицы).</summary>
+        public void AddToSection(string section, string[] row)
         {
-            for (int i = 0; i < row.Length; i++) row[i] = row[i] ?? "";
-            appended.Add(row);
+            row = Normalize(row);
             Rows.Add(row);
+
+            if (string.IsNullOrEmpty(section))
+            {
+                lines.Add(row);
+                return;
+            }
+
+            string title = "# " + section;
+            int start = lines.FindIndex(line => line[0].Trim() == title);
+            if (start < 0)
+            {
+                string[] comment = Normalize(new[] { title });
+                lines.Add(comment);
+                lines.Add(row);
+                return;
+            }
+
+            int insertAt = start + 1;
+            while (insertAt < lines.Count && !IsComment(lines[insertAt])) insertAt++;
+            lines.Insert(insertAt, row);
+        }
+
+        public void SetCell(string key, int column, string value)
+        {
+            string[] row = FindRow(key);
+            if (row != null && column > 0 && column < row.Length) row[column] = value ?? "";
         }
 
         public void Save()
         {
-            var builder = new StringBuilder(originalText);
-            if (builder.Length > 0 && builder[builder.Length - 1] != '\n') builder.Append('\n');
-            foreach (string[] row in appended) builder.Append(CsvUtility.FormatRow(row)).Append('\n');
+            var builder = new StringBuilder();
+            foreach (string[] line in lines) builder.Append(CsvUtility.FormatRow(line, Delimiter)).Append('\n');
 
             string fullPath = Path.Combine(Directory.GetCurrentDirectory(), path);
             Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
-            File.WriteAllText(fullPath, builder.ToString(), new UTF8Encoding(false));
-            originalText = builder.ToString();
-            appended.Clear();
+            File.WriteAllText(fullPath, builder.ToString(), new UTF8Encoding(true));
+        }
+
+        private string[] Normalize(string[] row)
+        {
+            var result = new string[System.Math.Max(ColumnCount, row.Length)];
+            for (int i = 0; i < result.Length; i++) result[i] = i < row.Length ? row[i] ?? "" : "";
+            return result;
+        }
+
+        private static bool IsComment(string[] line)
+        {
+            string key = line.Length > 0 ? line[0].Trim() : "";
+            return key.Length == 0 || key[0] == '#';
         }
     }
 }

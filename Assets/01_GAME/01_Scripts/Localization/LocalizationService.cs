@@ -173,6 +173,22 @@ public class LocalizationService : MonoBehaviour
         return key;
     }
 
+    /// <summary>
+    /// Строка по ключу на текущем языке, иначе на запасном — без предупреждения, если её нет. Для текстов
+    /// данных (названия предметов, квестов...): пока их не выгрузили в таблицу, показывается текст из ассета.
+    /// </summary>
+    public bool TryGet(string key, out string value)
+    {
+        value = null;
+        if (string.IsNullOrEmpty(key)) return false;
+        EnsureLoaded();
+
+        if (!strings.TryGetValue(key, out string[] values)) return false;
+        if (currentColumn >= 0 && !string.IsNullOrEmpty(values[currentColumn])) value = values[currentColumn];
+        else if (fallbackColumn >= 0 && !string.IsNullOrEmpty(values[fallbackColumn])) value = values[fallbackColumn];
+        return value != null;
+    }
+
     /// <summary>Строка по ключу с подстановкой параметров ({0}, {1:0.0}...) в культуре текущего языка.</summary>
     public string Get(string key, params object[] args)
     {

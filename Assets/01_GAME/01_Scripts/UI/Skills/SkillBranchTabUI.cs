@@ -44,7 +44,7 @@ public class SkillBranchTabUI : MonoBehaviour, IPointerEnterHandler, IPointerExi
     public void Bind(SkillBranch branch)
     {
         Branch = branch;
-        if (label != null) label.text = branch.displayName;
+        if (label != null) label.text = branch.DisplayName;
         if (icon != null) { icon.sprite = branch.icon; icon.enabled = branch.icon != null; }
     }
 

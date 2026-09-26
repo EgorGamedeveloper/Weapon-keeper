@@ -26,8 +26,8 @@ public class TerminalStation : MonoBehaviour, IInteractable
 
     public bool IsPowered => powerSource == null || powerSource.IsRepaired;
 
-    public string InteractTitle => "Терминал";
-    public string InteractHint => IsPowered ? "ЛКМ — открыть терминал" : "Нет питания — почините генератор";
+    public string InteractTitle => Loc.Get("interact.terminal.title");
+    public string InteractHint => IsPowered ? Loc.Get("interact.terminal.open") : Loc.Get("interact.terminal.no_power");
     public bool CanInteract => IsPowered && window != null;
 
     private void OnEnable()

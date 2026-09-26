@@ -24,6 +24,12 @@ public class QuestData : ScriptableObject
     [Tooltip("Описание задания.")]
     public string description = "Описание задания";
 
+    /// <summary>Заголовок на языке игры (strings.csv, ключ quest.&lt;questId&gt;.title; нет строки — title).</summary>
+    public string DisplayTitle => Loc.GetOr(Loc.DataKey("quest", questId, "title"), title);
+
+    /// <summary>Описание на языке игры (ключ quest.&lt;questId&gt;.desc; нет строки — description).</summary>
+    public string DisplayDescription => Loc.GetOr(Loc.DataKey("quest", questId, "desc"), description);
+
     [Header("Условие завершения")]
     [Tooltip("Тип цели: какие события засчитываются в прогресс.")]
     public QuestType type = QuestType.ShelveItems;

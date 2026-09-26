@@ -335,9 +335,9 @@ public class PlayerItemInteraction : MonoBehaviour
     {
         if (infoUI == null) return;
 
-        string actions = currentHoveredSlot != null ? "ЛКМ — поставить" : "";
+        string actions = currentHoveredSlot != null ? Loc.Get("hud.action.place") : "";
         if (currentTakeTarget != null)
-            actions += (actions.Length > 0 ? ", " : "") + takeKey + " — взять";
+            actions += (actions.Length > 0 ? ", " : "") + Loc.Get("hud.action.take", takeKey);
 
         infoUI.ShowActions(currentTakeTarget != null ? currentTakeTarget.itemData : active, actions);
     }

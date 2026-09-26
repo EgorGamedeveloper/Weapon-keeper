@@ -27,11 +27,11 @@ public class OrderRowUI : TerminalHoverItem
     public void Bind(ShippingOrderData order, string itemsText, string rewardText, bool canAccept, string reason, Color okColor, Color badColor)
     {
         Order = order;
-        if (customer != null) customer.text = order.customer.ToUpperInvariant();
+        if (customer != null) customer.text = order.DisplayCustomer.ToUpperInvariant();
         if (items != null) items.text = itemsText;
         if (reward != null) reward.text = rewardText;
         if (status != null) { status.text = reason; status.color = badColor; }
-        if (acceptLabel != null) { acceptLabel.text = canAccept ? "[ ПРИНЯТЬ ]" : "[ ЗАНЯТО ]"; acceptLabel.color = canAccept ? okColor : new Color(okColor.r, okColor.g, okColor.b, 0.35f); }
+        if (acceptLabel != null) { acceptLabel.text = canAccept ? Loc.Get("terminal.order.accept") : Loc.Get("terminal.order.busy"); acceptLabel.color = canAccept ? okColor : new Color(okColor.r, okColor.g, okColor.b, 0.35f); }
         if (acceptBackground != null) acceptBackground.color = canAccept ? new Color(okColor.r, okColor.g, okColor.b, 0.25f) : new Color(1f, 1f, 1f, 0.05f);
     }
 }

@@ -76,6 +76,12 @@ public class SkillData : ScriptableObject
     [TextArea(2, 4)]
     public string description = "Описание навыка";
 
+    /// <summary>Название на языке игры (strings.csv, ключ skill.&lt;skillId&gt;.title; нет строки — title).</summary>
+    public string DisplayTitle => Loc.GetOr(Loc.DataKey("skill", skillId, "title"), title);
+
+    /// <summary>Описание на языке игры (ключ skill.&lt;skillId&gt;.desc; нет строки — description).</summary>
+    public string DisplayDescription => Loc.GetOr(Loc.DataKey("skill", skillId, "desc"), description);
+
     [Tooltip("Иконка узла в дереве.")]
     public Sprite icon;
 

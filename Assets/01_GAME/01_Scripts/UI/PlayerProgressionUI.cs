@@ -23,9 +23,13 @@ public class PlayerProgressionUI : MonoBehaviour
     public Text skillPointsHint;
 
     [Tooltip("Формат подсказки: {0} — число очков.")]
-    public string skillPointsHintFormat = "+{0} оч. навыков · Tab";
+    public string skillPointsHintFormat = DefaultSkillPointsHintFormat;
+
+    // Пока формат в инспекторе не меняли, подсказка переводится (hud.skill_points_hint).
+    private const string DefaultSkillPointsHintFormat = "+{0} оч. навыков · Tab";
 
     private Tween hintPulse;
+    private LocalizationService localization;
 
     private void OnEnable()
     {
@@ -38,11 +42,17 @@ public class PlayerProgressionUI : MonoBehaviour
         RefreshLevelText();
         SetFillImmediate(playerProgression.CurrentXP, playerProgression.XPToNextLevel);
         RefreshSkillPointsHint(playerProgression.UnlockPoints);
+
+        // Язык сменили в настройках — «Ур.» и подсказка про очки перерисовываются сразу.
+        localization = LocalizationService.Instance;
+        if (localization != null) localization.OnLanguageChanged += HandleLanguageChanged;
     }
 
     private void OnDisable()
     {
         hintPulse?.Kill();
+        if (localization != null) localization.OnLanguageChanged -= HandleLanguageChanged;
+        localization = null;
         if (playerProgression == null) return;
 
         playerProgression.OnXPChanged -= HandleXPChanged;
@@ -60,10 +70,18 @@ public class PlayerProgressionUI : MonoBehaviour
         hintPulse?.Kill();
         if (!show) return;
 
-        skillPointsHint.text = string.Format(skillPointsHintFormat, points);
+        skillPointsHint.text = skillPointsHintFormat == DefaultSkillPointsHintFormat
+            ? Loc.Get("hud.skill_points_hint", points)
+            : string.Format(skillPointsHintFormat, points);
         Color c = skillPointsHint.color;
         skillPointsHint.color = new Color(c.r, c.g, c.b, 1f);
         hintPulse = skillPointsHint.DOFade(0.4f, 0.9f).SetEase(Ease.InOutSine).SetLoops(-1, LoopType.Yoyo);
+    }
+
+    private void HandleLanguageChanged()
+    {
+        RefreshLevelText();
+        RefreshSkillPointsHint(playerProgression.UnlockPoints);
     }
 
     private void HandleXPChanged(int currentXP, int xpToNextLevel)
@@ -86,7 +104,7 @@ public class PlayerProgressionUI : MonoBehaviour
 
     private void RefreshLevelText()
     {
-        if (levelText != null) levelText.text = $"Ур. {playerProgression.CurrentLevel}";
+        if (levelText != null) levelText.text = Loc.Get("hud.level_short", playerProgression.CurrentLevel);
     }
 
     private void SetFillImmediate(int currentXP, int xpToNextLevel)

@@ -1,4 +1,4 @@
-key,ru,en
+﻿key,ru,en
 # Строки с ключом на # — комментарии. Перевод строки внутри ячейки — \n.,,
 # Общие,,
 common.ok,ОК,OK
@@ -173,3 +173,77 @@ stat.play_time_min,Минут в игре,Minutes played
 stat.max_level,Максимальный уровень,Highest level
 stat.repairs_completed,Выполнено ремонтов,Repairs completed
 stat.debris_disposed,Выброшено обломков,Debris disposed
+# Окно навыков,,
+skills.level,Уровень {0},Level {0}
+skills.state.owned,Изучено,Learned
+skills.state.available,Можно изучить,Available
+skills.state.not_enough_points,Не хватает очков,Not enough points
+skills.state.locked,Закрыто,Locked
+skills.buy.unavailable,Недоступно,Unavailable
+skills.buy.cost,Изучить  —  {0} оч.,Learn  —  {0} pts
+skills.hint.need_points,Нужно ещё {0} оч. — получите следующий уровень.,You need {0} more pts — reach the next level.
+skills.hint.requirements_first,Сначала выполните требования выше.,Meet the requirements above first.
+skills.req.points,Очки навыков: {0} (есть {1}),Skill points: {0} (you have {1})
+skills.stat.tidyup_capacity,Вместимость инвентаря,Inventory capacity
+skills.stat.pickup_range,Дальность подбора,Pickup range
+skills.stat.walk_speed,Скорость ходьбы,Walk speed
+skills.stat.sprint_speed,Скорость бега,Sprint speed
+skills.stat.jump_height,Высота прыжка,Jump height
+skills.stat.max_health,Здоровье,Health
+skills.stat.xp_gain,Получаемый опыт,XP gain
+skills.stat.reload_time,Время перезарядки,Reload time
+skills.stat.recoil,Отдача и разброс,Recoil and spread
+skills.stat.ammo_capacity,Ёмкость магазина,Magazine capacity
+skills.stat.order_price,Цена лутбоксов,Loot box price
+skills.stat.delivery_time,Время доставки,Delivery time
+skills.stat.shipping_reward,Награда за отправку,Shipping reward
+skills.unit.meters,м,m
+skills.node.subtitle,{0}  ·  ур. {1},{0}  ·  lvl {1}
+skills.node.cost,{0} оч.,{0} pts
+skills.node.free,Бесплатно,Free
+# Терминал,,
+terminal.header,GUN KEEPER // ТЕРМИНАЛ СНАБЖЕНИЯ v1.3,GUN KEEPER // SUPPLY TERMINAL v1.3
+terminal.tab.supplies,ПОСТАВКИ,SUPPLIES
+terminal.tab.orders,ЗАКАЗЫ,ORDERS
+terminal.balance,БАЛАНС: {0},BALANCE: {0}
+terminal.delivery_time,ДОСТАВКА: {0},DELIVERY: {0}
+terminal.order.reward,НАГРАДА: {0}  +{1} XP,REWARD: {0}  +{1} XP
+terminal.active.title,ТЕКУЩИЙ ЗАКАЗ: {0},CURRENT ORDER: {0}
+terminal.active.packed,КОРОБКА ЗАПЕЧАТАНА — ОТНЕСИТЕ НА КРЫШУ В ЗОНУ ОТПРАВКИ,BOX SEALED — CARRY IT TO THE SHIPPING ZONE ON THE ROOF
+terminal.active.pack_items,УЛОЖИТЕ ТОВАР В КОРОБКУ У ТЕРМИНАЛА,PACK THE ITEMS INTO THE BOX BY THE TERMINAL
+terminal.cancelled.title,ЗАКАЗ ОТМЕНЁН,ORDER CANCELLED
+terminal.cancelled.body,В коробке остался товар: {0} шт.,Items left in the box: {0}
+terminal.cancelled.status,РАЗБЕРИТЕ КОРОБКУ И ВЕРНИТЕ ТОВАР НА ПОЛКИ,UNPACK THE BOX AND PUT THE ITEMS BACK ON THE SHELVES
+terminal.none.title,НЕТ АКТИВНОГО ЗАКАЗА,NO ACTIVE ORDER
+terminal.none.body,Примите заказ из входящих — у терминала появится коробка для упаковки.,Accept an order from the inbox — a packing box will appear by the terminal.
+terminal.supply.ordered,ЗАКАЗАНО — ЖДИТЕ ДОСТАВКУ,ORDERED — AWAIT DELIVERY
+terminal.block.license,НУЖНА ЛИЦЕНЗИЯ: {0},LICENSE REQUIRED: {0}
+terminal.block.level,НУЖЕН УРОВЕНЬ {0},LEVEL {0} REQUIRED
+terminal.block.money,НЕ ХВАТАЕТ ДЕНЕГ,NOT ENOUGH MONEY
+terminal.block.unpack_cancelled,СНАЧАЛА РАЗБЕРИТЕ КОРОБКУ ОТМЕНЁННОГО ЗАКАЗА,UNPACK THE CANCELLED ORDER BOX FIRST
+terminal.block.finish_current,СНАЧАЛА ЗАВЕРШИТЕ ТЕКУЩИЙ ЗАКАЗ,FINISH THE CURRENT ORDER FIRST
+terminal.block.license_generic,НУЖНА ЛИЦЕНЗИЯ,LICENSE REQUIRED
+terminal.block.higher_level,НУЖЕН БОЛЕЕ ВЫСОКИЙ УРОВЕНЬ,HIGHER LEVEL REQUIRED
+terminal.order.accept,[ ПРИНЯТЬ ],[ ACCEPT ]
+terminal.order.busy,[ ЗАНЯТО ],[ BUSY ]
+terminal.supply.buy,[ ЗАКАЗАТЬ ],[ ORDER ]
+terminal.supply.unavailable,[ НЕДОСТУПНО ],[ UNAVAILABLE ]
+# HUD и подсказки у прицела,,
+hud.level_short,Ур. {0},Lv. {0}
+hud.skill_points_hint,+{0} оч. навыков · Tab,+{0} skill pts · Tab
+hud.action.place,ЛКМ — поставить,LMB — place
+hud.action.take,{0} — взять,{0} — take
+interact.elevator.title,Лифт,Elevator
+interact.elevator.broken,Лифт не работает — нужен ремонт,The elevator is broken — needs repair
+interact.elevator.moving,Лифт едет…,The elevator is moving…
+interact.elevator.go_down,ЛКМ — вниз,LMB — go down
+interact.elevator.go_roof,ЛКМ — на крышу,LMB — go to the roof
+interact.elevator.call,ЛКМ — вызвать лифт,LMB — call the elevator
+interact.elevator.here,Лифт здесь,The elevator is here
+interact.terminal.title,Терминал,Terminal
+interact.terminal.open,ЛКМ — открыть терминал,LMB — open the terminal
+interact.terminal.no_power,Нет питания — почините генератор,No power — repair the generator
+interact.box.title,Коробка заказа,Order box
+interact.box.take_item,ЛКМ — достать предмет (осталось {0}),LMB — take an item out ({0} left)
+interact.box.sealed,Запечатана — отнесите на крышу в зону отправки,Sealed — carry it to the shipping zone on the roof
+interact.box.pack,Уложите товар по заказу (см. терминал),Pack the ordered items (see the terminal)

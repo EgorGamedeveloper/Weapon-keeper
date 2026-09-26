@@ -24,8 +24,8 @@ public class ItemInfoUI : MonoBehaviour
     {
         if (item == null) { Hide(); return; }
         if (panel != null) panel.SetActive(true);
-        if (nameText != null) nameText.text = item.itemName;
-        if (descriptionText != null) descriptionText.text = item.description;
+        if (nameText != null) nameText.text = item.DisplayName;
+        if (descriptionText != null) descriptionText.text = item.DisplayDescription;
     }
 
     /// <summary>Показать название предмета и доступные действия одной строкой
@@ -34,7 +34,7 @@ public class ItemInfoUI : MonoBehaviour
     {
         if (item == null) { Hide(); return; }
         if (panel != null) panel.SetActive(true);
-        if (nameText != null) nameText.text = item.itemName;
+        if (nameText != null) nameText.text = item.DisplayName;
         if (descriptionText != null) descriptionText.text = actions;
     }
 

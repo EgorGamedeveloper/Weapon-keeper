@@ -337,7 +337,7 @@ public class SkillTreeWindow : MonoBehaviour
     {
         if (progression == null) return;
 
-        if (levelText != null) levelText.text = "Уровень " + progression.CurrentLevel;
+        if (levelText != null) levelText.text = Loc.Get("skills.level", progression.CurrentLevel);
         if (xpFill != null)
         {
             float fill = progression.XPToNextLevel > 0 ? (float)progression.CurrentXP / progression.XPToNextLevel : 0f;
@@ -362,8 +362,8 @@ public class SkillTreeWindow : MonoBehaviour
         SkillState state = playerSkills.GetState(selected);
 
         if (detailIcon != null) { detailIcon.sprite = selected.icon; detailIcon.enabled = selected.icon != null; }
-        if (detailTitle != null) detailTitle.text = selected.title;
-        if (detailDescription != null) detailDescription.text = selected.description;
+        if (detailTitle != null) detailTitle.text = selected.DisplayTitle;
+        if (detailDescription != null) detailDescription.text = selected.DisplayDescription;
         string effects = FormatEffects(selected);
         if (detailEffects != null) detailEffects.text = effects;
         if (detailEffectsHeader != null) detailEffectsHeader.SetActive(effects.Length > 0);
@@ -373,15 +373,15 @@ public class SkillTreeWindow : MonoBehaviour
         {
             switch (state)
             {
-                case SkillState.Owned: detailStatus.text = "Изучено"; detailStatus.color = ownedColor; break;
-                case SkillState.Available: detailStatus.text = "Можно изучить"; detailStatus.color = accentColor; break;
-                case SkillState.NotEnoughPoints: detailStatus.text = "Не хватает очков"; detailStatus.color = dangerColor; break;
-                default: detailStatus.text = "Закрыто"; detailStatus.color = mutedColor; break;
+                case SkillState.Owned: detailStatus.text = Loc.Get("skills.state.owned"); detailStatus.color = ownedColor; break;
+                case SkillState.Available: detailStatus.text = Loc.Get("skills.state.available"); detailStatus.color = accentColor; break;
+                case SkillState.NotEnoughPoints: detailStatus.text = Loc.Get("skills.state.not_enough_points"); detailStatus.color = dangerColor; break;
+                default: detailStatus.text = Loc.Get("skills.state.locked"); detailStatus.color = mutedColor; break;
             }
         }
 
         if (buyButton != null) buyButton.gameObject.SetActive(state != SkillState.Owned);
-        if (buyLabel != null) buyLabel.text = state == SkillState.Locked ? "Недоступно" : "Изучить  —  " + selected.cost + " оч.";
+        if (buyLabel != null) buyLabel.text = state == SkillState.Locked ? Loc.Get("skills.buy.unavailable") : Loc.Get("skills.buy.cost", selected.cost);
         if (buyBackground != null) buyBackground.color = state == SkillState.Available ? accentColor : new Color(1f, 1f, 1f, 0.12f);
         if (buyLabel != null) buyLabel.color = state == SkillState.Available ? new Color(0.1f, 0.08f, 0.02f, 1f) : mutedColor;
         if (buyHint != null) buyHint.text = "";
@@ -410,8 +410,8 @@ public class SkillTreeWindow : MonoBehaviour
         {
             buyHint.color = dangerColor;
             buyHint.text = state == SkillState.NotEnoughPoints && progression != null
-                ? "Нужно ещё " + (selected.cost - progression.UnlockPoints) + " оч. — получите следующий уровень."
-                : "Сначала выполните требования выше.";
+                ? Loc.Get("skills.hint.need_points", selected.cost - progression.UnlockPoints)
+                : Loc.Get("skills.hint.requirements_first");
         }
 
         if (buyButton != null)
@@ -456,13 +456,13 @@ public class SkillTreeWindow : MonoBehaviour
 
         var sb = new StringBuilder();
         int level = progression != null ? progression.CurrentLevel : 1;
-        AppendRequirement(sb, level >= skill.requiredLevel, "Уровень " + skill.requiredLevel);
+        AppendRequirement(sb, level >= skill.requiredLevel, Loc.Get("skills.level", skill.requiredLevel));
 
         foreach (var prerequisite in skill.prerequisites)
-            if (prerequisite != null) AppendRequirement(sb, playerSkills.IsOwned(prerequisite), prerequisite.title);
+            if (prerequisite != null) AppendRequirement(sb, playerSkills.IsOwned(prerequisite), prerequisite.DisplayTitle);
 
         int points = progression != null ? progression.UnlockPoints : 0;
-        AppendRequirement(sb, points >= skill.cost, "Очки навыков: " + skill.cost + " (есть " + points + ")");
+        AppendRequirement(sb, points >= skill.cost, Loc.Get("skills.req.points", skill.cost, points));
         return sb.ToString();
     }
 
@@ -477,22 +477,22 @@ public class SkillTreeWindow : MonoBehaviour
     {
         switch (stat)
         {
-            case SkillStat.TidyUpCapacity: return "Вместимость инвентаря";
-            case SkillStat.PickupRange: return "Дальность подбора";
-            case SkillStat.WalkSpeed: return "Скорость ходьбы";
-            case SkillStat.SprintSpeed: return "Скорость бега";
-            case SkillStat.JumpHeight: return "Высота прыжка";
-            case SkillStat.MaxHealth: return "Здоровье";
-            case SkillStat.XPGain: return "Получаемый опыт";
-            case SkillStat.ReloadTime: return "Время перезарядки";
-            case SkillStat.Recoil: return "Отдача и разброс";
-            case SkillStat.AmmoCapacity: return "Ёмкость магазина";
-            case SkillStat.OrderPrice: return "Цена лутбоксов";
-            case SkillStat.DeliveryTime: return "Время доставки";
-            case SkillStat.ShippingReward: return "Награда за отправку";
+            case SkillStat.TidyUpCapacity: return Loc.Get("skills.stat.tidyup_capacity");
+            case SkillStat.PickupRange: return Loc.Get("skills.stat.pickup_range");
+            case SkillStat.WalkSpeed: return Loc.Get("skills.stat.walk_speed");
+            case SkillStat.SprintSpeed: return Loc.Get("skills.stat.sprint_speed");
+            case SkillStat.JumpHeight: return Loc.Get("skills.stat.jump_height");
+            case SkillStat.MaxHealth: return Loc.Get("skills.stat.max_health");
+            case SkillStat.XPGain: return Loc.Get("skills.stat.xp_gain");
+            case SkillStat.ReloadTime: return Loc.Get("skills.stat.reload_time");
+            case SkillStat.Recoil: return Loc.Get("skills.stat.recoil");
+            case SkillStat.AmmoCapacity: return Loc.Get("skills.stat.ammo_capacity");
+            case SkillStat.OrderPrice: return Loc.Get("skills.stat.order_price");
+            case SkillStat.DeliveryTime: return Loc.Get("skills.stat.delivery_time");
+            case SkillStat.ShippingReward: return Loc.Get("skills.stat.shipping_reward");
             default: return stat.ToString();
         }
     }
 
-    private static string StatUnit(SkillStat stat) => stat == SkillStat.PickupRange ? " м" : "";
+    private static string StatUnit(SkillStat stat) => stat == SkillStat.PickupRange ? " " + Loc.Get("skills.unit.meters") : "";
 }
