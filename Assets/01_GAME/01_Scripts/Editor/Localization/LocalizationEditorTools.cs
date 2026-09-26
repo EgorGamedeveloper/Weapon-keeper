@@ -31,7 +31,7 @@ public static class LocalizationEditorTools
     // Префиксы ключей, которые код передаёт строковыми литералами (Loc.Get("settings.title") и т.п.) —
     // по ним Validate ищет в .cs ключи, которых нет в таблице.
     private static readonly Regex CodeKeyPattern =
-        new Regex("\"((?:settings|pause|ach|achievements|menu|common|dialog|toast|lang|debug|skills|terminal|hud|interact)\\.[a-z0-9_.]+)\"");
+        new Regex("\"((?:settings|pause|ach|achievements|menu|common|dialog|toast|lang|debug|skills|terminal|hud|interact|radio)\\.[a-z0-9_.]+)\"");
 
     // ───────────────────────── Extract ─────────────────────────
 
@@ -683,7 +683,7 @@ public static class LocalizationEditorTools
     /// строка дополняется пустыми ячейками до числа столбцов заголовка — новый язык достаточно дописать в
     /// заголовок, ячейки под него появятся у всех строк при следующей записи.
     /// </summary>
-    private class StringsTable
+    public class StringsTable
     {
         public List<string> Header { get; private set; } = new List<string>();
         /// <summary>Строки с ключами (без комментариев и заголовка).</summary>
@@ -777,6 +777,42 @@ public static class LocalizationEditorTools
             int insertAt = start + 1;
             while (insertAt < lines.Count && !IsComment(lines[insertAt])) insertAt++;
             lines.Insert(insertAt, row);
+        }
+
+        /// <summary>Столбец языка (заголовок — код столбца: de, fr...). Нет — добавляется в конец таблицы,
+        /// у всех строк появляется пустая ячейка. Возвращает индекс столбца.</summary>
+        public int EnsureLanguageColumn(string column)
+        {
+            int existing = FindLanguageColumn(GameLanguages.ColumnToSteamCode(column));
+            if (existing >= 0) return existing;
+
+            Header.Add(column);
+            for (int i = 0; i < lines.Count; i++)
+            {
+                string[] line = lines[i];
+                string[] wider = new string[Header.Count];
+                for (int c = 0; c < wider.Length; c++) wider[c] = c < line.Length ? line[c] ?? "" : "";
+                if (i == 0) wider[wider.Length - 1] = column;
+                int rowIndex = Rows.IndexOf(line);
+                if (rowIndex >= 0) Rows[rowIndex] = wider;
+                lines[i] = wider;
+            }
+            return Header.Count - 1;
+        }
+
+        /// <summary>Записать строку ключа в раздел (нет ключа — добавить в конец раздела). values — по столбцам.</summary>
+        public void Upsert(string section, string key, IReadOnlyDictionary<int, string> values)
+        {
+            string[] row = FindRow(key);
+            if (row == null)
+            {
+                row = new string[ColumnCount];
+                row[0] = key;
+                AddToSection(section, row);
+                row = FindRow(key);
+            }
+            foreach (KeyValuePair<int, string> pair in values)
+                if (pair.Key > 0 && pair.Key < row.Length) row[pair.Key] = pair.Value ?? "";
         }
 
         public void SetCell(string key, int column, string value)

@@ -1,0 +1,2255 @@
+<title>Сюжет Weapon Keeper</title>
+<!-- story-host-api: 1 — версия моста storyHost, которую ждёт этот редактор (приложение для Mac: Tools/StoryEditor/app/main.js, HOST_API) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #e7ebee;
+  --grid: #cdd4da;
+  --panel: #f6f7f8;
+  --panel-2: #eceff2;
+  --ink: #1b2127;
+  --muted: #5a6570;
+  --line: #c4ccd3;
+  --accent: #c47e14;
+  --accent-ink: #1b1305;
+  --danger: #b8432f;
+  --warn: #a8750c;
+  --ok: #3f7d3a;
+  --node: #ffffff;
+  --node-shadow: 0 1px 2px rgba(20, 30, 40, .12), 0 4px 14px rgba(20, 30, 40, .08);
+  --wire: #7b8894;
+  --wire-sel: #c47e14;
+  --t-start: #6f7b87;
+  --t-quest: #c98a1c;
+  --t-radio: #2f948d;
+  --t-trigger: #c8573f;
+  --t-wait: #667894;
+  --t-and: #7d69b6;
+  --t-action: #6c8f35;
+  --t-note: #b49b2c;
+  --note-bg: #fbf5d7;
+  --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-head: "Barlow Condensed", "Arial Narrow", "IBM Plex Sans", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #14181c; --grid: #242b32; --panel: #1b2025; --panel-2: #22282e; --ink: #e4e8eb; --muted: #8f9aa4;
+    --line: #313941; --accent: #eda63a; --accent-ink: #1b1305; --danger: #e0715c; --warn: #e0ab45; --ok: #7fbf6f;
+    --node: #20262c; --node-shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 6px 18px rgba(0, 0, 0, .35);
+    --wire: #6d7985; --wire-sel: #eda63a; --note-bg: #34301c;
+    --t-start: #8b97a3; --t-quest: #e0a33a; --t-radio: #3fb0a8; --t-trigger: #e0674f; --t-wait: #7f92b0;
+    --t-and: #9884d0; --t-action: #8fb152; --t-note: #d2bb4f;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #14181c; --grid: #242b32; --panel: #1b2025; --panel-2: #22282e; --ink: #e4e8eb; --muted: #8f9aa4;
+  --line: #313941; --accent: #eda63a; --accent-ink: #1b1305; --danger: #e0715c; --warn: #e0ab45; --ok: #7fbf6f;
+  --node: #20262c; --node-shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 6px 18px rgba(0, 0, 0, .35);
+  --wire: #6d7985; --wire-sel: #eda63a; --note-bg: #34301c;
+  --t-start: #8b97a3; --t-quest: #e0a33a; --t-radio: #3fb0a8; --t-trigger: #e0674f; --t-wait: #7f92b0;
+  --t-and: #9884d0; --t-action: #8fb152; --t-note: #d2bb4f;
+}
+
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.4 var(--font-ui);
+  overflow: hidden;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app { height: 100%; display: grid; grid-template-rows: auto 1fr; }
+
+/* ── Верхняя панель ── */
+.bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  padding: 8px 16px; background: var(--panel); border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: baseline; gap: 10px; margin-right: auto; min-width: 0; }
+.brand h1 {
+  margin: 0; font: 600 20px/1 var(--font-head); letter-spacing: .04em; text-transform: uppercase; white-space: nowrap;
+}
+.brand .sub { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.status { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+.status[data-state="saved"]::before { background: var(--ok); }
+.status[data-state="saving"]::before { background: var(--warn); }
+.status[data-state="error"]::before, .status[data-state="local"]::before { background: var(--danger); }
+.btn {
+  border: 1px solid var(--line); background: var(--panel-2); border-radius: 6px; padding: 5px 10px;
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+}
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn .count {
+  min-width: 18px; padding: 0 5px; border-radius: 9px; font-size: 11px; font-weight: 600; text-align: center;
+  background: var(--line); color: var(--ink);
+}
+.btn .count.err { background: var(--danger); color: #fff; }
+.btn .count.warn { background: var(--warn); color: #1b1305; }
+
+/* ── Рабочая область ── */
+.work { position: relative; display: grid; grid-template-columns: 168px 1fr 320px; min-height: 0; }
+.palette {
+  background: var(--panel); border-right: 1px solid var(--line); padding: 12px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.palette h2, .inspector h2 {
+  margin: 0 0 4px; font: 600 13px/1.2 var(--font-head); letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
+}
+#palItems { display: flex; flex-direction: column; gap: 6px; }
+.pal-item {
+  display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--node);
+  border-radius: 6px; padding: 6px 8px; text-align: left; width: 100%;
+}
+.pal-item:hover { border-color: var(--muted); }
+.pal-item .sw { width: 10px; height: 10px; border-radius: 2px; flex: none; }
+.pal-item small { display: block; color: var(--muted); font-size: 11px; line-height: 1.25; }
+.hint { color: var(--muted); font-size: 12px; margin-top: 10px; line-height: 1.45; }
+.hint kbd {
+  font: 11px var(--font-mono); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px;
+  background: var(--panel-2);
+}
+
+.canvas {
+  position: relative; overflow: hidden; touch-action: none; cursor: grab;
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--grid) 1.2px, transparent 1.3px);
+}
+.canvas.panning { cursor: grabbing; }
+.world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.wires { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
+.wires path { fill: none; stroke: var(--wire); stroke-width: 2.2; pointer-events: stroke; cursor: pointer; }
+.wires path.hit { stroke: transparent; stroke-width: 14; }
+.wires path.sel { stroke: var(--wire-sel); stroke-width: 3; }
+.wires path.temp { stroke: var(--accent); stroke-dasharray: 6 5; pointer-events: none; }
+
+.node {
+  position: absolute; width: 230px; background: var(--node); border: 1px solid var(--line); border-radius: 8px;
+  box-shadow: var(--node-shadow); user-select: none; cursor: default;
+}
+.node.sel { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), var(--node-shadow); }
+.node.has-err .n-head::after {
+  content: "!"; margin-left: auto; width: 16px; height: 16px; border-radius: 50%; background: var(--danger); color: #fff;
+  font: 700 11px/16px var(--font-ui); text-align: center;
+}
+.node.has-warn:not(.has-err) .n-head::after {
+  content: "!"; margin-left: auto; width: 16px; height: 16px; border-radius: 50%; background: var(--warn); color: #1b1305;
+  font: 700 11px/16px var(--font-ui); text-align: center;
+}
+.n-head {
+  display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 7px 7px 0 0; cursor: move;
+  color: #fff; font: 600 14px/1.1 var(--font-head); letter-spacing: .06em; text-transform: uppercase;
+}
+.n-head .n-id { margin-left: 4px; font: 400 11px var(--font-mono); letter-spacing: 0; text-transform: none; opacity: .8; }
+.n-body { padding: 8px 10px 10px; font-size: 12.5px; line-height: 1.4; }
+.n-body .t { font-weight: 600; font-size: 13px; }
+.n-body .m { color: var(--muted); }
+.n-body .q { border-left: 2px solid var(--line); padding-left: 6px; margin-top: 4px; color: var(--muted);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.n-body .empty { color: var(--danger); }
+.port {
+  position: absolute; top: 9px; width: 14px; height: 14px; border-radius: 50%; background: var(--node);
+  border: 2px solid var(--wire); cursor: crosshair; touch-action: none;
+}
+.port.in { left: -8px; }
+.port.out { right: -8px; }
+.port::after { content: ""; position: absolute; inset: -9px; border-radius: 50%; }
+.port:hover, .port.hot { border-color: var(--accent); background: var(--accent); }
+.node.drop { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent), var(--node-shadow); }
+.node[data-type="note"] { background: var(--note-bg); width: 220px; }
+.node[data-type="note"] .n-body { white-space: pre-wrap; }
+
+.zoom {
+  position: absolute; right: 12px; bottom: 12px; display: flex; gap: 4px; background: var(--panel); border: 1px solid var(--line);
+  border-radius: 8px; padding: 4px;
+}
+.zoom button { border: 0; background: transparent; border-radius: 5px; padding: 3px 8px; }
+.zoom button:hover { background: var(--panel-2); }
+.zoom span { font: 12px var(--font-mono); color: var(--muted); align-self: center; min-width: 44px; text-align: center; }
+.banner {
+  position: absolute; left: 12px; top: 12px; right: 12px; max-width: 560px; background: var(--panel); border: 1px solid var(--line);
+  border-left: 3px solid var(--accent); border-radius: 6px; padding: 8px 12px; font-size: 12.5px; color: var(--ink);
+}
+
+/* ── Инспектор ── */
+.inspector {
+  background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; padding: 12px 14px 24px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.insp-empty { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field > label, .field > .lbl { font-size: 12px; font-weight: 500; color: var(--muted); }
+.field input, .field select, .field textarea {
+  width: 100%; box-sizing: border-box; background: var(--node); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px;
+}
+.field textarea { resize: vertical; min-height: 54px; }
+.field .mono, input.mono { font-family: var(--font-mono); font-size: 12.5px; }
+.field .help { font-size: 11.5px; color: var(--muted); line-height: 1.4; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.loc { display: grid; grid-template-columns: 28px 1fr; gap: 4px 6px; align-items: start; }
+.loc .lang { font: 500 11px/28px var(--font-mono); color: var(--muted); text-transform: uppercase; }
+.lines { display: flex; flex-direction: column; gap: 10px; }
+.line-card { border: 1px solid var(--line); border-radius: 6px; padding: 8px; background: var(--panel-2); display: flex; flex-direction: column; gap: 6px; }
+.line-card .line-top { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.line-card .line-top input { width: 64px; }
+.line-card .line-top .sp { margin-left: auto; display: flex; gap: 4px; }
+.mini { border: 1px solid var(--line); background: var(--node); border-radius: 5px; padding: 1px 7px; font-size: 12px; }
+.danger-btn { color: var(--danger); }
+.type-chip { display: inline-flex; align-items: center; gap: 6px; font: 600 13px var(--font-head); letter-spacing: .06em; text-transform: uppercase; }
+.type-chip .sw { width: 10px; height: 10px; border-radius: 2px; }
+
+/* ── Панели-оверлеи ── */
+.sheet {
+  position: absolute; right: 332px; top: 12px; width: min(460px, calc(100% - 24px)); max-height: calc(100% - 24px); overflow-y: auto;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--node-shadow); padding: 12px 14px; z-index: 5;
+}
+.sheet h3 { margin: 0 0 8px; font: 600 15px var(--font-head); letter-spacing: .06em; text-transform: uppercase; }
+.sheet .close { float: right; }
+.issues { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.issues li button {
+  width: 100%; text-align: left; border: 1px solid var(--line); background: var(--node); border-radius: 6px; padding: 6px 8px;
+  display: grid; grid-template-columns: 58px 1fr; gap: 8px; font-size: 12.5px;
+}
+.sev { font: 600 11px/18px var(--font-ui); border-radius: 4px; text-align: center; }
+.sev.err { background: var(--danger); color: #fff; }
+.sev.warn { background: var(--warn); color: #1b1305; }
+.sev.info { background: var(--line); color: var(--ink); }
+.sheet textarea { width: 100%; box-sizing: border-box; min-height: 180px; font: 12px var(--font-mono); background: var(--node); border: 1px solid var(--line); border-radius: 6px; padding: 8px; }
+.sheet .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.msg { font-size: 12.5px; margin-top: 8px; }
+.msg.err { color: var(--danger); }
+.msg.ok { color: var(--ok); }
+
+.backups { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.backups li { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; border: 1px solid var(--line); background: var(--node); border-radius: 6px; padding: 6px 8px; font-size: 12.5px; }
+.backups small { display: block; color: var(--muted); font-size: 11.5px; }
+.sheet[data-sticky] { border-left: 3px solid var(--accent); z-index: 6; }
+
+.colors { display: grid; grid-template-columns: 1fr auto auto; gap: 6px 10px; align-items: center; }
+.colors label { font-size: 13px; display: flex; align-items: center; gap: 8px; }
+.colors .sw { width: 10px; height: 10px; border-radius: 2px; }
+.colors input[type="color"] { width: 44px; height: 28px; padding: 0 2px; border: 1px solid var(--line); border-radius: 6px; background: var(--node); cursor: pointer; }
+.colors .reset { font-size: 12px; }
+.colors h4 { grid-column: 1 / -1; margin: 8px 0 0; font: 600 12px var(--font-head); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.theme-btn { min-width: 36px; justify-content: center; }
+.hidden-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+/* ── Узкий экран ── */
+.mob-toggle { display: none; }
+@media (max-width: 860px) {
+  .work { grid-template-columns: 1fr; }
+  .palette {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 180px; z-index: 6; transform: translateX(-100%);
+    transition: transform .2s; box-shadow: var(--node-shadow);
+  }
+  .palette.open { transform: none; }
+  .inspector {
+    position: absolute; left: 0; right: 0; bottom: 0; max-height: 55%; z-index: 6; border-left: 0; border-top: 1px solid var(--line);
+    box-shadow: var(--node-shadow);
+  }
+  .inspector.closed { display: none; }
+  .sheet { right: 12px; }
+  .mob-toggle { display: inline-flex; }
+  .brand .sub { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .palette { transition: none; } }
+</style>
+
+<div class="app">
+  <header class="bar">
+    <div class="brand">
+      <h1>Сюжет</h1>
+      <span class="sub" id="brandSub">Weapon Keeper · квесты, рация, триггеры</span>
+    </div>
+    <button class="btn mob-toggle" id="btnPalette" type="button">+ Нода</button>
+    <span class="status" id="status" data-state="idle">Загрузка…</span>
+    <button class="btn" id="btnIssues" type="button" title="Проверка графа">Проверка <span class="count" id="issueCount">0</span></button>
+    <button class="btn theme-btn" id="btnTheme" type="button" title="Светлая / тёмная тема" aria-label="Переключить тему">☾</button>
+    <button class="btn" id="btnColors" type="button" title="Цвета редактора">Цвета</button>
+    <button class="btn" id="btnLangs" type="button" title="Языки текстов">Языки</button>
+    <button class="btn" id="btnCatalog" type="button" title="Каталог объектов сцены из Unity">Каталог</button>
+    <button class="btn" id="btnImport" type="button">Открыть JSON</button>
+    <button class="btn primary" id="btnExport" type="button">Скачать JSON</button>
+  </header>
+
+  <div class="work">
+    <aside class="palette" id="palette" aria-label="Типы нод">
+      <h2>Добавить</h2>
+      <div id="palItems"></div>
+      <p class="hint">
+        Тяните от правого кружка ноды к левому кружку другой — это «нитка»: следующая нода включится, когда эта завершится.<br><br>
+        <kbd>Del</kbd> удалить · <kbd>Ctrl</kbd>+<kbd>D</kbd> копия · <kbd>Ctrl</kbd>+<kbd>Z</kbd> отмена · колесо — масштаб, фон — сдвиг.
+      </p>
+    </aside>
+
+    <main class="canvas" id="canvas" aria-label="Граф сюжета">
+      <div class="world" id="world">
+        <svg class="wires" id="wires" aria-hidden="true"></svg>
+        <div id="nodes"></div>
+      </div>
+      <div class="banner" id="banner" hidden></div>
+      <div class="zoom">
+        <button type="button" id="zoomOut" aria-label="Уменьшить">−</button>
+        <span id="zoomLabel">100%</span>
+        <button type="button" id="zoomIn" aria-label="Увеличить">+</button>
+        <button type="button" id="zoomFit">Весь граф</button>
+      </div>
+
+      <section class="sheet" id="sheetIssues" hidden aria-label="Проверка графа">
+        <button class="btn close" type="button" data-close>Закрыть</button>
+        <h3>Проверка графа</h3>
+        <ul class="issues" id="issueList"></ul>
+      </section>
+
+      <section class="sheet" id="sheetColors" hidden aria-label="Цвета">
+        <button class="btn close" type="button" data-close>Закрыть</button>
+        <h3>Цвета</h3>
+        <p class="hint" style="margin-top:0">Меняются сразу и запоминаются для этого графа. Цвета нод и акцент общие для обеих тем, фон холста — свой у каждой.</p>
+        <div class="colors" id="colorList"></div>
+        <div class="actions"><button class="btn" type="button" id="colorsResetAll">Вернуть все цвета</button></div>
+      </section>
+
+      <section class="sheet" id="sheetLangs" hidden aria-label="Языки">
+        <button class="btn close" type="button" data-close>Закрыть</button>
+        <h3>Языки текстов</h3>
+        <p class="hint" style="margin-top:0">Первый язык — основной: его поля обязательны. Остальные можно заполнять постепенно — в игре непереведённое покажется по-английски. Коды — как столбцы strings.csv: ru, en, de, fr, es, it, pl, pt-br, zh-cn, ja, ko…</p>
+        <div class="field">
+          <label for="langList">Языки через запятую</label>
+          <input id="langList" class="mono" type="text" autocomplete="off">
+        </div>
+        <div class="actions"><button class="btn primary" type="button" id="langApply">Применить</button></div>
+        <div class="msg" id="langMsg"></div>
+      </section>
+
+      <section class="sheet" id="sheetCatalog" hidden aria-label="Каталог сцены">
+        <button class="btn close" type="button" data-close>Закрыть</button>
+        <h3>Каталог сцены</h3>
+        <p class="hint" style="margin-top:0">Списки объектов для выбора целей: точки ремонта, двери, пятна, полки, зоны, предметы, враги, заказы. Файл делает Unity: <b>Tools → Weapon Keeper → Story → Export Scene Catalog</b> (scene_catalog.json).</p>
+        <div id="catalogSummary" class="hint"></div>
+        <div class="actions">
+          <button class="btn primary" type="button" id="catalogLoad">Загрузить scene_catalog.json</button>
+          <button class="btn" type="button" id="catalogPasteToggle">Вставить текстом</button>
+        </div>
+        <div id="catalogPaste" hidden>
+          <textarea id="catalogText" aria-label="Текст каталога" placeholder="{ &quot;repairPoints&quot;: [ … ] }"></textarea>
+          <div class="actions"><button class="btn" type="button" id="catalogApplyText">Применить</button></div>
+        </div>
+        <div class="actions" id="catalogProjectRow" hidden><button class="btn" type="button" id="catalogReload">Перечитать из проекта</button></div>
+        <div class="msg" id="catalogMsg"></div>
+      </section>
+
+      <section class="sheet" id="sheetImport" hidden aria-label="Открыть JSON">
+        <button class="btn close" type="button" data-close>Закрыть</button>
+        <h3>Открыть граф</h3>
+        <p class="hint" style="margin-top:0">Заменит текущий граф целиком (отменить можно через <kbd>Ctrl</kbd>+<kbd>Z</kbd>). Файл — story_graph.json из проекта: Assets/01_GAME/08_Story/.</p>
+        <div class="actions">
+          <button class="btn primary" type="button" id="importFileBtn">Выбрать файл…</button>
+        </div>
+        <textarea id="importText" aria-label="Текст графа" placeholder="…или вставьте JSON сюда"></textarea>
+        <div class="actions"><button class="btn" type="button" id="importApplyText">Открыть вставленный</button></div>
+        <div class="msg" id="importMsg"></div>
+      </section>
+
+      <section class="sheet" id="sheetExport" hidden aria-label="Экспорт">
+        <button class="btn close" type="button" data-close>Закрыть</button>
+        <h3>story_graph.json</h3>
+        <p class="hint" style="margin-top:0" id="exportHint">Скачивание здесь недоступно — скопируйте текст и сохраните в Assets/01_GAME/08_Story/story_graph.json. Или просто напишите Claude «синхронизируй граф».</p>
+        <textarea id="exportText" aria-label="JSON графа" readonly></textarea>
+        <div class="actions"><button class="btn primary" type="button" id="exportCopy">Копировать</button></div>
+        <div class="msg" id="exportMsg"></div>
+      </section>
+
+      <!-- Приложение для Mac (режим «файлы проекта») -->
+      <section class="sheet" id="sheetWelcome" hidden data-sticky aria-label="Выбор проекта">
+        <h3>Папка проекта</h3>
+        <p class="hint" style="margin-top:0">Укажите папку Unity-проекта Weapon Keeper (ту, где лежит Assets). Граф будет храниться прямо в проекте — Assets/01_GAME/08_Story/story_graph.json, — а приложение само сохраняет правки и делает резервные копии.</p>
+        <div class="actions"><button class="btn primary" type="button" id="welcomeChoose">Выбрать папку…</button></div>
+        <div class="msg" id="welcomeMsg"></div>
+      </section>
+
+      <section class="sheet" id="sheetDraft" hidden data-sticky aria-label="Несохранённые правки">
+        <h3>Несохранённые правки</h3>
+        <p class="hint" style="margin-top:0" id="draftText"></p>
+        <div class="actions">
+          <button class="btn primary" type="button" id="draftRestore">Восстановить правки</button>
+          <button class="btn" type="button" id="draftDiscard">Оставить файл проекта</button>
+        </div>
+        <p class="hint">Что бы вы ни выбрали, вторая версия уйдёт в «Историю версий» — её можно будет вернуть.</p>
+        <div class="msg" id="draftMsg"></div>
+      </section>
+
+      <section class="sheet" id="sheetConflict" hidden data-sticky aria-label="Файл изменён снаружи">
+        <h3>Файл изменён снаружи</h3>
+        <p class="hint" style="margin-top:0">story_graph.json поменяли вне редактора (git pull, Unity или другая программа), а у вас есть несохранённые правки. Какую версию оставить?</p>
+        <div class="actions">
+          <button class="btn primary" type="button" id="conflictMine">Мои правки</button>
+          <button class="btn" type="button" id="conflictDisk">Версию с диска</button>
+        </div>
+        <p class="hint">Вторая версия не пропадёт — она уйдёт в «Историю версий».</p>
+        <div class="msg" id="conflictMsg"></div>
+      </section>
+
+      <section class="sheet" id="sheetBroken" hidden data-sticky aria-label="Файл графа не читается">
+        <h3>Файл графа не читается</h3>
+        <p class="hint" style="margin-top:0" id="brokenText"></p>
+        <p class="hint">Сохранение выключено, чтобы ничего не перезаписать. Восстановите одну из резервных копий ниже или почините файл вручную и перезагрузите окно (Вид → Перезагрузить).</p>
+        <div class="actions">
+          <button class="btn" type="button" id="brokenReveal">Показать файл в Finder</button>
+          <button class="btn" type="button" id="brokenFolder">Папка копий</button>
+        </div>
+        <ul class="backups" id="brokenList"></ul>
+        <div class="msg" id="brokenMsg"></div>
+      </section>
+
+      <section class="sheet" id="sheetHistory" hidden aria-label="История версий">
+        <button class="btn close" type="button" data-close>Закрыть</button>
+        <h3>История версий</h3>
+        <p class="hint" style="margin-top:0">Копии делаются при открытии, раз в 5 минут, пока идут правки, и перед любым восстановлением. Хранятся последние 100 и по одной за день за месяц. Восстановление тоже можно отменить — через <kbd>Ctrl</kbd>+<kbd>Z</kbd> или эту же историю.</p>
+        <div class="actions">
+          <button class="btn" type="button" id="historySnap">Сделать копию сейчас</button>
+          <button class="btn" type="button" id="historyFolder">Папка копий</button>
+        </div>
+        <ul class="backups" id="historyList"></ul>
+        <div class="msg" id="historyMsg"></div>
+      </section>
+
+      <input class="hidden-file" type="file" id="fileImport" accept=".json,application/json">
+      <input class="hidden-file" type="file" id="fileCatalog" accept=".json,application/json">
+    </main>
+
+    <aside class="inspector" id="inspector" aria-label="Свойства ноды"></aside>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+// ───────────────────────── Справочники ─────────────────────────
+
+const TYPES = {
+  start:   { label: 'Старт',    color: '--t-start',   inPort: false, outPort: true,  desc: 'Начало новой игры' },
+  quest:   { label: 'Квест',    color: '--t-quest',   inPort: true,  outPort: true,  desc: 'Задание в списке квестов' },
+  radio:   { label: 'Рация',    color: '--t-radio',   inPort: true,  outPort: true,  desc: 'Вызов и переговоры' },
+  trigger: { label: 'Триггер',  color: '--t-trigger', inPort: true,  outPort: true,  desc: 'Действие игрока' },
+  wait:    { label: 'Ожидание', color: '--t-wait',    inPort: true,  outPort: true,  desc: 'Пауза в секундах' },
+  and:     { label: 'И',        color: '--t-and',     inPort: true,  outPort: true,  desc: 'Ждёт все входы' },
+  action:  { label: 'Событие',  color: '--t-action',  inPort: true,  outPort: true,  desc: 'Деньги, опыт, объекты' },
+  note:    { label: 'Заметка',  color: '--t-note',    inPort: false, outPort: false, desc: 'Текст для себя' },
+};
+
+const QUEST_TYPES = [
+  { id: 'CleanStains',  label: 'Отмыть пятна' },
+  { id: 'RepairPoints', label: 'Починить' },
+  { id: 'ShelveItems',  label: 'Расставить на полки' },
+  { id: 'DeliverItem',  label: 'Доставить в зону' },
+];
+
+// Поле цели: какой список каталога предлагать и как подписать.
+const TARGETS = {
+  stain:      { catalog: 'stains',       label: 'Пятно' },
+  repair:     { catalog: 'repairPoints', label: 'Точка ремонта' },
+  breakable:  { catalog: 'breakables',   label: 'Объект (дверь, доска…)' },
+  shelf:      { catalog: 'shelves',      label: 'Полка' },
+  spawn:      { catalog: 'enemySpawns',  label: 'Точка спавна врага' },
+  storyObject:{ catalog: 'storyObjects', label: 'Объект сюжета (StoryObject)' },
+};
+
+// Что спрашивает квест каждого типа: target — вид цели, required — обязательна ли.
+const QUEST_FIELDS = {
+  CleanStains:  { target: 'stain',  targetRequired: false, category: false, zone: false, item: false },
+  RepairPoints: { target: 'repair', targetRequired: false, category: false, zone: false, item: false },
+  ShelveItems:  { target: 'shelf',  targetRequired: false, category: true,  zone: false, item: false },
+  DeliverItem:  { target: null,     targetRequired: false, category: false, zone: true,  item: true },
+};
+
+// Виды триггеров. Поля: target (вид цели), category, item, zone, count, value, orderId, lootBoxId, enemyType, questId.
+// req — обязательные поля. Добавить вид: строка здесь + класс-триггер в Unity (Story/Triggers).
+const TRIGGERS = [
+  { id: 'repairPointRepaired', label: 'Починена точка ремонта', fields: { target: 'repair' }, req: ['target'] },
+  { id: 'breakableBroken',     label: 'Сломан объект',          fields: { target: 'breakable' }, req: ['target'] },
+  { id: 'stainCleaned',        label: 'Отмыто пятно',           fields: { target: 'stain' }, req: ['target'] },
+  { id: 'shelfItemsPlaced',    label: 'Поставлено на полки',    fields: { category: 1, count: 1 }, req: ['category'] },
+  { id: 'itemDelivered',       label: 'Доставлено в зону',      fields: { zone: 1, item: 1, count: 1 }, req: [] },
+  { id: 'itemPickedUp',        label: 'Подобран предмет',       fields: { item: 1 }, req: ['item'] },
+  { id: 'levelReached',        label: 'Достигнут уровень',      fields: { value: 'Уровень' }, req: ['value'] },
+  { id: 'restorationPercent',  label: 'Восстановление здания ≥ %', fields: { value: 'Процент' }, req: ['value'] },
+  { id: 'moneyReached',        label: 'На счету денег ≥',       fields: { value: 'Сумма' }, req: ['value'] },
+  { id: 'enemyKilled',         label: 'Убит враг',              fields: { target: 'spawn', enemyType: 1, count: 1 }, req: [] },
+  { id: 'orderPacked',         label: 'Собран заказ',           fields: { orderId: 1 }, req: [] },
+  { id: 'orderShipped',        label: 'Отправлен заказ',        fields: { orderId: 1 }, req: [] },
+  { id: 'crateArrived',        label: 'Приехал ящик поставки',  fields: { lootBoxId: 1 }, req: [] },
+  { id: 'crateOpened',         label: 'Открыт ящик поставки',   fields: { lootBoxId: 1 }, req: [] },
+  { id: 'questCompleted',      label: 'Выполнен квест вне графа', fields: { questId: 1 }, req: ['questId'] },
+];
+
+const ACTIONS = [
+  { id: 'giveMoney',     label: 'Дать деньги',        fields: { value: 'Сумма' },  req: ['value'] },
+  { id: 'giveXp',        label: 'Дать опыт',          fields: { value: 'Опыт' },   req: ['value'] },
+  { id: 'enableObject',  label: 'Включить объект',    fields: { target: 'storyObject' }, req: ['target'] },
+  { id: 'disableObject', label: 'Выключить объект',   fields: { target: 'storyObject' }, req: ['target'] },
+];
+
+const CATALOG_LISTS = {
+  repairPoints: 'Точки ремонта', breakables: 'Разрушаемые', stains: 'Пятна', shelves: 'Полки', categories: 'Категории полок',
+  zones: 'Зоны доставки', items: 'Предметы', enemySpawns: 'Точки спавна', enemyTypes: 'Типы врагов', orders: 'Заказы',
+  lootBoxes: 'Ящики поставки', storyObjects: 'Объекты сюжета', quests: 'Квесты вне графа', speakers: 'Говорящие',
+};
+
+const FILE_VERSION = 1;
+const LOCAL_KEY = 'wk-story-graph-v1';
+
+// ───────────────────────── Состояние ─────────────────────────
+
+const state = {
+  graph: { languages: ['ru', 'en'], nodes: new Map(), links: [] },
+  catalog: {},
+  view: { x: 60, y: 60, k: 1 },
+  sel: { node: null, link: null },
+  isExample: false,
+  issues: [],
+  storage: 'none', // db | local | file (приложение для Mac) | none
+};
+
+const $ = (id) => document.getElementById(id);
+const el = (tag, attrs = {}, ...children) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v === undefined || v === null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'text') e.textContent = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of children) if (c !== null && c !== undefined) e.append(c);
+  return e;
+};
+
+const uid = (prefix) => prefix + '_' + Math.random().toString(36).slice(2, 8);
+const langs = () => state.graph.languages;
+const firstLang = () => langs()[0] || 'ru';
+const locText = (obj) => (obj && (obj[firstLang()] || Object.values(obj).find(Boolean))) || '';
+
+function newNode(type, x, y) {
+  const n = { id: uid(type === 'quest' ? 'q' : 'n'), type, x: Math.round(x), y: Math.round(y) };
+  switch (type) {
+    case 'quest':
+      Object.assign(n, { questId: '', title: {}, description: {}, questType: 'RepairPoints', targetCount: 1,
+        target: '', category: '', item: '', zone: '', xp: 10, money: 50 });
+      break;
+    case 'radio':
+      Object.assign(n, { speaker: {}, portrait: '', lines: [{ seconds: 4, text: {} }] });
+      break;
+    case 'trigger':
+      Object.assign(n, { trigger: 'repairPointRepaired', target: '', category: '', item: '', zone: '', count: 1, value: 0,
+        orderId: '', lootBoxId: '', enemyType: '', questId: '' });
+      break;
+    case 'wait': n.seconds = 3; break;
+    case 'action': Object.assign(n, { action: 'giveMoney', value: 100, target: '' }); break;
+    case 'note': n.text = ''; break;
+  }
+  return n;
+}
+
+// ───────────────────────── История (Ctrl+Z) ─────────────────────────
+
+const history = { undo: [], redo: [], pendingTimer: 0, pending: false };
+
+function snapshot() {
+  return JSON.stringify({ languages: langs(), nodes: [...state.graph.nodes.values()], links: state.graph.links });
+}
+function restore(json) {
+  const s = JSON.parse(json);
+  state.graph.languages = s.languages;
+  state.graph.nodes = new Map(s.nodes.map((n) => [n.id, n]));
+  state.graph.links = s.links;
+  if (state.sel.node && !state.graph.nodes.has(state.sel.node)) state.sel.node = null;
+  state.sel.link = null;
+}
+// Запомнить состояние ДО правки. coalesce — набор текста: одна запись на серию правок.
+function beginEdit(coalesce) {
+  if (coalesce && history.pending) {
+    clearTimeout(history.pendingTimer);
+    history.pendingTimer = setTimeout(() => { history.pending = false; }, 900);
+    return;
+  }
+  history.undo.push(snapshot());
+  if (history.undo.length > 120) history.undo.shift();
+  history.redo.length = 0;
+  history.pending = !!coalesce;
+  if (coalesce) history.pendingTimer = setTimeout(() => { history.pending = false; }, 900);
+  if (state.isExample) adoptExample();
+}
+// В приложении для Mac Cmd+Z приходит и как нажатие, и как команда меню — второй вызов в пределах 150 мс пропускается.
+let lastUndoAt = 0;
+function undoOnce() { if (performance.now() - lastUndoAt < 150) return; lastUndoAt = performance.now(); undo(); }
+function redoOnce() { if (performance.now() - lastUndoAt < 150) return; lastUndoAt = performance.now(); redo(); }
+function undo() {
+  if (!history.undo.length) return;
+  history.redo.push(snapshot());
+  restore(history.undo.pop());
+  history.pending = false;
+  changed(true);
+}
+function redo() {
+  if (!history.redo.length) return;
+  history.undo.push(snapshot());
+  restore(history.redo.pop());
+  changed(true);
+}
+
+// После любой правки: перерисовать, проверить, сохранить.
+function changed(structural) {
+  if (structural) renderAll(); else { renderNodesLight(); renderWires(); }
+  validate();
+  scheduleSync();
+}
+
+// ───────────────────────── Отрисовка ─────────────────────────
+
+const canvas = $('canvas'), world = $('world'), wiresSvg = $('wires'), nodesLayer = $('nodes');
+const nodeEls = new Map();
+
+function applyView() {
+  const { x, y, k } = state.view;
+  world.style.transform = `translate(${x}px, ${y}px) scale(${k})`;
+  canvas.style.backgroundSize = `${22 * k}px ${22 * k}px`;
+  canvas.style.backgroundPosition = `${x}px ${y}px`;
+  $('zoomLabel').textContent = Math.round(k * 100) + '%';
+}
+
+function typeColor(type) { return `var(${TYPES[type].color})`; }
+
+function nodeSummary(n) {
+  const body = el('div', { class: 'n-body' });
+  const add = (cls, text) => body.append(el('div', { class: cls, text }));
+  switch (n.type) {
+    case 'start': add('m', 'Новая игра'); break;
+    case 'quest': {
+      const title = locText(n.title);
+      add(title ? 't' : 'empty', title || 'Без названия');
+      const qt = QUEST_TYPES.find((q) => q.id === n.questType);
+      add('m', `${qt ? qt.label : n.questType} × ${n.targetCount || 1} · ${n.xp || 0} XP · $${n.money || 0}`);
+      break;
+    }
+    case 'radio': {
+      const who = locText(n.speaker);
+      add(who ? 't' : 'empty', who || 'Кто говорит?');
+      const first = n.lines && n.lines[0] ? locText(n.lines[0].text) : '';
+      add('q', first ? `«${first}»` : 'Нет реплик');
+      add('m', `Реплик: ${(n.lines || []).length}`);
+      break;
+    }
+    case 'trigger': {
+      const t = TRIGGERS.find((x) => x.id === n.trigger);
+      add('t', t ? t.label : n.trigger);
+      const detail = triggerDetail(n, t);
+      if (detail) add('m', detail);
+      break;
+    }
+    case 'wait': add('t', `${n.seconds || 0} с`); break;
+    case 'and': add('m', 'Ждёт все входящие нитки'); break;
+    case 'action': {
+      const a = ACTIONS.find((x) => x.id === n.action);
+      add('t', a ? a.label : n.action);
+      if (a && a.fields.value) add('m', String(n.value || 0));
+      if (a && a.fields.target) add('m', catalogName(TARGETS.storyObject.catalog, n.target) || '—');
+      break;
+    }
+    case 'note': body.textContent = n.text || 'Пустая заметка'; break;
+  }
+  return body;
+}
+
+function triggerDetail(n, t) {
+  if (!t) return '';
+  const parts = [];
+  if (t.fields.target && n.target) parts.push(catalogName(TARGETS[t.fields.target].catalog, n.target));
+  if (t.fields.category && n.category) parts.push(catalogName('categories', n.category));
+  if (t.fields.item && n.item) parts.push(catalogName('items', n.item));
+  if (t.fields.zone && n.zone) parts.push(catalogName('zones', n.zone));
+  if (t.fields.enemyType && n.enemyType) parts.push(catalogName('enemyTypes', n.enemyType));
+  if (t.fields.orderId && n.orderId) parts.push(catalogName('orders', n.orderId));
+  if (t.fields.lootBoxId && n.lootBoxId) parts.push(catalogName('lootBoxes', n.lootBoxId));
+  if (t.fields.questId && n.questId) parts.push(catalogName('quests', n.questId));
+  if (t.fields.value) parts.push(String(n.value || 0));
+  if (t.fields.count && (n.count || 1) > 1) parts.push('× ' + n.count);
+  return parts.filter(Boolean).join(' · ');
+}
+
+function buildNodeEl(n) {
+  const t = TYPES[n.type];
+  const head = el('div', { class: 'n-head', style: `background:${typeColor(n.type)}` },
+    el('span', { text: t.label }),
+    n.type === 'quest' && n.questId ? el('span', { class: 'n-id', text: n.questId }) : null);
+  const div = el('div', { class: 'node', 'data-id': n.id, 'data-type': n.type }, head, nodeSummary(n));
+  if (t.inPort) div.append(el('div', { class: 'port in', 'data-port': 'in', title: 'Вход' }));
+  if (t.outPort) div.append(el('div', { class: 'port out', 'data-port': 'out', title: 'Выход: тяните к следующей ноде' }));
+  return div;
+}
+
+function placeNodeEl(div, n) {
+  div.style.left = n.x + 'px';
+  div.style.top = n.y + 'px';
+  div.classList.toggle('sel', state.sel.node === n.id);
+  const issues = state.issues.filter((i) => i.node === n.id);
+  div.classList.toggle('has-err', issues.some((i) => i.sev === 'err'));
+  div.classList.toggle('has-warn', issues.some((i) => i.sev === 'warn'));
+}
+
+function renderNodes() {
+  nodesLayer.textContent = '';
+  nodeEls.clear();
+  for (const n of state.graph.nodes.values()) {
+    const div = buildNodeEl(n);
+    placeNodeEl(div, n);
+    nodesLayer.append(div);
+    nodeEls.set(n.id, div);
+  }
+}
+// Правка полей без изменения структуры: обновить содержимое нод на месте.
+function renderNodesLight() {
+  for (const n of state.graph.nodes.values()) {
+    const old = nodeEls.get(n.id);
+    if (!old) { renderNodes(); return; }
+    const fresh = buildNodeEl(n);
+    placeNodeEl(fresh, n);
+    old.replaceWith(fresh);
+    nodeEls.set(n.id, fresh);
+  }
+}
+
+function portPos(nodeId, port) {
+  const n = state.graph.nodes.get(nodeId);
+  const div = nodeEls.get(nodeId);
+  if (!n || !div) return null;
+  return { x: n.x + (port === 'out' ? div.offsetWidth : 0), y: n.y + 16 };
+}
+function wirePath(a, b) {
+  const dx = Math.max(40, Math.abs(b.x - a.x) * 0.5);
+  return `M${a.x},${a.y} C${a.x + dx},${a.y} ${b.x - dx},${b.y} ${b.x},${b.y}`;
+}
+function renderWires() {
+  wiresSvg.textContent = '';
+  state.graph.links.forEach((l, i) => {
+    const a = portPos(l.from, 'out'), b = portPos(l.to, 'in');
+    if (!a || !b) return;
+    const d = wirePath(a, b);
+    const vis = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    vis.setAttribute('d', d);
+    if (state.sel.link === i) vis.setAttribute('class', 'sel');
+    const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    hit.setAttribute('d', d);
+    hit.setAttribute('class', 'hit');
+    hit.dataset.link = i;
+    wiresSvg.append(vis, hit);
+  });
+  if (drag && drag.kind === 'wire' && drag.to) {
+    const temp = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    temp.setAttribute('d', wirePath(drag.from, drag.to));
+    temp.setAttribute('class', 'temp');
+    wiresSvg.append(temp);
+  }
+}
+
+function renderAll() {
+  renderNodes();
+  renderWires();
+  renderInspector();
+  renderBanner();
+}
+
+function renderBanner() {
+  const b = $('banner');
+  if (state.isExample) {
+    b.hidden = false;
+    b.textContent = 'Это пример сюжета. Любая правка сохранит его как ваш граф — правьте его или удалите ноды и начните с нуля.';
+  } else if (state.storage === 'file' && file.blocked) {
+    b.hidden = false;
+    b.textContent = file.blocked === 'newer'
+      ? 'Граф сохранён более новой версией редактора — открыт только для просмотра. Обновите проект (git pull) и перезагрузите окно.'
+      : 'Файл графа не читается — сохранение выключено, пока не восстановите копию.';
+  } else if (state.storage === 'file' && file.info && file.info.editorSource === 'bundled-newer-needed') {
+    b.hidden = false;
+    b.textContent = 'Редактор в проекте требует более новую версию приложения — открыта встроенная копия. Скачайте свежую сборку (Docs/Story/STORY_GRAPH.md, «Приложение для Mac»).';
+  } else if (state.storage === 'local') {
+    b.hidden = false;
+    b.textContent = 'Общее хранилище недоступно — граф сохраняется только в этом браузере. Не забудьте скачать JSON.';
+  } else b.hidden = true;
+}
+
+// ───────────────────────── Инспектор ─────────────────────────
+
+const insp = $('inspector');
+
+function catalogList(name) { return Array.isArray(state.catalog[name]) ? state.catalog[name] : []; }
+function catalogName(name, id) {
+  if (!id) return '';
+  const hit = catalogList(name).find((e) => e.id === id);
+  return hit ? hit.name : id;
+}
+
+let fieldSeq = 0;
+function fid() { return 'f' + (++fieldSeq); }
+
+function fieldWrap(label, control, help) {
+  const id = control.id || (control.id = fid());
+  return el('div', { class: 'field' }, el('label', { for: id, text: label }), control, help ? el('div', { class: 'help', text: help }) : null);
+}
+
+function textInput(n, key, opts = {}) {
+  const input = el('input', { type: opts.number ? 'number' : 'text', class: opts.mono ? 'mono' : null, autocomplete: 'off',
+    min: opts.min, step: opts.step, list: opts.list });
+  input.value = n[key] ?? '';
+  input.addEventListener('input', () => {
+    beginEdit(true);
+    n[key] = opts.number ? (input.value === '' ? 0 : Number(input.value)) : (opts.sanitize ? opts.sanitize(input.value) : input.value);
+    if (opts.sanitize && input.value !== n[key]) input.value = n[key];
+    changed(false);
+  });
+  return input;
+}
+
+function selectInput(n, key, options, onChange) {
+  const s = el('select');
+  for (const o of options) s.append(el('option', { value: o.id, text: o.label }));
+  s.value = n[key];
+  s.addEventListener('change', () => { beginEdit(false); n[key] = s.value; if (onChange) onChange(); changed(false); renderInspector(); });
+  return s;
+}
+
+// Поле с выпадающим списком из каталога и свободным вводом (если каталога ещё нет).
+function catalogInput(n, key, catalogKey, label, required) {
+  const listId = fid();
+  const list = el('datalist', { id: listId });
+  for (const e of catalogList(catalogKey)) list.append(el('option', { value: e.id, label: e.name }));
+  const input = textInput(n, key, { mono: true, list: listId });
+  const known = catalogList(catalogKey).length;
+  const help = known
+    ? `${catalogName(catalogKey, n[key]) !== n[key] ? catalogName(catalogKey, n[key]) : ''}`
+    : 'Каталог сцены не загружен — впишите id вручную или загрузите каталог.';
+  const wrap = fieldWrap(label + (required ? ' *' : ''), input, help || (required ? '' : 'Пусто — любой.'));
+  wrap.append(list);
+  return wrap;
+}
+
+function locInput(owner, key, label, multiline, requiredFirst) {
+  if (!owner[key] || typeof owner[key] !== 'object') owner[key] = {};
+  const box = el('div', { class: 'field' }, el('div', { class: 'lbl', text: label }));
+  const grid = el('div', { class: 'loc' });
+  langs().forEach((lang, i) => {
+    const control = multiline ? el('textarea', { rows: 2 }) : el('input', { type: 'text', autocomplete: 'off' });
+    control.id = fid();
+    control.value = owner[key][lang] || '';
+    control.setAttribute('aria-label', `${label} (${lang})`);
+    if (i === 0 && requiredFirst) control.setAttribute('placeholder', 'обязательно');
+    control.addEventListener('input', () => { beginEdit(true); owner[key][lang] = control.value; changed(false); });
+    grid.append(el('label', { class: 'lang', for: control.id, text: lang }), control);
+  });
+  box.append(grid);
+  return box;
+}
+
+function renderInspector() {
+  insp.textContent = '';
+  const id = state.sel.node;
+  const n = id && state.graph.nodes.get(id);
+  if (state.sel.link !== null && state.graph.links[state.sel.link]) {
+    const l = state.graph.links[state.sel.link];
+    insp.append(el('h2', { text: 'Нитка' }),
+      el('div', { class: 'insp-empty', text: `${nodeTitle(l.from)} → ${nodeTitle(l.to)}` }),
+      el('button', { class: 'btn danger-btn', type: 'button', text: 'Удалить нитку', onclick: deleteSelection }));
+    insp.classList.remove('closed');
+    return;
+  }
+  if (!n) {
+    insp.append(el('h2', { text: 'Свойства' }),
+      el('div', { class: 'insp-empty', text: 'Выберите ноду, чтобы изменить её. Новую ноду добавьте слева — она появится в центре экрана.' }));
+    insp.classList.add('closed');
+    return;
+  }
+  insp.classList.remove('closed');
+  const t = TYPES[n.type];
+  insp.append(el('div', { class: 'type-chip' }, el('span', { class: 'sw', style: `background:${typeColor(n.type)}` }), t.label),
+    el('div', { class: 'help', style: 'font:11px var(--font-mono);color:var(--muted)', text: 'id ноды: ' + n.id }));
+
+  switch (n.type) {
+    case 'start':
+      insp.append(el('div', { class: 'insp-empty', text: 'Отсюда начинается новая игра. Нитки от «Старта» включают первые ноды сюжета. Триггер без входящих ниток тоже слушает с самого начала.' }));
+      break;
+    case 'quest': renderQuest(n); break;
+    case 'radio': renderRadio(n); break;
+    case 'trigger': renderTrigger(n); break;
+    case 'wait':
+      insp.append(fieldWrap('Секунды', textInput(n, 'seconds', { number: true, min: 0, step: 0.5 }), 'Игровое время: на паузе не идёт.'));
+      break;
+    case 'and':
+      insp.append(el('div', { class: 'insp-empty', text: 'Нода «И» ждёт, пока сработают ВСЕ ноды, чьи нитки в неё входят. Обычные ноды включаются от любой входящей нитки.' }));
+      break;
+    case 'action': renderAction(n); break;
+    case 'note': {
+      const ta = el('textarea', { rows: 6 });
+      ta.value = n.text || '';
+      ta.addEventListener('input', () => { beginEdit(true); n.text = ta.value; changed(false); });
+      insp.append(fieldWrap('Текст заметки', ta, 'В игре не участвует.'));
+      break;
+    }
+  }
+
+  const issues = state.issues.filter((i) => i.node === n.id);
+  if (issues.length) {
+    const ul = el('ul', { class: 'issues' });
+    for (const i of issues) ul.append(el('li', {}, el('button', { type: 'button' }, el('span', { class: 'sev ' + i.sev, text: sevLabel(i.sev) }), el('span', { text: i.text }))));
+    insp.append(el('div', { class: 'field' }, el('div', { class: 'lbl', text: 'Что поправить' }), ul));
+  }
+
+  insp.append(el('div', { class: 'actions', style: 'display:flex;gap:8px;flex-wrap:wrap' },
+    el('button', { class: 'btn', type: 'button', text: 'Копия (Ctrl+D)', onclick: duplicateSelection }),
+    el('button', { class: 'btn danger-btn', type: 'button', text: 'Удалить', onclick: deleteSelection })));
+}
+
+function renderQuest(n) {
+  insp.append(fieldWrap('id квеста *', textInput(n, 'questId', { mono: true, sanitize: sanitizeId }),
+    'Латиница, цифры, «_». После выхода игры не менять — по нему сейвы находят квест.'));
+  insp.append(locInput(n, 'title', 'Название *', false, true));
+  insp.append(locInput(n, 'description', 'Описание', true, false));
+  insp.append(fieldWrap('Что сделать', selectInput(n, 'questType', QUEST_TYPES)));
+  const f = QUEST_FIELDS[n.questType] || QUEST_FIELDS.RepairPoints;
+  if (f.category) insp.append(catalogInput(n, 'category', 'categories', 'Категория полки', true));
+  if (f.target) insp.append(catalogInput(n, 'target', TARGETS[f.target].catalog, TARGETS[f.target].label, f.targetRequired));
+  if (f.zone) insp.append(catalogInput(n, 'zone', 'zones', 'Зона доставки', false));
+  if (f.item) insp.append(catalogInput(n, 'item', 'items', 'Предмет', false));
+  insp.append(fieldWrap('Сколько', textInput(n, 'targetCount', { number: true, min: 1 })));
+  insp.append(el('div', { class: 'row2' },
+    fieldWrap('Опыт', textInput(n, 'xp', { number: true, min: 0 })),
+    fieldWrap('Деньги', textInput(n, 'money', { number: true, min: 0 }))));
+}
+
+function renderRadio(n) {
+  insp.append(locInput(n, 'speaker', 'Кто говорит *', false, true));
+  const plist = fid();
+  const portrait = textInput(n, 'portrait', { mono: true, list: plist });
+  const pw = fieldWrap('Портрет (id)', portrait, 'Картинка говорящего из каталога Unity. Можно пусто.');
+  const dl = el('datalist', { id: plist });
+  for (const e of catalogList('speakers')) dl.append(el('option', { value: e.id, label: e.name }));
+  pw.append(dl);
+  insp.append(pw);
+
+  const box = el('div', { class: 'lines' });
+  (n.lines || (n.lines = [])).forEach((line, i) => {
+    const card = el('div', { class: 'line-card' });
+    const secs = el('input', { type: 'number', min: 0.5, step: 0.5, 'aria-label': `Длительность реплики ${i + 1}` });
+    secs.value = line.seconds ?? 4;
+    secs.addEventListener('input', () => { beginEdit(true); line.seconds = Number(secs.value) || 0; changed(false); });
+    const up = el('button', { class: 'mini', type: 'button', text: '↑', 'aria-label': 'Выше', disabled: i === 0 ? true : null,
+      onclick: () => { beginEdit(false); n.lines.splice(i - 1, 0, n.lines.splice(i, 1)[0]); changed(false); renderInspector(); } });
+    const down = el('button', { class: 'mini', type: 'button', text: '↓', 'aria-label': 'Ниже', disabled: i === n.lines.length - 1 ? true : null,
+      onclick: () => { beginEdit(false); n.lines.splice(i + 1, 0, n.lines.splice(i, 1)[0]); changed(false); renderInspector(); } });
+    const del = el('button', { class: 'mini danger-btn', type: 'button', text: '✕', 'aria-label': 'Удалить реплику',
+      onclick: () => { beginEdit(false); n.lines.splice(i, 1); changed(false); renderInspector(); } });
+    card.append(el('div', { class: 'line-top' }, el('span', { text: `Реплика ${i + 1}` }), secs, el('span', { text: 'с' }),
+      el('span', { class: 'sp' }, up, down, del)));
+    card.append(locInput(line, 'text', 'Текст', true, true));
+    box.append(card);
+  });
+  insp.append(el('div', { class: 'field' }, el('div', { class: 'lbl', text: 'Реплики' }), box,
+    el('button', { class: 'btn', type: 'button', text: '+ Реплика', onclick: () => { beginEdit(false); n.lines.push({ seconds: 4, text: {} }); changed(false); renderInspector(); } })));
+  insp.append(el('div', { class: 'help', text: 'В игре: «Входящий вызов» → игрок жмёт E → HUD гаснет, в руках рация, реплики идут строкой внизу. E допечатывает и листает.' }));
+}
+
+function renderTrigger(n) {
+  insp.append(fieldWrap('Когда сработать', selectInput(n, 'trigger', TRIGGERS)));
+  const t = TRIGGERS.find((x) => x.id === n.trigger) || TRIGGERS[0];
+  const req = (k) => t.req.includes(k);
+  if (t.fields.target) insp.append(catalogInput(n, 'target', TARGETS[t.fields.target].catalog, TARGETS[t.fields.target].label, req('target')));
+  if (t.fields.category) insp.append(catalogInput(n, 'category', 'categories', 'Категория полки', req('category')));
+  if (t.fields.zone) insp.append(catalogInput(n, 'zone', 'zones', 'Зона доставки', req('zone')));
+  if (t.fields.item) insp.append(catalogInput(n, 'item', 'items', 'Предмет', req('item')));
+  if (t.fields.enemyType) insp.append(catalogInput(n, 'enemyType', 'enemyTypes', 'Тип врага', req('enemyType')));
+  if (t.fields.orderId) insp.append(catalogInput(n, 'orderId', 'orders', 'Заказ', req('orderId')));
+  if (t.fields.lootBoxId) insp.append(catalogInput(n, 'lootBoxId', 'lootBoxes', 'Ящик поставки', req('lootBoxId')));
+  if (t.fields.questId) insp.append(catalogInput(n, 'questId', 'quests', 'Квест', req('questId')));
+  if (t.fields.value) insp.append(fieldWrap(t.fields.value + ' *', textInput(n, 'value', { number: true, min: 0 })));
+  if (t.fields.count) insp.append(fieldWrap('Сколько раз', textInput(n, 'count', { number: true, min: 1 })));
+  insp.append(el('div', { class: 'help', text: 'Триггер начинает слушать, когда в него пришла нитка (без входящих ниток — с начала игры). Если условие уже выполнено, срабатывает сразу.' }));
+}
+
+function renderAction(n) {
+  insp.append(fieldWrap('Что сделать', selectInput(n, 'action', ACTIONS)));
+  const a = ACTIONS.find((x) => x.id === n.action) || ACTIONS[0];
+  if (a.fields.value) insp.append(fieldWrap(a.fields.value + ' *', textInput(n, 'value', { number: true, min: 0 })));
+  if (a.fields.target) insp.append(catalogInput(n, 'target', TARGETS.storyObject.catalog, TARGETS.storyObject.label, true));
+}
+
+function nodeTitle(id) {
+  const n = state.graph.nodes.get(id);
+  if (!n) return id;
+  const t = TYPES[n.type].label;
+  if (n.type === 'quest') return `${t} «${locText(n.title) || n.questId || n.id}»`;
+  if (n.type === 'radio') return `${t} «${locText(n.speaker) || n.id}»`;
+  if (n.type === 'trigger') { const tr = TRIGGERS.find((x) => x.id === n.trigger); return `${t} «${tr ? tr.label : n.trigger}»`; }
+  return t;
+}
+
+const sanitizeId = (v) => v.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+
+// ───────────────────────── Проверка графа ─────────────────────────
+
+function sevLabel(s) { return s === 'err' ? 'Ошибка' : s === 'warn' ? 'Внимание' : 'Инфо'; }
+
+function validate() {
+  const issues = [];
+  const add = (sev, node, text) => issues.push({ sev, node, text });
+  const nodes = [...state.graph.nodes.values()];
+  const fl = firstLang();
+
+  const starts = nodes.filter((n) => n.type === 'start');
+  if (!starts.length) add('err', null, 'Нет ноды «Старт» — сюжету неоткуда начаться.');
+  if (starts.length > 1) starts.slice(1).forEach((s) => add('warn', s.id, 'Лишний «Старт»: сработают все — обычно нужен один.'));
+
+  // Достижимость: от «Старта» и от триггеров без входящих ниток (они слушают с начала игры).
+  const incoming = new Map(), outgoing = new Map();
+  for (const l of state.graph.links) {
+    (incoming.get(l.to) || incoming.set(l.to, []).get(l.to)).push(l.from);
+    (outgoing.get(l.from) || outgoing.set(l.from, []).get(l.from)).push(l.to);
+  }
+  const roots = nodes.filter((n) => n.type === 'start' || (n.type === 'trigger' && !incoming.has(n.id))).map((n) => n.id);
+  const seen = new Set(roots);
+  const stack = [...roots];
+  while (stack.length) for (const next of outgoing.get(stack.pop()) || []) if (!seen.has(next)) { seen.add(next); stack.push(next); }
+  for (const n of nodes) if (n.type !== 'note' && !seen.has(n.id)) add('warn', n.id, 'До этой ноды нельзя дойти от «Старта» — она никогда не включится.');
+
+  const questIds = new Map();
+  for (const n of nodes) {
+    if (n.type === 'quest') {
+      if (!n.questId) add('err', n.id, 'Не задан id квеста.');
+      else if (!/^[a-z0-9_]+$/.test(n.questId)) add('err', n.id, 'id квеста — только латиница в нижнем регистре, цифры и «_».');
+      else if (questIds.has(n.questId)) add('err', n.id, `id «${n.questId}» уже занят другим квестом.`);
+      else questIds.set(n.questId, n.id);
+      if (!(n.title && n.title[fl])) add('err', n.id, `Нет названия (${fl}).`);
+      if (!(n.targetCount >= 1)) add('err', n.id, '«Сколько» должно быть не меньше 1.');
+      const f = QUEST_FIELDS[n.questType];
+      if (!f) add('err', n.id, 'Неизвестный тип квеста.');
+      else {
+        if (f.category && !n.category) add('err', n.id, 'Для расстановки нужна категория полки.');
+        checkCatalog(add, n, 'category', 'categories', f.category);
+        if (f.target) checkCatalog(add, n, 'target', TARGETS[f.target].catalog, true);
+        checkCatalog(add, n, 'zone', 'zones', f.zone);
+        checkCatalog(add, n, 'item', 'items', f.item);
+      }
+    }
+    if (n.type === 'radio') {
+      if (!(n.speaker && n.speaker[fl])) add('err', n.id, `Не указано, кто говорит (${fl}).`);
+      if (!n.lines || !n.lines.length) add('err', n.id, 'В разговоре нет реплик.');
+      else n.lines.forEach((l, i) => {
+        if (!(l.text && l.text[fl])) add('err', n.id, `Реплика ${i + 1}: пустой текст (${fl}).`);
+        if (!(l.seconds > 0)) add('warn', n.id, `Реплика ${i + 1}: длительность 0 — пролетит мгновенно.`);
+      });
+    }
+    if (n.type === 'trigger') {
+      const t = TRIGGERS.find((x) => x.id === n.trigger);
+      if (!t) add('err', n.id, `Неизвестный вид триггера «${n.trigger}».`);
+      else {
+        for (const r of t.req) if (!n[r] && n[r] !== 0) add('err', n.id, `Не заполнено поле «${fieldLabel(t, r)}».`);
+        if (t.req.includes('value') && !(n.value > 0)) add('err', n.id, `«${t.fields.value}» должно быть больше 0.`);
+        if (t.fields.target) checkCatalog(add, n, 'target', TARGETS[t.fields.target].catalog, true);
+        checkCatalog(add, n, 'category', 'categories', !!t.fields.category);
+        checkCatalog(add, n, 'item', 'items', !!t.fields.item);
+        checkCatalog(add, n, 'zone', 'zones', !!t.fields.zone);
+        checkCatalog(add, n, 'enemyType', 'enemyTypes', !!t.fields.enemyType);
+        checkCatalog(add, n, 'orderId', 'orders', !!t.fields.orderId);
+        checkCatalog(add, n, 'lootBoxId', 'lootBoxes', !!t.fields.lootBoxId);
+      }
+    }
+    if (n.type === 'action') {
+      const a = ACTIONS.find((x) => x.id === n.action);
+      if (!a) add('err', n.id, `Неизвестное событие «${n.action}».`);
+      else {
+        if (a.fields.value && !(n.value > 0)) add('err', n.id, `«${a.fields.value}» должно быть больше 0.`);
+        if (a.fields.target && !n.target) add('err', n.id, 'Не выбран объект сюжета.');
+        if (a.fields.target) checkCatalog(add, n, 'target', 'storyObjects', true);
+      }
+    }
+    if (n.type === 'and' && (incoming.get(n.id) || []).length < 2) add('warn', n.id, '«И» с одним входом ничего не ждёт — соедините с ней две ноды или больше.');
+    if (n.type === 'wait' && !(n.seconds > 0)) add('warn', n.id, 'Ожидание 0 секунд.');
+  }
+
+  // Переводы на остальные языки — только справка.
+  if (langs().length > 1) {
+    for (const lang of langs().slice(1)) {
+      let missing = 0;
+      for (const n of nodes) for (const obj of locFields(n)) if (obj[fl] && !obj[lang]) missing++;
+      if (missing) add('info', null, `Не переведено на «${lang}»: ${missing} текст(ов) — в игре покажется английский.`);
+    }
+  }
+
+  state.issues = issues;
+  const errs = issues.filter((i) => i.sev === 'err').length, warns = issues.filter((i) => i.sev === 'warn').length;
+  const c = $('issueCount');
+  c.textContent = errs || warns || 0;
+  c.className = 'count' + (errs ? ' err' : warns ? ' warn' : '');
+  for (const n of nodes) { const d = nodeEls.get(n.id); if (d) placeNodeEl(d, n); }
+  if (!$('sheetIssues').hidden) renderIssues();
+}
+
+function fieldLabel(t, key) {
+  if (key === 'target') return TARGETS[t.fields.target].label;
+  return { category: 'Категория полки', item: 'Предмет', zone: 'Зона', value: t.fields.value, questId: 'Квест', orderId: 'Заказ', lootBoxId: 'Ящик', enemyType: 'Тип врага' }[key] || key;
+}
+
+function checkCatalog(add, n, key, catalogKey, relevant) {
+  if (!relevant || !n[key]) return;
+  const list = catalogList(catalogKey);
+  if (list.length && !list.some((e) => e.id === n[key])) add('warn', n.id, `«${n[key]}» нет в каталоге сцены (${CATALOG_LISTS[catalogKey] || catalogKey}).`);
+}
+
+function locFields(n) {
+  const out = [];
+  if (n.type === 'quest') { out.push(n.title || {}); if (n.description && Object.values(n.description).some(Boolean)) out.push(n.description); }
+  if (n.type === 'radio') { out.push(n.speaker || {}); for (const l of n.lines || []) out.push(l.text || {}); }
+  return out;
+}
+
+function renderIssues() {
+  const ul = $('issueList');
+  ul.textContent = '';
+  if (!state.issues.length) { ul.append(el('li', { class: 'msg ok', text: 'Проблем не найдено — граф можно импортировать в Unity.' })); return; }
+  const order = { err: 0, warn: 1, info: 2 };
+  for (const i of [...state.issues].sort((a, b) => order[a.sev] - order[b.sev])) {
+    ul.append(el('li', {}, el('button', { type: 'button', onclick: () => { if (i.node) focusNode(i.node); } },
+      el('span', { class: 'sev ' + i.sev, text: sevLabel(i.sev) }),
+      el('span', { text: (i.node ? nodeTitle(i.node) + ': ' : '') + i.text }))));
+  }
+}
+
+// ───────────────────────── Мышь, касания, клавиатура ─────────────────────────
+
+let drag = null;
+const pointers = new Map();
+
+function toWorld(clientX, clientY) {
+  const r = canvas.getBoundingClientRect();
+  return { x: (clientX - r.left - state.view.x) / state.view.k, y: (clientY - r.top - state.view.y) / state.view.k };
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  if (e.target.closest('.sheet, .zoom, .banner')) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 2) { startPinch(); return; }
+  if (e.button === 2) return;
+
+  const port = e.target.closest('.port.out');
+  const nodeDiv = e.target.closest('.node');
+  const hit = e.target.closest('path.hit');
+
+  if (port && nodeDiv) {
+    const id = nodeDiv.dataset.id;
+    drag = { kind: 'wire', fromId: id, from: portPos(id, 'out'), to: toWorld(e.clientX, e.clientY) };
+  } else if (nodeDiv && !e.target.closest('.port')) {
+    const id = nodeDiv.dataset.id;
+    selectNode(id);
+    const n = state.graph.nodes.get(id);
+    drag = { kind: 'node', id, startX: e.clientX, startY: e.clientY, nx: n.x, ny: n.y, moved: false };
+  } else if (hit) {
+    state.sel = { node: null, link: Number(hit.dataset.link) };
+    renderAll();
+    drag = null;
+    return;
+  } else {
+    drag = { kind: 'pan', startX: e.clientX, startY: e.clientY, vx: state.view.x, vy: state.view.y, moved: false };
+    canvas.classList.add('panning');
+  }
+  canvas.setPointerCapture(e.pointerId);
+});
+
+canvas.addEventListener('pointermove', (e) => {
+  if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pinch && pointers.size === 2) { movePinch(); return; }
+  if (!drag) return;
+  if (drag.kind === 'pan') {
+    state.view.x = drag.vx + (e.clientX - drag.startX);
+    state.view.y = drag.vy + (e.clientY - drag.startY);
+    drag.moved = drag.moved || Math.abs(e.clientX - drag.startX) + Math.abs(e.clientY - drag.startY) > 3;
+    applyView();
+  } else if (drag.kind === 'node') {
+    const dx = (e.clientX - drag.startX) / state.view.k, dy = (e.clientY - drag.startY) / state.view.k;
+    if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 3) return;
+    if (!drag.moved) { beginEdit(false); drag.moved = true; }
+    const n = state.graph.nodes.get(drag.id);
+    n.x = Math.round(drag.nx + dx); n.y = Math.round(drag.ny + dy);
+    const d = nodeEls.get(n.id);
+    d.style.left = n.x + 'px'; d.style.top = n.y + 'px';
+    renderWires();
+  } else if (drag.kind === 'wire') {
+    drag.to = toWorld(e.clientX, e.clientY);
+    clearDropHighlight();
+    const target = dropTarget(e.clientX, e.clientY);
+    if (target) { target.classList.add('drop'); target.querySelector('.port.in').classList.add('hot'); }
+    renderWires();
+  }
+});
+
+// Нитку можно бросить на любую часть ноды, у которой есть вход, — не только точно в кружок.
+function dropTarget(clientX, clientY) {
+  const over = document.elementFromPoint(clientX, clientY);
+  const nodeDiv = over && over.closest('.node');
+  if (!nodeDiv || !drag || nodeDiv.dataset.id === drag.fromId || !nodeDiv.querySelector('.port.in')) return null;
+  return nodeDiv;
+}
+function clearDropHighlight() {
+  document.querySelectorAll('.node.drop').forEach((n) => n.classList.remove('drop'));
+  document.querySelectorAll('.port.in.hot').forEach((p) => p.classList.remove('hot'));
+}
+
+function endPointer(e) {
+  pointers.delete(e.pointerId);
+  if (pinch && pointers.size < 2) { pinch = null; return; }
+  if (!drag) return;
+  if (drag.kind === 'wire') {
+    clearDropHighlight();
+    const nodeDiv = dropTarget(e.clientX, e.clientY);
+    if (nodeDiv) connect(drag.fromId, nodeDiv.dataset.id);
+    drag = null;
+    renderWires();
+  } else if (drag.kind === 'node') {
+    if (drag.moved) changed(false);
+    drag = null;
+  } else if (drag.kind === 'pan') {
+    if (!drag.moved && (state.sel.node || state.sel.link !== null)) { state.sel = { node: null, link: null }; renderAll(); }
+    drag = null;
+    canvas.classList.remove('panning');
+  }
+}
+canvas.addEventListener('pointerup', endPointer);
+canvas.addEventListener('pointercancel', endPointer);
+
+canvas.addEventListener('wheel', (e) => {
+  if (e.target.closest('.sheet')) return;
+  e.preventDefault();
+  const factor = Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015));
+  zoomAt(e.clientX, e.clientY, state.view.k * factor);
+}, { passive: false });
+
+function zoomAt(clientX, clientY, k) {
+  k = Math.min(2.5, Math.max(0.2, k));
+  const r = canvas.getBoundingClientRect();
+  const px = clientX - r.left, py = clientY - r.top;
+  const wx = (px - state.view.x) / state.view.k, wy = (py - state.view.y) / state.view.k;
+  state.view.k = k;
+  state.view.x = px - wx * k;
+  state.view.y = py - wy * k;
+  applyView();
+}
+
+let pinch = null;
+function startPinch() {
+  const [a, b] = [...pointers.values()];
+  drag = null;
+  pinch = { dist: Math.hypot(a.x - b.x, a.y - b.y), k: state.view.k };
+}
+function movePinch() {
+  const [a, b] = [...pointers.values()];
+  const dist = Math.hypot(a.x - b.x, a.y - b.y);
+  zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, pinch.k * dist / pinch.dist);
+}
+
+$('zoomIn').addEventListener('click', () => { const r = canvas.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, state.view.k * 1.2); });
+$('zoomOut').addEventListener('click', () => { const r = canvas.getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, state.view.k / 1.2); });
+$('zoomFit').addEventListener('click', fitAll);
+
+function fitAll() {
+  const nodes = [...state.graph.nodes.values()];
+  if (!nodes.length) { state.view = { x: 60, y: 60, k: 1 }; applyView(); return; }
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const n of nodes) {
+    const d = nodeEls.get(n.id);
+    minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
+    maxX = Math.max(maxX, n.x + (d ? d.offsetWidth : 230)); maxY = Math.max(maxY, n.y + (d ? d.offsetHeight : 100));
+  }
+  const r = canvas.getBoundingClientRect();
+  const k = Math.min(1.2, Math.max(0.2, Math.min((r.width - 80) / (maxX - minX), (r.height - 80) / (maxY - minY))));
+  state.view = { k, x: (r.width - (maxX - minX) * k) / 2 - minX * k, y: (r.height - (maxY - minY) * k) / 2 - minY * k };
+  applyView();
+}
+
+function focusNode(id) {
+  const n = state.graph.nodes.get(id);
+  if (!n) return;
+  const r = canvas.getBoundingClientRect();
+  state.view.x = r.width / 2 - (n.x + 115) * state.view.k;
+  state.view.y = r.height / 2 - (n.y + 40) * state.view.k;
+  applyView();
+  selectNode(id);
+}
+
+function selectNode(id) {
+  if (state.sel.node === id && state.sel.link === null) return;
+  state.sel = { node: id, link: null };
+  for (const [nid, d] of nodeEls) d.classList.toggle('sel', nid === id);
+  renderWires();
+  renderInspector();
+}
+
+function connect(from, to) {
+  if (from === to) return;
+  const target = state.graph.nodes.get(to);
+  if (!target || !TYPES[target.type].inPort) return;
+  if (state.graph.links.some((l) => l.from === from && l.to === to)) return;
+  beginEdit(false);
+  state.graph.links.push({ from, fromPort: 'out', to, toPort: 'in' });
+  changed(true);
+}
+
+function deleteSelection() {
+  if (state.sel.link !== null) {
+    beginEdit(false);
+    state.graph.links.splice(state.sel.link, 1);
+    state.sel.link = null;
+    changed(true);
+    return;
+  }
+  const id = state.sel.node;
+  if (!id) return;
+  beginEdit(false);
+  state.graph.nodes.delete(id);
+  state.graph.links = state.graph.links.filter((l) => l.from !== id && l.to !== id);
+  state.sel.node = null;
+  changed(true);
+}
+
+function duplicateSelection() {
+  const n = state.sel.node && state.graph.nodes.get(state.sel.node);
+  if (!n || n.type === 'start') return;
+  beginEdit(false);
+  const copy = JSON.parse(JSON.stringify(n));
+  copy.id = uid(n.type === 'quest' ? 'q' : 'n');
+  copy.x += 40; copy.y += 40;
+  if (copy.type === 'quest' && copy.questId) copy.questId = copy.questId + '_copy';
+  state.graph.nodes.set(copy.id, copy);
+  state.sel = { node: copy.id, link: null };
+  changed(true);
+}
+
+function addNode(type) {
+  const r = canvas.getBoundingClientRect();
+  const c = toWorld(r.left + r.width / 2, r.top + r.height / 2);
+  const offset = (state.graph.nodes.size % 5) * 24;
+  beginEdit(false);
+  const n = newNode(type, c.x - 115 + offset, c.y - 40 + offset);
+  state.graph.nodes.set(n.id, n);
+  state.sel = { node: n.id, link: null };
+  $('palette').classList.remove('open');
+  changed(true);
+}
+
+document.addEventListener('keydown', (e) => {
+  const typing = e.target.closest && e.target.closest('input, textarea, select');
+  const mod = e.ctrlKey || e.metaKey;
+  if (mod && e.key.toLowerCase() === 'z' && !typing) { e.preventDefault(); if (e.shiftKey) redoOnce(); else undoOnce(); return; }
+  if (mod && e.key.toLowerCase() === 'y' && !typing) { e.preventDefault(); redoOnce(); return; }
+  if (typing) return;
+  if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicateSelection(); return; }
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSelection(); }
+  if (e.key === 'Escape') { closeSheets(); state.sel = { node: null, link: null }; renderAll(); }
+});
+
+// ───────────────────────── Панели ─────────────────────────
+
+// Окна с data-sticky (выбор проекта, конфликт, битый файл) закрываются только своими кнопками — не Esc и не другими окнами.
+function closeSheets(force) { document.querySelectorAll('.sheet').forEach((s) => { if (force || !s.hasAttribute('data-sticky')) s.hidden = true; }); }
+function openSheet(id) { const was = !$(id).hidden; closeSheets(); if (!was) $(id).hidden = false; return !was; }
+function showSticky(id) { $(id).hidden = false; }
+function hideSticky(id) { $(id).hidden = true; }
+document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => closeSheets()));
+
+$('btnIssues').addEventListener('click', () => { if (openSheet('sheetIssues')) renderIssues(); });
+$('btnPalette').addEventListener('click', () => $('palette').classList.toggle('open'));
+
+$('btnLangs').addEventListener('click', () => {
+  if (!openSheet('sheetLangs')) return;
+  $('langList').value = langs().join(', ');
+  $('langMsg').textContent = '';
+});
+$('langApply').addEventListener('click', () => {
+  const list = $('langList').value.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+  const msg = $('langMsg');
+  const bad = list.filter((l) => !/^[a-z]{2,3}(-[a-z0-9]{2,4})?$/.test(l));
+  if (!list.length || bad.length) { msg.className = 'msg err'; msg.textContent = bad.length ? `Непонятный код: ${bad.join(', ')}` : 'Нужен хотя бы один язык.'; return; }
+  if (new Set(list).size !== list.length) { msg.className = 'msg err'; msg.textContent = 'Языки повторяются.'; return; }
+  beginEdit(false);
+  state.graph.languages = list;
+  changed(true);
+  msg.className = 'msg ok';
+  msg.textContent = 'Готово. Тексты удалённых языков сохранены в нодах и вернутся, если язык добавить снова.';
+});
+
+$('btnCatalog').addEventListener('click', () => { if (openSheet('sheetCatalog')) renderCatalogSummary(); });
+$('catalogLoad').addEventListener('click', () => $('fileCatalog').click());
+$('catalogPasteToggle').addEventListener('click', () => { $('catalogPaste').hidden = !$('catalogPaste').hidden; });
+$('fileCatalog').addEventListener('change', async (e) => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (f) applyCatalogText(await f.text());
+});
+$('catalogApplyText').addEventListener('click', () => applyCatalogText($('catalogText').value));
+
+function applyCatalogText(text) {
+  const msg = $('catalogMsg');
+  try {
+    const data = JSON.parse(text.replace(/^﻿/, ''));
+    const clean = {};
+    for (const key of Object.keys(CATALOG_LISTS)) {
+      if (!Array.isArray(data[key])) continue;
+      clean[key] = data[key].filter((e) => e && typeof e.id === 'string' && e.id).map((e) => ({ id: e.id, name: String(e.name || e.id) }));
+    }
+    if (!Object.keys(clean).length) throw new Error('в файле нет ни одного списка каталога');
+    state.catalog = clean;
+    msg.className = 'msg ok';
+    msg.textContent = 'Каталог загружен.';
+    renderCatalogSummary();
+    renderAll();
+    validate();
+    saveCatalog();
+  } catch (err) {
+    msg.className = 'msg err';
+    msg.textContent = 'Не получилось прочитать каталог: ' + err.message;
+  }
+}
+
+function renderCatalogSummary() {
+  const box = $('catalogSummary');
+  const parts = Object.entries(CATALOG_LISTS).map(([k, label]) => catalogList(k).length ? `${label}: ${catalogList(k).length}` : null).filter(Boolean);
+  box.textContent = parts.length ? 'Загружено — ' + parts.join(' · ') : 'Каталог ещё не загружен: цели придётся вписывать id вручную.';
+}
+
+$('btnImport').addEventListener('click', () => { if (openSheet('sheetImport')) $('importMsg').textContent = ''; });
+$('importFileBtn').addEventListener('click', () => $('fileImport').click());
+$('fileImport').addEventListener('change', async (e) => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (f) importText(await f.text());
+});
+$('importApplyText').addEventListener('click', () => importText($('importText').value));
+
+function importText(text) {
+  const msg = $('importMsg');
+  try {
+    const g = fromFileFormat(JSON.parse(text.replace(/^﻿/, '')));
+    beginEdit(false);
+    state.graph = g;
+    state.sel = { node: null, link: null };
+    changed(true);
+    fitAll();
+    msg.className = 'msg ok';
+    msg.textContent = `Открыто: нод — ${g.nodes.size}, ниток — ${g.links.length}.`;
+  } catch (err) {
+    msg.className = 'msg err';
+    msg.textContent = 'Файл не похож на граф сюжета: ' + err.message;
+  }
+}
+
+$('btnExport').addEventListener('click', () => { if (state.storage === 'file') { if (openSheet('sheetHistory')) renderHistory(); } else exportGraph(); });
+$('exportCopy').addEventListener('click', async () => {
+  const ta = $('exportText');
+  try { await navigator.clipboard.writeText(ta.value); $('exportMsg').className = 'msg ok'; $('exportMsg').textContent = 'Скопировано.'; }
+  catch { ta.select(); $('exportMsg').className = 'msg'; $('exportMsg').textContent = 'Текст выделен — скопируйте его сочетанием Ctrl+C.'; }
+});
+
+async function exportGraph() {
+  const json = JSON.stringify(toFileFormat(), null, 2);
+  const downloads = caps.downloads;
+  if (downloads) {
+    try { await downloads.save({ filename: 'story_graph.json', data: json }); return; }
+    catch (err) { if (err && err.code === 'declined') return; }
+  }
+  openSheet('sheetExport');
+  $('sheetExport').hidden = false;
+  if (state.storage === 'file') $('exportHint').textContent = 'Граф и так сохраняется в проект автоматически. Здесь — его текст, если нужно скопировать.';
+  $('exportText').value = json;
+  $('exportMsg').textContent = '';
+}
+
+// ───────────────────────── Оформление: тема и цвета ─────────────────────────
+// Настройки вида хранятся в браузере и в graph/appearance — чтобы на другом устройстве граф выглядел так же.
+
+const PREFS_KEY = 'wk-story-prefs-v1';
+const COLOR_VARS = [
+  { v: '--accent', label: 'Акцент (кнопки, выделение)' },
+  { v: '--wire', label: 'Нитки' },
+  { v: '--t-start', label: 'Старт' }, { v: '--t-quest', label: 'Квест' }, { v: '--t-radio', label: 'Рация' },
+  { v: '--t-trigger', label: 'Триггер' }, { v: '--t-wait', label: 'Ожидание' }, { v: '--t-and', label: 'И' },
+  { v: '--t-action', label: 'Событие' }, { v: '--t-note', label: 'Заметка' },
+];
+let prefs = { theme: null, colors: {}, bg: {} };
+const root = document.documentElement;
+const darkQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+function effectiveTheme() {
+  if (prefs.theme === 'dark' || prefs.theme === 'light') return prefs.theme;
+  const stamped = root.getAttribute('data-theme');
+  if (stamped === 'dark' || stamped === 'light') return stamped;
+  return darkQuery && darkQuery.matches ? 'dark' : 'light';
+}
+
+function applyPrefs() {
+  if (prefs.theme) root.setAttribute('data-theme', prefs.theme);
+  for (const { v } of COLOR_VARS) {
+    if (prefs.colors[v]) root.style.setProperty(v, prefs.colors[v]); else root.style.removeProperty(v);
+  }
+  if (prefs.colors['--accent']) {
+    root.style.setProperty('--wire-sel', prefs.colors['--accent']);
+    root.style.setProperty('--accent-ink', readableInk(prefs.colors['--accent']));
+  } else { root.style.removeProperty('--wire-sel'); root.style.removeProperty('--accent-ink'); }
+  const bg = prefs.bg[effectiveTheme()];
+  if (bg) root.style.setProperty('--bg', bg); else root.style.removeProperty('--bg');
+  $('btnTheme').textContent = effectiveTheme() === 'dark' ? '☀' : '☾';
+  $('btnTheme').title = effectiveTheme() === 'dark' ? 'Включить светлую тему' : 'Включить тёмную тему';
+}
+
+// Тёмный или светлый текст на цвете — по яркости цвета.
+function readableInk(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return '#1b1305';
+  const n = parseInt(m[1], 16);
+  const lum = (0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255;
+  return lum > 0.55 ? '#1b1305' : '#ffffff';
+}
+
+// Текущий цвет переменной в виде #rrggbb (для поля выбора цвета).
+function currentHex(v) {
+  const probe = document.createElement('span');
+  probe.style.color = `var(${v})`;
+  document.body.append(probe);
+  const rgb = getComputedStyle(probe).color.match(/\d+/g) || [0, 0, 0];
+  probe.remove();
+  return '#' + rgb.slice(0, 3).map((x) => Number(x).toString(16).padStart(2, '0')).join('');
+}
+
+function savePrefs() {
+  try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); } catch { /* только на этот сеанс */ }
+  clearTimeout(savePrefs.timer);
+  savePrefs.timer = setTimeout(() => {
+    if (state.storage === 'db' && caps.db) caps.db.doc('graph/appearance').set(JSON.parse(JSON.stringify(prefs))).catch(() => {});
+  }, 800);
+}
+
+function renderColors() {
+  const box = $('colorList');
+  box.textContent = '';
+  const row = (label, value, sw, onInput, onReset, overridden) => {
+    const id = fid();
+    const input = el('input', { type: 'color', id });
+    input.value = value;
+    input.addEventListener('input', () => onInput(input.value));
+    box.append(el('label', { for: id }, sw ? el('span', { class: 'sw', style: `background:${sw}` }) : null, label), input,
+      el('button', { class: 'mini reset', type: 'button', text: 'Сброс', disabled: overridden ? null : true,
+        onclick: () => { onReset(); applyPrefs(); savePrefs(); renderColors(); } }));
+  };
+  box.append(el('h4', { text: 'Ноды и акцент' }));
+  for (const { v, label } of COLOR_VARS) {
+    row(label, currentHex(v), v.startsWith('--t-') ? `var(${v})` : null,
+      (val) => { prefs.colors[v] = val; applyPrefs(); savePrefs(); },
+      () => { delete prefs.colors[v]; }, !!prefs.colors[v]);
+  }
+  box.append(el('h4', { text: 'Фон холста' }));
+  for (const [theme, label] of [['light', 'Светлая тема'], ['dark', 'Тёмная тема']]) {
+    const fallback = theme === 'light' ? '#e7ebee' : '#14181c';
+    row(label, prefs.bg[theme] || fallback, null,
+      (val) => { prefs.bg[theme] = val; applyPrefs(); savePrefs(); },
+      () => { delete prefs.bg[theme]; }, !!prefs.bg[theme]);
+  }
+}
+
+function loadPrefs(raw) {
+  if (!raw || typeof raw !== 'object') return;
+  prefs = { theme: raw.theme === 'dark' || raw.theme === 'light' ? raw.theme : null,
+    colors: typeof raw.colors === 'object' && raw.colors ? { ...raw.colors } : {},
+    bg: typeof raw.bg === 'object' && raw.bg ? { ...raw.bg } : {} };
+}
+
+$('btnTheme').addEventListener('click', () => {
+  prefs.theme = effectiveTheme() === 'dark' ? 'light' : 'dark';
+  applyPrefs();
+  savePrefs();
+  if (!$('sheetColors').hidden) renderColors();
+});
+$('btnColors').addEventListener('click', () => { if (openSheet('sheetColors')) renderColors(); });
+$('colorsResetAll').addEventListener('click', () => { prefs.colors = {}; prefs.bg = {}; applyPrefs(); savePrefs(); renderColors(); });
+if (darkQuery && darkQuery.addEventListener) darkQuery.addEventListener('change', applyPrefs);
+try { loadPrefs(JSON.parse(localStorage.getItem(PREFS_KEY) || 'null')); } catch { /* по умолчанию */ }
+applyPrefs();
+
+// ───────────────────────── Формат файла story_graph.json ─────────────────────────
+// Тексты в файле — массивы {lang, text}: так их читает JsonUtility в Unity (словарей он не умеет).
+
+const LOC_KEYS = ['title', 'description', 'speaker'];
+const toLocArray = (obj) => Object.entries(obj || {}).filter(([, v]) => v).map(([lang, text]) => ({ lang, text }));
+const fromLocArray = (arr) => { const o = {}; if (Array.isArray(arr)) for (const e of arr) if (e && e.lang) o[e.lang] = String(e.text || ''); return o; };
+
+function toFileFormat() {
+  const nodes = [...state.graph.nodes.values()].map((n) => {
+    const out = { ...n };
+    for (const k of LOC_KEYS) if (k in out) out[k] = toLocArray(out[k]);
+    if (out.lines) out.lines = out.lines.map((l) => ({ seconds: Number(l.seconds) || 0, text: toLocArray(l.text) }));
+    return out;
+  });
+  return { ...(state.graph.extra || {}), version: FILE_VERSION, languages: langs(), nodes, links: state.graph.links.map((l) => ({ ...l })) };
+}
+
+// Миграции формата: MIGRATIONS[n] переводит файл версии n в n+1. Новые версии редактора открывают старые файлы;
+// при смене формата — поднять FILE_VERSION и дописать сюда шаг (старые шаги не трогать).
+const MIGRATIONS = {
+  // 1: (data) => { /* переименования полей */ data.version = 2; return data; },
+};
+
+function migrateGraph(data) {
+  let version = Number(data.version) || 1;
+  if (version > FILE_VERSION) {
+    const err = new Error(`файл сохранён более новой версией редактора (формат ${version}, этот редактор знает до ${FILE_VERSION})`);
+    err.newer = true;
+    throw err;
+  }
+  while (version < FILE_VERSION) {
+    const step = MIGRATIONS[version];
+    if (!step) throw new Error(`нет миграции формата ${version} → ${version + 1}`);
+    data = step(JSON.parse(JSON.stringify(data)));
+    version = Number(data.version);
+  }
+  return data;
+}
+
+// Поля верхнего уровня, которых этот редактор не знает, сохраняются как есть — чтобы не потерять данные новых версий.
+const KNOWN_TOP = new Set(['version', 'languages', 'nodes', 'links']);
+
+function fromFileFormat(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('не объект JSON');
+  data = migrateGraph(data);
+  if (!Array.isArray(data.nodes) || !Array.isArray(data.links)) throw new Error('нет списков nodes и links');
+  const nodes = new Map();
+  for (const raw of data.nodes) {
+    if (!raw || !raw.id || !TYPES[raw.type]) throw new Error(`нода без id или с неизвестным типом «${raw && raw.type}»`);
+    const n = { ...raw };
+    for (const k of LOC_KEYS) if (k in n) n[k] = Array.isArray(n[k]) ? fromLocArray(n[k]) : (n[k] || {});
+    if (Array.isArray(n.lines)) n.lines = n.lines.map((l) => ({ seconds: Number(l.seconds) || 0, text: Array.isArray(l.text) ? fromLocArray(l.text) : (l.text || {}) }));
+    n.x = Number(n.x) || 0; n.y = Number(n.y) || 0;
+    nodes.set(n.id, n);
+  }
+  const links = data.links.filter((l) => l && nodes.has(l.from) && nodes.has(l.to))
+    .map((l) => ({ from: l.from, fromPort: l.fromPort || 'out', to: l.to, toPort: l.toPort || 'in' }));
+  const languages = Array.isArray(data.languages) && data.languages.length ? data.languages.map(String) : ['ru', 'en'];
+  const extra = {};
+  for (const [k, v] of Object.entries(data)) if (!KNOWN_TOP.has(k)) extra[k] = v;
+  return { languages, nodes, links, extra };
+}
+
+// ───────────────────────── Хранение ─────────────────────────
+// db: nodes/<id> — по документу на ноду (лимит документа 256 КБ не упрётся в размер сюжета),
+// graph/links — все нитки, graph/meta — языки, graph/catalog — каталог сцены.
+
+const caps = { db: null, downloads: null };
+const saved = { nodes: new Map(), links: null, meta: null };
+let syncTimer = 0, syncing = false, syncAgain = false;
+
+function setStatus(stateName, text) { const s = $('status'); s.dataset.state = stateName; s.textContent = text; }
+
+function scheduleSync() {
+  if (state.isExample) return;
+  clearTimeout(syncTimer);
+  if (state.storage === 'file') { fileDirty(); if (file.blocked || file.conflict) return; }
+  setStatus('saving', 'Сохраняется…');
+  syncTimer = setTimeout(sync, state.storage === 'file' ? 1000 : 700);
+}
+
+async function sync() {
+  if (syncing) { syncAgain = true; return; }
+  syncing = true;
+  try {
+    if (state.storage === 'db') await syncDb();
+    else if (state.storage === 'file') await syncFile();
+    else if (state.storage === 'local') {
+      try { localStorage.setItem(LOCAL_KEY, JSON.stringify(toFileFormat())); setStatus('local', 'Сохранено в браузере'); }
+      catch { setStatus('error', 'Не сохранено — скачайте JSON'); }
+    } else setStatus('error', 'Не сохранено — скачайте JSON');
+  } catch (err) {
+    setStatus('error', err && err.code === 'quota_exceeded' ? 'Хранилище заполнено' : 'Ошибка сохранения — повторю');
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(sync, 4000);
+  } finally {
+    syncing = false;
+    if (syncAgain) { syncAgain = false; scheduleSync(); }
+  }
+}
+
+async function syncDb() {
+  const db = caps.db;
+  for (const n of state.graph.nodes.values()) {
+    const json = JSON.stringify(n);
+    if (saved.nodes.get(n.id) === json) continue;
+    await db.doc('nodes/' + safeDocId(n.id)).set(JSON.parse(json));
+    saved.nodes.set(n.id, json);
+  }
+  for (const id of [...saved.nodes.keys()]) {
+    if (state.graph.nodes.has(id)) continue;
+    await db.doc('nodes/' + safeDocId(id)).delete();
+    saved.nodes.delete(id);
+  }
+  const links = JSON.stringify(state.graph.links);
+  if (saved.links !== links) { await db.doc('graph/links').set({ links: state.graph.links }); saved.links = links; }
+  const meta = JSON.stringify({ languages: langs() });
+  if (saved.meta !== meta) { await db.doc('graph/meta').set({ languages: langs(), version: FILE_VERSION }); saved.meta = meta; }
+  setStatus('saved', 'Сохранено');
+}
+
+async function saveCatalog() {
+  if (state.storage === 'file') {
+    if (!file.info || !file.info.project) return;
+    try { await file.host.writeCatalog(JSON.stringify(state.catalog, null, 2) + '\n'); } catch { setStatus('error', 'Каталог не сохранён'); }
+  } else if (state.storage === 'db') {
+    try { await caps.db.doc('graph/catalog').set({ lists: state.catalog }); } catch { setStatus('error', 'Каталог не сохранён'); }
+  } else {
+    try { localStorage.setItem(LOCAL_KEY + '-catalog', JSON.stringify(state.catalog)); } catch { /* только в памяти */ }
+  }
+}
+
+const safeDocId = (id) => id.replace(/[^A-Za-z0-9_\-.~:@+]/g, '_');
+
+// Первая правка примера делает его «своим»: дальше всё сохраняется как обычно.
+function adoptExample() {
+  state.isExample = false;
+  renderBanner();
+}
+
+async function loadFromDb(db) {
+  const [nodesSnap, linksDoc, metaDoc, catalogDoc] = await Promise.all([
+    db.collection('nodes').get(), db.doc('graph/links').get(), db.doc('graph/meta').get(), db.doc('graph/catalog').get(),
+  ]);
+  if (catalogDoc.exists) state.catalog = (catalogDoc.data() || {}).lists || {};
+  try {
+    const look = await db.doc('graph/appearance').get();
+    if (look.exists) { loadPrefs(look.data()); applyPrefs(); }
+  } catch { /* вид по умолчанию */ }
+  if (nodesSnap.empty && !linksDoc.exists) return false;
+  const nodes = new Map();
+  for (const d of nodesSnap.docs) {
+    const n = JSON.parse(JSON.stringify(d.data()));
+    if (!n || !n.id || !TYPES[n.type]) continue;
+    nodes.set(n.id, n);
+    saved.nodes.set(n.id, JSON.stringify(n));
+  }
+  const links = linksDoc.exists ? ((linksDoc.data() || {}).links || []).filter((l) => nodes.has(l.from) && nodes.has(l.to)) : [];
+  const meta = metaDoc.exists ? metaDoc.data() || {} : {};
+  state.graph = { languages: Array.isArray(meta.languages) && meta.languages.length ? [...meta.languages] : ['ru', 'en'], nodes, links: links.map((l) => ({ ...l })) };
+  saved.links = JSON.stringify(state.graph.links);
+  saved.meta = JSON.stringify({ languages: langs() });
+  return true;
+}
+
+// Правки из другой вкладки или устройства: подтягиваем, если у нас нет своих несохранённых изменений.
+function watchDb(db) {
+  db.collection('nodes').onSnapshot((snap) => {
+    if (syncing || syncTimer && $('status').dataset.state === 'saving') return;
+    let dirty = false;
+    for (const ch of snap.docChanges()) {
+      const data = ch.doc.data();
+      const id = data && data.id;
+      if (!id) continue;
+      if (ch.type === 'removed') {
+        if (state.graph.nodes.has(id) && saved.nodes.has(id)) { state.graph.nodes.delete(id); saved.nodes.delete(id); dirty = true; }
+        continue;
+      }
+      const json = JSON.stringify(data);
+      if (saved.nodes.get(id) === json) continue;
+      const local = state.graph.nodes.get(id);
+      if (local && JSON.stringify(local) !== saved.nodes.get(id)) continue; // своя несохранённая правка
+      state.graph.nodes.set(id, JSON.parse(json));
+      saved.nodes.set(id, json);
+      dirty = true;
+    }
+    if (dirty && !drag) { renderAll(); validate(); }
+  }, () => {});
+  db.doc('graph/links').onSnapshot((doc) => {
+    if (!doc.exists || syncing) return;
+    const links = (doc.data() || {}).links || [];
+    const json = JSON.stringify(links);
+    if (json === saved.links || JSON.stringify(state.graph.links) !== saved.links) return;
+    state.graph.links = JSON.parse(json);
+    saved.links = json;
+    if (!drag) { renderWires(); validate(); }
+  }, () => {});
+}
+
+// ───────────────────────── Приложение для Mac: файлы проекта ─────────────────────────
+// window.storyHost даёт Tools/StoryEditor/app (preload.js). Граф — Assets/01_GAME/08_Story/story_graph.json в проекте.
+// Правила: битый файл не перезаписывается; файл, изменённый снаружи, не затирается молча; любая вытесненная версия
+// сначала уходит в резервную копию; пока правки не записаны, они лежат в черновике (переживёт сбой приложения).
+
+const file = {
+  host: null,
+  info: null,
+  mtimeMs: 0,     // mtime файла, который мы последними прочитали или записали (0 — файла нет)
+  diskText: null, // точный текст файла на диске, каким мы его знаем
+  cleanText: '',  // graphText() последнего сохранённого состояния — с ним сравнивается «есть ли несохранённое»
+  blocked: '',    // '' | 'corrupt' | 'newer' — сохранение выключено
+  conflict: false,
+  draftTimer: 0,
+};
+
+const graphText = () => JSON.stringify(toFileFormat(), null, 2) + '\n';
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const isDirty = () => !state.isExample && graphText() !== file.cleanText;
+
+// Каждая правка: пометить окно «есть несохранённое» и через 250 мс записать черновик.
+function fileDirty() {
+  if (!file.info || !file.info.project) return;
+  file.host.setDirty(true);
+  clearTimeout(file.draftTimer);
+  file.draftTimer = setTimeout(writeDraft, 250);
+  if (file.blocked) setStatus('error', file.blocked === 'newer' ? 'Только просмотр' : 'Сохранение выключено');
+  else if (file.conflict) setStatus('error', 'Выберите версию');
+}
+
+async function writeDraft() {
+  clearTimeout(file.draftTimer);
+  if (!isDirty()) return;
+  try { await file.host.writeDraft(graphText(), file.mtimeMs); } catch { /* черновик — страховка, не критично */ }
+}
+
+function markClean() {
+  file.host.setDirty(false);
+  clearTimeout(file.draftTimer);
+  file.host.clearDraft().catch(() => {});
+}
+
+async function syncFile() {
+  if (!file.info || !file.info.project) { setStatus('error', 'Проект не выбран'); return; }
+  if (file.blocked || file.conflict) return;
+  const text = graphText();
+  if (text === file.cleanText) { markClean(); setStatus('saved', 'Сохранено в проект'); return; }
+  const res = await file.host.writeGraph(text, file.mtimeMs);
+  if (res.conflict) { await openConflict(); return; }
+  file.mtimeMs = res.mtimeMs;
+  file.diskText = text;
+  file.cleanText = text;
+  if (!isDirty()) markClean();
+  setStatus('saved', 'Сохранено в проект');
+}
+
+// Приложение закрывается / перезагружает окно / меняет проект: дописать всё. true — на диске то же, что на экране.
+async function flushFile() {
+  clearTimeout(syncTimer);
+  for (let i = 0; syncing && i < 80; i++) await sleep(50);
+  if (!isDirty()) return true;
+  try { await sync(); } catch { /* ниже проверим */ }
+  for (let i = 0; syncing && i < 80; i++) await sleep(50);
+  if (!isDirty()) return true;
+  await writeDraft();
+  return false;
+}
+
+function loadGraphObject(g) {
+  state.graph = g;
+  state.isExample = false;
+  state.sel = { node: null, link: null };
+}
+
+// Разбор текста файла: { graph } или { error, newer }.
+function parseGraphText(text) {
+  try {
+    return { graph: fromFileFormat(JSON.parse(String(text).replace(/^﻿/, ''))) };
+  } catch (err) {
+    return { error: err.message || String(err), newer: !!err.newer };
+  }
+}
+
+async function initFile(host) {
+  file.host = host;
+  state.storage = 'file';
+  $('btnExport').textContent = 'История';
+  $('btnExport').title = 'История версий графа';
+  $('catalogProjectRow').hidden = false;
+  host.onFlushRequest(flushFile);
+  host.onFileChanged(onFileChanged);
+  host.onMenu(onMenu);
+
+  try { file.info = await host.getInfo(); } catch { file.info = null; }
+  const project = file.info && file.info.project;
+  if (project) $('brandSub').textContent = `${project.name} · 08_Story/story_graph.json`;
+
+  if (!project) {
+    state.graph = exampleGraph(); state.isExample = true;
+    setStatus('error', 'Проект не выбран');
+    finishInit();
+    showSticky('sheetWelcome');
+    return;
+  }
+
+  await loadCatalogFromProject(false);
+  const disk = await host.readGraph();
+  file.mtimeMs = disk.mtimeMs || 0;
+  file.diskText = disk.exists ? disk.text : null;
+
+  if (disk.error) {
+    enterBroken('Файл не открылся: ' + disk.error);
+  } else if (!disk.exists) {
+    // Графа в проекте ещё нет — показываем пример; первая правка создаст файл.
+    state.graph = exampleGraph(); state.isExample = true;
+    setStatus('saved', 'Новый граф');
+  } else {
+    const parsed = parseGraphText(disk.text);
+    if (parsed.graph) {
+      loadGraphObject(parsed.graph);
+      setStatus('saved', 'Сохранено в проект');
+    } else if (parsed.newer) {
+      const view = parseGraphText(JSON.stringify({ ...JSON.parse(disk.text.replace(/^﻿/, '')), version: FILE_VERSION }));
+      if (view.graph) loadGraphObject(view.graph);
+      file.blocked = 'newer';
+      setStatus('error', 'Только просмотр');
+    } else {
+      enterBroken('Файл не похож на граф сюжета: ' + parsed.error);
+    }
+  }
+  file.cleanText = state.isExample ? '' : graphText();
+  finishInit();
+  if (!file.blocked) await offerDraft();
+}
+
+function finishInit() {
+  renderAll();
+  validate();
+  requestAnimationFrame(() => { renderWires(); fitAll(); });
+}
+
+function enterBroken(reason) {
+  file.blocked = 'corrupt';
+  state.graph = { languages: ['ru', 'en'], nodes: new Map(), links: [] };
+  state.isExample = false;
+  setStatus('error', 'Сохранение выключено');
+  $('brokenText').textContent = reason;
+  showSticky('sheetBroken');
+  renderBackupList($('brokenList'), $('brokenMsg'));
+}
+
+// Черновик остался после сбоя (или приложение закрыли, не дописав) — предложить.
+async function offerDraft() {
+  let draft = null;
+  try { draft = await file.host.readDraft(); } catch { return; }
+  if (!draft) return;
+  const current = file.diskText === null ? '' : file.diskText;
+  if (draft.text === current || draft.text === file.cleanText) { file.host.clearDraft().catch(() => {}); return; }
+  const parsed = parseGraphText(draft.text);
+  if (!parsed.graph) {
+    // Нечитаемый черновик не выбрасываем — кладём в историю.
+    await file.host.backupNow(draft.text, 'draft-unreadable').catch(() => {});
+    file.host.clearDraft().catch(() => {});
+    return;
+  }
+  const when = draft.savedAt ? new Date(draft.savedAt).toLocaleString('ru-RU') : 'неизвестно когда';
+  const newerDisk = draft.baseMtimeMs && file.mtimeMs && Math.abs(draft.baseMtimeMs - file.mtimeMs) > 1;
+  $('draftText').textContent = `Прошлый сеанс закончился, не записав последние правки (${when}, нод: ${parsed.graph.nodes.size}).`
+    + (newerDisk ? ' Файл проекта с тех пор тоже менялся (git pull или Unity).' : '');
+  $('draftMsg').textContent = '';
+  showSticky('sheetDraft');
+  file.pendingDraft = draft;
+}
+
+$('draftRestore').addEventListener('click', async () => {
+  const draft = file.pendingDraft;
+  if (!draft) return;
+  const parsed = parseGraphText(draft.text);
+  if (file.diskText) await file.host.backupNow(file.diskText, 'before-draft').catch(() => {});
+  beginEdit(false);
+  loadGraphObject(parsed.graph);
+  file.pendingDraft = null;
+  hideSticky('sheetDraft');
+  changed(true);
+  fitAll();
+});
+$('draftDiscard').addEventListener('click', async () => {
+  const draft = file.pendingDraft;
+  if (draft) await file.host.backupNow(draft.text, 'draft-discarded').catch(() => {});
+  file.pendingDraft = null;
+  file.host.clearDraft().catch(() => {});
+  hideSticky('sheetDraft');
+});
+
+// Файл поменялся на диске. Своя запись — пропускаем; своих правок нет — перечитываем; есть — спрашиваем.
+async function onFileChanged() {
+  if (!file.info || !file.info.project) return;
+  for (let i = 0; syncing && i < 80; i++) await sleep(50);
+  let disk;
+  try { disk = await file.host.readGraph(); } catch { return; }
+  if (!disk.exists) {
+    file.mtimeMs = 0; file.diskText = null;
+    setStatus('error', 'Файл удалён снаружи — следующая правка создаст его заново');
+    return;
+  }
+  if (disk.text === file.diskText) { file.mtimeMs = disk.mtimeMs; return; }
+  if (file.blocked === 'corrupt') {
+    // Файл починили вручную — пробуем открыть.
+    const parsed = parseGraphText(disk.text);
+    if (!parsed.graph) { $('brokenText').textContent = 'Файл всё ещё не читается: ' + parsed.error; return; }
+    file.blocked = '';
+    hideSticky('sheetBroken');
+    applyDisk(disk, parsed.graph);
+    return;
+  }
+  if (isDirty() || file.conflict) { await openConflict(disk); return; }
+  const parsed = parseGraphText(disk.text);
+  if (!parsed.graph) {
+    // Снаружи записали что-то нечитаемое. Наше состояние цело — показываем, но файл не трогаем.
+    file.mtimeMs = disk.mtimeMs; file.diskText = disk.text;
+    enterBrokenKeep('Файл изменён снаружи и не читается: ' + parsed.error);
+    return;
+  }
+  applyDisk(disk, parsed.graph);
+}
+
+function applyDisk(disk, graph) {
+  file.mtimeMs = disk.mtimeMs;
+  file.diskText = disk.text;
+  beginEdit(false);
+  loadGraphObject(graph);
+  file.cleanText = graphText();
+  history.pending = false;
+  renderAll();
+  validate();
+  markClean();
+  setStatus('saved', 'Обновлено с диска');
+}
+
+// Как enterBroken, но граф на экране не очищаем — его можно восстановить в файл из «Истории» или сделать копию.
+function enterBrokenKeep(reason) {
+  file.blocked = 'corrupt';
+  setStatus('error', 'Сохранение выключено');
+  $('brokenText').textContent = reason + ' Граф на экране — последняя целая версия; «Сделать копию сейчас» в «Истории» сохранит её.';
+  showSticky('sheetBroken');
+  renderBackupList($('brokenList'), $('brokenMsg'));
+  renderBanner();
+}
+
+async function openConflict(disk) {
+  file.conflict = true;
+  clearTimeout(syncTimer);
+  file.conflictDisk = disk || await file.host.readGraph();
+  writeDraft();
+  setStatus('error', 'Выберите версию');
+  $('conflictMsg').textContent = '';
+  showSticky('sheetConflict');
+}
+
+$('conflictMine').addEventListener('click', async () => {
+  const disk = file.conflictDisk;
+  try {
+    if (disk && disk.exists && disk.text) await file.host.backupNow(disk.text, 'conflict-disk');
+  } catch (err) { $('conflictMsg').className = 'msg err'; $('conflictMsg').textContent = 'Не удалось сохранить копию версии с диска: ' + err.message; return; }
+  file.mtimeMs = disk && disk.exists ? disk.mtimeMs : 0;
+  file.diskText = disk && disk.exists ? disk.text : null;
+  file.conflict = false;
+  file.conflictDisk = null;
+  hideSticky('sheetConflict');
+  file.cleanText = '';
+  scheduleSync();
+});
+$('conflictDisk').addEventListener('click', async () => {
+  const disk = file.conflictDisk;
+  const parsed = disk && disk.exists ? parseGraphText(disk.text) : null;
+  if (!parsed || !parsed.graph) {
+    $('conflictMsg').className = 'msg err';
+    $('conflictMsg').textContent = 'Версия с диска не читается' + (parsed ? ': ' + parsed.error : '') + ' — оставьте свои правки.';
+    return;
+  }
+  try { await file.host.backupNow(graphText(), 'conflict-mine'); }
+  catch (err) { $('conflictMsg').className = 'msg err'; $('conflictMsg').textContent = 'Не удалось сохранить копию ваших правок: ' + err.message; return; }
+  file.conflict = false;
+  file.conflictDisk = null;
+  hideSticky('sheetConflict');
+  applyDisk(disk, parsed.graph);
+});
+
+// ── История версий ──
+
+const REASONS = {
+  open: 'при открытии', auto: 'автоматически', manual: 'вручную', 'before-restore': 'перед восстановлением',
+  'before-draft': 'перед восстановлением черновика', 'draft-discarded': 'отброшенный черновик', 'draft-unreadable': 'нечитаемый черновик',
+  'conflict-disk': 'версия с диска при конфликте', 'conflict-mine': 'ваши правки при конфликте', corrupt: 'нечитаемый файл',
+};
+
+async function renderHistory() {
+  $('historyMsg').textContent = '';
+  await renderBackupList($('historyList'), $('historyMsg'));
+}
+
+async function renderBackupList(list, msg) {
+  list.replaceChildren();
+  let backups = [];
+  try { backups = await file.host.listBackups(); } catch (err) { msg.className = 'msg err'; msg.textContent = 'Список копий не открылся: ' + err.message; return; }
+  if (!backups.length) { list.append(el('li', {}, el('span', { text: 'Копий пока нет.' }))); return; }
+  for (const b of backups) {
+    const when = b.time ? new Date(b.time).toLocaleString('ru-RU') : b.id;
+    const info = [REASONS[b.reason] || b.reason, b.nodes === null ? 'не читается' : `нод: ${b.nodes}`].filter(Boolean).join(' · ');
+    list.append(el('li', {},
+      el('span', {}, when, el('small', { text: info })),
+      el('button', { class: 'btn', type: 'button', text: 'Восстановить', disabled: b.nodes === null, onclick: () => restoreBackup(b.id, msg) })));
+  }
+}
+
+async function restoreBackup(id, msg) {
+  try {
+    const text = await file.host.readBackup(id);
+    const parsed = parseGraphText(text);
+    if (!parsed.graph) throw new Error(parsed.error);
+    // Текущее состояние — в копию, чтобы восстановление можно было отменить.
+    if (file.blocked === 'corrupt') { if (file.diskText) await file.host.backupNow(file.diskText, 'corrupt'); }
+    else if (!state.isExample) await file.host.backupNow(graphText(), 'before-restore');
+    beginEdit(false);
+    loadGraphObject(parsed.graph);
+    if (file.blocked === 'corrupt') { file.blocked = ''; hideSticky('sheetBroken'); }
+    changed(true);
+    fitAll();
+    msg.className = 'msg ok';
+    msg.textContent = `Восстановлено: нод — ${parsed.graph.nodes.size}.`;
+    if (!$('sheetHistory').hidden) renderHistory();
+  } catch (err) {
+    msg.className = 'msg err';
+    msg.textContent = 'Не получилось восстановить: ' + err.message;
+  }
+}
+
+$('historySnap').addEventListener('click', async () => {
+  try {
+    await file.host.backupNow(graphText(), 'manual');
+    renderHistory();
+  } catch (err) { $('historyMsg').className = 'msg err'; $('historyMsg').textContent = err.message; }
+});
+$('historyFolder').addEventListener('click', () => file.host.showBackups());
+$('brokenFolder').addEventListener('click', () => file.host.showBackups());
+$('brokenReveal').addEventListener('click', () => file.host.revealGraph());
+
+$('welcomeChoose').addEventListener('click', async () => {
+  const msg = $('welcomeMsg');
+  msg.textContent = '';
+  const res = await file.host.chooseProject();
+  if (res && res.error) { msg.className = 'msg err'; msg.textContent = res.error; }
+  else if (res && res.ok) { msg.className = 'msg ok'; msg.textContent = 'Открываю проект…'; }
+});
+
+async function loadCatalogFromProject(report) {
+  const msg = $('catalogMsg');
+  try {
+    const res = await file.host.readCatalog();
+    if (!res.exists) { if (report) { msg.className = 'msg err'; msg.textContent = 'В проекте ещё нет scene_catalog.json — сделайте Export Scene Catalog в Unity.'; } return; }
+    const data = JSON.parse(res.text.replace(/^﻿/, ''));
+    const clean = {};
+    for (const key of Object.keys(CATALOG_LISTS)) {
+      if (Array.isArray(data[key])) clean[key] = data[key].filter((e) => e && typeof e.id === 'string' && e.id).map((e) => ({ id: e.id, name: String(e.name || e.id) }));
+    }
+    state.catalog = clean;
+    if (report) { msg.className = 'msg ok'; msg.textContent = 'Каталог перечитан.'; renderCatalogSummary(); renderAll(); validate(); }
+  } catch (err) {
+    if (report) { msg.className = 'msg err'; msg.textContent = 'Каталог не читается: ' + err.message; }
+  }
+}
+$('catalogReload').addEventListener('click', () => loadCatalogFromProject(true));
+
+// Команды меню приложения.
+function onMenu(command) {
+  const typing = document.activeElement && document.activeElement.closest && document.activeElement.closest('input, textarea, select');
+  if (command === 'undo') { if (typing) document.execCommand('undo'); else undoOnce(); }
+  else if (command === 'redo') { if (typing) document.execCommand('redo'); else redoOnce(); }
+  else if (command === 'history') { $('sheetHistory').hidden = true; if (openSheet('sheetHistory')) renderHistory(); }
+  else if (command === 'export') exportGraph();
+}
+
+// ───────────────────────── Пример для первого открытия ─────────────────────────
+
+function exampleGraph() {
+  const g = { languages: ['ru', 'en'], nodes: new Map(), links: [] };
+  const put = (n) => { g.nodes.set(n.id, n); return n; };
+  const link = (a, b) => g.links.push({ from: a.id, fromPort: 'out', to: b.id, toPort: 'in' });
+  const start = put({ id: 'n_start', type: 'start', x: 0, y: 140 });
+  const r1 = put({ id: 'n_radio1', type: 'radio', x: 300, y: 110, speaker: { ru: 'Диспетчер', en: 'Dispatcher' }, portrait: 'dispatcher', lines: [
+    { seconds: 4, text: { ru: 'Приём, это диспетчер. Слышишь меня?', en: 'Come in, this is dispatch. Do you read me?' } },
+    { seconds: 5, text: { ru: 'Магазин теперь твой. Начни с мусора — кирпичи и доски в контейнер у входа.', en: 'The shop is yours now. Start with the rubble — bricks and boards go in the dumpster by the entrance.' } },
+  ] });
+  const q1 = put({ id: 'q_cleardebris', type: 'quest', x: 600, y: 110, questId: 'cleardebris',
+    title: { ru: 'Убрать обломки', en: 'Clear the debris' },
+    description: { ru: 'Соберите кирпичи и доски и выбросьте их в мусорный контейнер.', en: 'Collect the bricks and boards and throw them into the dumpster.' },
+    questType: 'ShelveItems', targetCount: 5, target: '', category: 'Category_Trash', item: '', zone: '', xp: 20, money: 50 });
+  const t1 = put({ id: 'n_trig_door', type: 'trigger', x: 600, y: 340, trigger: 'breakableBroken', target: '', category: '', item: '', zone: '',
+    count: 1, value: 0, orderId: '', lootBoxId: '', enemyType: '', questId: '' });
+  const r2 = put({ id: 'n_radio2', type: 'radio', x: 900, y: 340, speaker: { ru: 'Диспетчер', en: 'Dispatcher' }, portrait: 'dispatcher', lines: [
+    { seconds: 5, text: { ru: 'Ты пробился на склад? Там должны остаться патроны — разложи их по полкам.', en: 'You broke into the storeroom? There should be ammo left — put it on the shelves.' } },
+  ] });
+  const q2 = put({ id: 'q_stockammo', type: 'quest', x: 1200, y: 340, questId: 'stockammo',
+    title: { ru: 'Пополнить запас патронов', en: 'Restock ammo' },
+    description: { ru: 'Расставьте патроны 5.56 на складской полке.', en: 'Put the 5.56 rounds on the storage shelf.' },
+    questType: 'ShelveItems', targetCount: 3, target: '', category: 'Category_Ammo', item: '', zone: '', xp: 30, money: 80 });
+  const all = put({ id: 'n_and', type: 'and', x: 1500, y: 220 });
+  const reward = put({ id: 'n_bonus', type: 'action', x: 1800, y: 220, action: 'giveMoney', value: 150, target: '' });
+  put({ id: 'n_note', type: 'note', x: 0, y: 360, text: 'Пример сюжета: откройте «Каталог» и загрузите scene_catalog.json из Unity — тогда цели выбираются из списков.\n\nТриггер «Сломан объект» ждёт, пока выберете дверь склада.' });
+  link(start, r1); link(r1, q1); link(q1, t1); link(t1, r2); link(r2, q2); link(q1, all); link(q2, all); link(all, reward);
+  return g;
+}
+
+// ───────────────────────── Запуск ─────────────────────────
+
+function buildPalette() {
+  const box = $('palItems');
+  for (const [type, t] of Object.entries(TYPES)) {
+    box.append(el('button', { class: 'pal-item', type: 'button', onclick: () => addNode(type) },
+      el('span', { class: 'sw', style: `background:${typeColor(type)}` }),
+      el('span', {}, t.label, el('small', { text: t.desc }))));
+  }
+}
+
+async function init() {
+  buildPalette();
+  applyView();
+
+  let loaded = false;
+  if (window.storyHost) { await initFile(window.storyHost); return; }
+  const claude = window.claude;
+  if (claude && typeof claude.use === 'function') {
+    const [db, downloads] = await Promise.all([claude.use('db').catch(() => null), claude.use('downloads').catch(() => null)]);
+    caps.db = db; caps.downloads = downloads;
+  }
+
+  if (caps.db) {
+    try {
+      state.storage = 'db';
+      loaded = await loadFromDb(caps.db);
+      watchDb(caps.db);
+      setStatus('saved', loaded ? 'Сохранено' : 'Новый граф');
+    } catch {
+      caps.db = null;
+    }
+  }
+  if (!caps.db) {
+    state.storage = 'local';
+    try {
+      const raw = localStorage.getItem(LOCAL_KEY);
+      if (raw) { state.graph = fromFileFormat(JSON.parse(raw)); loaded = true; }
+      const cat = localStorage.getItem(LOCAL_KEY + '-catalog');
+      if (cat) state.catalog = JSON.parse(cat);
+    } catch { /* пусто — покажем пример */ }
+    setStatus('local', 'Только в этом браузере');
+  }
+
+  if (!loaded) { state.graph = exampleGraph(); state.isExample = true; }
+  renderAll();
+  validate();
+  requestAnimationFrame(() => { renderWires(); fitAll(); });
+}
+
+init();
+})();
+</script>

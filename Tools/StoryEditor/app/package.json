@@ -1,0 +1,47 @@
+{
+  "name": "weapon-keeper-story",
+  "productName": "Weapon Keeper Story",
+  "version": "1.0.0",
+  "description": "Редактор сюжета Weapon Keeper для Mac: квесты, рация, триггеры и события на графе.",
+  "main": "main.js",
+  "private": true,
+  "author": "GEGA Games",
+  "scripts": {
+    "prestart": "node scripts/copy-editor.js",
+    "start": "electron .",
+    "test": "node --test test/*.test.js",
+    "predist": "node scripts/copy-editor.js",
+    "dist": "electron-builder --mac --universal --publish never"
+  },
+  "devDependencies": {
+    "electron": "44.4.5",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "com.gegagames.weaponkeeper.story",
+    "productName": "Weapon Keeper Story",
+    "copyright": "GEGA Games",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "storage.js",
+      "editor/**"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        "dmg"
+      ],
+      "identity": "-",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "title": "Weapon Keeper Story ${version}",
+      "artifactName": "WeaponKeeperStory-${version}.dmg"
+    }
+  }
+}

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -24,6 +25,10 @@ public class EnemySpawnPoint : MonoBehaviour
 
     private Enemy currentEnemy;
 
+    /// <summary>Игрок убил врага этой точки (до респавна). Для сюжетных триггеров: конкретную точку
+    /// сюжет узнаёт по PersistentId на её объекте.</summary>
+    public event Action<EnemySpawnPoint, Enemy> OnEnemyKilled;
+
     private void Start()
     {
         TrySpawn();
@@ -49,6 +54,7 @@ public class EnemySpawnPoint : MonoBehaviour
     {
         enemy.OnDied -= HandleEnemyDied;
         currentEnemy = null;
+        OnEnemyKilled?.Invoke(this, enemy);
         TrySpawn();
     }
 
