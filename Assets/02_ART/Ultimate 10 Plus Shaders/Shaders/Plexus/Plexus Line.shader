@@ -1,37 +1,24 @@
-﻿/*
-            ██████╗░██╗░░░░░███████╗██╗░░██╗██╗░░░██╗░██████╗  ██╗░░░░░██╗███╗░░██╗███████╗
-            ██╔══██╗██║░░░░░██╔════╝╚██╗██╔╝██║░░░██║██╔════╝  ██║░░░░░██║████╗░██║██╔════╝
-            ██████╔╝██║░░░░░█████╗░░░╚███╔╝░██║░░░██║╚█████╗░  ██║░░░░░██║██╔██╗██║█████╗░░
-            ██╔═══╝░██║░░░░░██╔══╝░░░██╔██╗░██║░░░██║░╚═══██╗  ██║░░░░░██║██║╚████║██╔══╝░░
-            ██║░░░░░███████╗███████╗██╔╝╚██╗╚██████╔╝██████╔╝  ███████╗██║██║░╚███║███████╗
-            ╚═╝░░░░░╚══════╝╚══════╝╚═╝░░╚═╝░╚═════╝░╚═════╝░  ╚══════╝╚═╝╚═╝░░╚══╝╚══════╝
+/*
+        ░██████╗██╗███╗░░░███╗██████╗░██╗░░░░░███████╗  ░██████╗██╗███╗░░██╗███████╗
+        ██╔════╝██║████╗░████║██╔══██╗██║░░░░░██╔════╝  ██╔════╝██║████╗░██║██╔════╝
+        ╚█████╗░██║██╔████╔██║██████╔╝██║░░░░░█████╗░░  ╚█████╗░██║██╔██╗██║█████╗░░
+        ░╚═══██╗██║██║╚██╔╝██║██╔═══╝░██║░░░░░██╔══╝░░  ░╚═══██╗██║██║╚████║██╔══╝░░
+        ██████╔╝██║██║░╚═╝░██║██║░░░░░███████╗███████╗  ██████╔╝██║██║░╚███║███████╗
+        ╚═════╝░╚═╝╚═╝░░░░░╚═╝╚═╝░░░░░╚══════╝╚══════╝  ╚═════╝░╚═╝╚═╝░░╚══╝╚══════╝
 
-                        ░██████╗██╗░░██╗░█████╗░██████╗░███████╗██████╗░
-                        ██╔════╝██║░░██║██╔══██╗██╔══██╗██╔════╝██╔══██╗
-                        ╚█████╗░███████║███████║██║░░██║█████╗░░██████╔╝
-                        ░╚═══██╗██╔══██║██╔══██║██║░░██║██╔══╝░░██╔══██╗
-                        ██████╔╝██║░░██║██║░░██║██████╔╝███████╗██║░░██║
-                        ╚═════╝░╚═╝░░╚═╝╚═╝░░╚═╝╚═════╝░╚══════╝╚═╝░░╚═╝
-                █▀▀▄ █──█ 　 ▀▀█▀▀ █──█ █▀▀ 　 ░█▀▀▄ █▀▀ ▀█─█▀ █▀▀ █── █▀▀█ █▀▀█ █▀▀ █▀▀█ 
-                █▀▀▄ █▄▄█ 　 ─░█── █▀▀█ █▀▀ 　 ░█─░█ █▀▀ ─█▄█─ █▀▀ █── █──█ █──█ █▀▀ █▄▄▀ 
-                ▀▀▀─ ▄▄▄█ 　 ─░█── ▀──▀ ▀▀▀ 　 ░█▄▄▀ ▀▀▀ ──▀── ▀▀▀ ▀▀▀ ▀▀▀▀ █▀▀▀ ▀▀▀ ▀─▀▀
-____________________________________________________________________________________________________________________________________________
+   ░██╗░░░░░░░██╗░█████╗░██╗░░░██╗███████╗  ░██████╗██╗░░██╗░█████╗░██████╗░███████╗██████╗░
+   ░██║░░██╗░░██║██╔══██╗██║░░░██║██╔════╝  ██╔════╝██║░░██║██╔══██╗██╔══██╗██╔════╝██╔══██╗
+   ░╚██╗████╗██╔╝███████║╚██╗░██╔╝█████╗░░  ╚█████╗░███████║███████║██║░░██║█████╗░░██████╔╝
+   ░░████╔═████║░██╔══██║░╚████╔╝░██╔══╝░░  ░╚═══██╗██╔══██║██╔══██║██║░░██║██╔══╝░░██╔══██╗
+   ░░╚██╔╝░╚██╔╝░██║░░██║░░╚██╔╝░░███████╗  ██████╔╝██║░░██║██║░░██║██████╔╝███████╗██║░░██║
+   ░░░╚═╝░░░╚═╝░░╚═╝░░╚═╝░░░╚═╝░░░╚══════╝  ╚═════╝░╚═╝░░╚═╝╚═╝░░╚═╝╚═════╝░╚══════╝╚═╝░░╚═╝
 
-        ▄▀█ █▀ █▀ █▀▀ ▀█▀ ▀   █░█ █░░ ▀█▀ █ █▀▄▀█ ▄▀█ ▀█▀ █▀▀   ▄█ █▀█ ▄█▄   █▀ █░█ ▄▀█ █▀▄ █▀▀ █▀█ █▀
-        █▀█ ▄█ ▄█ ██▄ ░█░ ▄   █▄█ █▄▄ ░█░ █ █░▀░█ █▀█ ░█░ ██▄   ░█ █▄█ ░▀░   ▄█ █▀█ █▀█ █▄▀ ██▄ █▀▄ ▄█
-____________________________________________________________________________________________________________________________________________
 License:
     The license is ATTRIBUTION 3.0
-
-    More license info here:
-        https://creativecommons.org/licenses/by/3.0/
+    More license info here: https://creativecommons.org/licenses/by/3.0/
 ____________________________________________________________________________________________________________________________________________
-This shader has NOT been tested on any other PC configuration except the following:
-    CPU: Intel Core i5-6400
-    GPU: NVidia GTX 750Ti
-    RAM: 16GB
-    Windows: 10 x64
-    DirectX: 11
+Портировано на Universal Render Pipeline (было CGPROGRAM/Built-in RP). Compute-шейдер Plexus.compute
+и Plexus.cs изменений не требуют — они не зависят от рендер-пайплайна.
 ____________________________________________________________________________________________________________________________________________
 */
 
@@ -42,66 +29,60 @@ Shader "Ultimate 10+ Shaders/Plexus Line"
         _Color ("Color", Color) = (0, 1, 0, 1)
         [HDR] _Emission1 ("Emission1", Color) = (2.56, 0, 0, 1)
         [HDR] _Emission2 ("Emission2", Color) = (0, 1.95, 2.52, 1)
-        _BoxDims ("Box Dimensions", float) = (5, 5, 5, 1) // Controlled by Plexus.cs
+        _BoxDims ("Box Dimensions", float) = (5, 5, 5, 1) // Управляется Plexus.cs
 
         [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull", Float) = 0
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
+        Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalRenderPipeline" }
         LOD 100
         Cull [_Cull]
 
         Pass
         {
-            CGPROGRAM
+            Name "ForwardUnlit"
+            Tags { "LightMode"="UniversalForward" }
+
+            HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
 
-            #include "UnityCG.cginc"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
-            struct appdata
+            struct Attributes
             {
-                float4 vertex : POSITION;
+                float4 positionOS : POSITION;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
-            struct v2f
+            struct Varyings
             {
-                float4 vertex : SV_POSITION;
-                fixed4 col : TEXCOORD0;
+                float4 positionCS : SV_POSITION;
+                half4 col         : TEXCOORD0;
             };
 
-            fixed4 _Color;
-            fixed4 _Emission1, _Emission2;
-            half4 _BoxDims;
+            CBUFFER_START(UnityPerMaterial)
+                half4 _Color;
+                half4 _Emission1, _Emission2;
+                half4 _BoxDims;
+            CBUFFER_END
 
-            // Add instancing support for this shader. You need to check 'Enable Instancing' on materials that use the shader.
-            // See https://docs.unity3d.com/Manual/GPUInstancing.html for more information about instancing.
-            // #pragma instancing_options assumeuniformscaling
-            UNITY_INSTANCING_BUFFER_START(Props)
-                // put more per-instance properties here
-            UNITY_INSTANCING_BUFFER_END(Props)
-
-            v2f vert (appdata v)
+            Varyings vert (Attributes input)
             {
-                v2f o;
+                Varyings output;
 
-                o.vertex = UnityObjectToClipPos(v.vertex);
-                o.col = fixed4((clamp(o.vertex.xyz/_BoxDims.xyz, -1, 1) + 1.0) / 2.0, 1);
-                
-                return o;
+                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                output.col = half4((clamp(output.positionCS.xyz / _BoxDims.xyz, -1, 1) + 1.0) / 2.0, 1);
+
+                return output;
             }
 
-            fixed4 pixel;
-            fixed4 frag (v2f i) : SV_Target
+            half4 frag (Varyings input) : SV_Target
             {
-                pixel = _Color + lerp(_Emission1, _Emission2, i.col);
-                
-                return pixel;
+                return _Color + lerp(_Emission1, _Emission2, input.col);
             }
-            ENDCG
+            ENDHLSL
         }
     }
-    FallBack "Diffuse"
 }

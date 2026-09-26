@@ -19,7 +19,7 @@ public class ShelvingProgressTracker : MonoBehaviour
     /// <summary>Сколько из них стоит на полках.</summary>
     public int PlacedUnits { get; private set; }
 
-    public float ProgressPercent => TotalUnits == 0 ? 0f : (float)PlacedUnits / TotalUnits * 100f;
+    public float ProgressPercent => TotalUnits == 0 ? 0f : Mathf.Min(100f, (float)PlacedUnits / TotalUnits * 100f);
 
     /// <summary>Прогресс изменился: (расставлено, всего, процент).</summary>
     public event Action<int, int, float> OnShelvingProgressChanged;
@@ -45,7 +45,7 @@ public class ShelvingProgressTracker : MonoBehaviour
             }
         }
 
-        TotalUnits = CountTrackedWorldItems();
+        TotalUnits = CountTrackedWorldItems() + CountPendingLoot();
         Recompute();
     }
 
@@ -67,6 +67,29 @@ public class ShelvingProgressTracker : MonoBehaviour
     }
 
     private void HandleSlotChanged(ShelfSlot slot) => Recompute();
+
+    /// <summary>
+    /// Товар, который ещё лежит в неразобранных ящиках (Breakable.spawnOnBreak). Считаем его сразу,
+    /// а не по факту вскрытия: тогда общий итог один и тот же и до, и после вскрытия, и после
+    /// загрузки сейва (где вскрытый ящик уже разобран, а лут лежит в мире обычными предметами).
+    /// </summary>
+    private int CountPendingLoot()
+    {
+        int total = 0;
+        foreach (var breakable in FindObjectsByType<Breakable>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (breakable.IsBroken || breakable.spawnOnBreak == null) continue;
+            foreach (var prefab in breakable.spawnOnBreak)
+            {
+                if (prefab == null) continue;
+                WorldItem item = prefab.GetComponent<WorldItem>();
+                if (item != null && item.itemData != null && item.itemData.shelfType != null
+                    && trackedCategories.Contains(item.itemData.shelfType))
+                    total++;
+            }
+        }
+        return total;
+    }
 
     private int CountTrackedWorldItems()
     {

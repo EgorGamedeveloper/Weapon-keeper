@@ -126,8 +126,9 @@ public class Weapon : MonoBehaviour
 	public float range = 9999.0f;						// How far this weapon can shoot (for raycast and beam)
 
 	// Layers
-	public LayerMask hittableLayers = ~(1 << 9);		// Слои, по которым бьёт raycast/beam (по умолчанию все, кроме "IgnoreBullets" — на нём подбираемые
-														// предметы и триггеры полок, чтобы стрельба их не толкала и не давала "попадание").
+	public LayerMask hittableLayers = ~((1 << 9) | (1 << 24));	// Слои, по которым бьёт raycast/beam: все, кроме 9 "Player" (сам стрелок)
+														// и 24 "IgnoreBullets" (подбираемые предметы — стрельба их не толкает и не даёт "попадание").
+														// ПАТЧ Weapon Keeper: раньше дефолт исключал только слой 9, а комментарий ошибочно называл его IgnoreBullets.
 
 	// Rate of Fire
 	public float rateOfFire = 10;						// The number of rounds this weapon fires per second
@@ -615,7 +616,8 @@ public class Weapon : MonoBehaviour
 			Ray ray = new Ray(raycastStartSpot.position, direction);
 			RaycastHit hit;
 
-			if (Physics.Raycast(ray, out hit, range, hittableLayers))
+			// ПАТЧ Weapon Keeper: триггеры (ячейки полок, зоны доставки, пятна) — не препятствие для пули.
+			if (Physics.Raycast(ray, out hit, range, hittableLayers, QueryTriggerInteraction.Ignore))
 			{
 				// Warmup heat
 				float damage = power;
@@ -940,7 +942,8 @@ public class Weapon : MonoBehaviour
 			// Initialize the next point.  If a raycast hit is not returned, this will be the forward direction * range
 			Vector3 nextPoint = ray.direction * range;
 
-			if (Physics.Raycast(ray, out hit, range, hittableLayers))
+			// ПАТЧ Weapon Keeper: триггеры (ячейки полок, зоны доставки, пятна) — не препятствие для пули.
+			if (Physics.Raycast(ray, out hit, range, hittableLayers, QueryTriggerInteraction.Ignore))
 			{
 				// Set the next point to the hit location from the raycast
 				nextPoint = hit.point;

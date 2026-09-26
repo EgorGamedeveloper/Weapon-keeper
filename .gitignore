@@ -82,3 +82,35 @@ crashlytics-build.properties
 /Assets/02_ART/Firearms.meta
 Assets/02_ART/Models
 Assets/02_ART/Models.meta
+# Тяжёлые текстуры-исходники (8K, 276 МБ) — только локально
+/Assets/02_ART/Poliigon_BrickWallReclaimed_8320/
+/Assets/02_ART/Poliigon_BrickWallReclaimed_8320.meta
+
+# Изображения и текстуры арта — только локально (уже отслеживаемые файлы остаются в git).
+# Иконки навыков оставлены: без них у клона окно навыков без картинок.
+/Assets/02_ART/**/*.[Pp][Nn][Gg]
+/Assets/02_ART/**/*.[Pp][Nn][Gg].meta
+/Assets/02_ART/**/*.[Jj][Pp][Gg]
+/Assets/02_ART/**/*.[Jj][Pp][Gg].meta
+/Assets/02_ART/**/*.[Jj][Pp][Ee][Gg]
+/Assets/02_ART/**/*.[Jj][Pp][Ee][Gg].meta
+/Assets/02_ART/**/*.[Tt][Gg][Aa]
+/Assets/02_ART/**/*.[Tt][Gg][Aa].meta
+/Assets/02_ART/**/*.[Tt][Ii][Ff]
+/Assets/02_ART/**/*.[Tt][Ii][Ff].meta
+/Assets/02_ART/**/*.[Tt][Ii][Ff][Ff]
+/Assets/02_ART/**/*.[Tt][Ii][Ff][Ff].meta
+/Assets/02_ART/**/*.[Pp][Ss][Dd]
+/Assets/02_ART/**/*.[Pp][Ss][Dd].meta
+/Assets/02_ART/**/*.[Ee][Xx][Rr]
+/Assets/02_ART/**/*.[Ee][Xx][Rr].meta
+/Assets/02_ART/**/*.[Hh][Dd][Rr]
+/Assets/02_ART/**/*.[Hh][Dd][Rr].meta
+!/Assets/02_ART/Icons/**
+
+# Скриншоты, аварийные копии сцен Unity, служебные файлы macOS
+/Assets/Screenshots/
+/Assets/Screenshots.meta
+/Assets/_Recovery/
+/Assets/_Recovery.meta
+.DS_Store

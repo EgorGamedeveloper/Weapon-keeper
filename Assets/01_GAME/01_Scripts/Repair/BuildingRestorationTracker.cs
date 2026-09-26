@@ -45,8 +45,11 @@ public class BuildingRestorationTracker : MonoBehaviour
         if (config != null && config.restoration.thresholds != null && config.restoration.thresholds.Length > 0)
             thresholds = config.restoration.thresholds;
 
-        repairPoints.AddRange(FindObjectsByType<RepairPoint>(FindObjectsSortMode.None));
-        stains.AddRange(FindObjectsByType<CleanableStain>(FindObjectsSortMode.None));
+        // Include: очищенное пятно без отдельного stainVisual выключает само себя, а точка ремонта
+        // за доской скрыта до RevealOnBreak. Без неактивных объектов общий счёт после загрузки
+        // сейва менялся бы, процент "проседал", а пороги выстреливали повторно.
+        repairPoints.AddRange(FindObjectsByType<RepairPoint>(FindObjectsInactive.Include, FindObjectsSortMode.None));
+        stains.AddRange(FindObjectsByType<CleanableStain>(FindObjectsInactive.Include, FindObjectsSortMode.None));
 
         TotalCount = repairPoints.Count + stains.Count;
 

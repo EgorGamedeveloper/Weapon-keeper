@@ -10,6 +10,7 @@ public class EquippedItemHolder : MonoBehaviour
     [Header("Ссылки")]
     [Tooltip("Точка в руке игрока (пустой Transform перед камерой), куда крепится модель предмета.")]
     public Transform handPoint;
+    [Tooltip("Tidy-up инвентарь: в руке показывается модель его активного предмета.")]
     public InventorySystem inventory;
 
     [Tooltip("Дочерний pivot HandPoint для sway/bobbing. HandPoint остаётся неподвижным якорем.")]
@@ -26,13 +27,19 @@ public class EquippedItemHolder : MonoBehaviour
     public GameConfig config;
 
     [Header("Покачивание от мыши (sway)")]
+    [Tooltip("Сила покачивания предмета от движения мыши.")]
     public float swayAmount = 4f;
+    [Tooltip("Плавность возврата покачивания от мыши.")]
     public float swaySmooth = 6f;
+    [Tooltip("Максимальный угол покачивания от мыши, градусы.")]
     public float maxSwayAngle = 8f;
 
     [Header("Покачивание при ходьбе (bobbing)")]
+    [Tooltip("Частота покачивания при ходьбе.")]
     public float bobFrequency = 6f;
+    [Tooltip("Амплитуда покачивания при ходьбе, м.")]
     public float bobAmount = 0.03f;
+    [Tooltip("Плавность входа/выхода покачивания при ходьбе.")]
     public float bobSmooth = 8f;
     [Tooltip("Минимальная скорость игрока, при которой начинается покачивание.")]
     public float moveThreshold = 0.1f;

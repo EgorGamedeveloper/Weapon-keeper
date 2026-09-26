@@ -10,12 +10,19 @@ using DG.Tweening;
 /// </summary>
 public class TidyUpInventoryRowUI : MonoBehaviour
 {
+    [Tooltip("Иконка предмета.")]
     public Image icon;
+    [Tooltip("Название предмета.")]
     public Text itemName;
+    [Tooltip("Количество штук.")]
     public Text quantity;
+    [Tooltip("Фон строки — подсвечивается у выбранной записи.")]
     public Image background;
+    [Tooltip("Цвет фона обычной строки.")]
     public Color normalColor = Color.white;
+    [Tooltip("Цвет фона выбранной строки.")]
     public Color selectedColor = new Color(1f, 0.82f, 0.25f, 1f);
+    [Tooltip("Время анимации выделения, сек.")]
     public float selectionTweenDuration = 0.15f;
 
     [Tooltip("Во сколько раз увеличивается выбранный элемент относительно остальных.")]

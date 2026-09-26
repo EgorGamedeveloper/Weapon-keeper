@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using DG.Tweening;
 
 /// <summary>
@@ -9,8 +10,11 @@ using DG.Tweening;
 /// </summary>
 public class QuestHudUI : MonoBehaviour
 {
+    [Tooltip("Источник активных квестов.")]
     public QuestManager questManager;
+    [Tooltip("Контейнер для строк квестов.")]
     public Transform contentRoot;
+    [Tooltip("Префаб строки квеста.")]
     public QuestRowUI rowPrefab;
 
     [Tooltip("Длительность анимации исчезновения строки завершённого квеста.")]
@@ -18,11 +22,21 @@ public class QuestHudUI : MonoBehaviour
 
     private readonly Dictionary<QuestProgress, QuestRowUI> rows = new Dictionary<QuestProgress, QuestRowUI>();
 
+    private Image background;
+
     private void Awake()
     {
+        background = GetComponent<Image>();
+
         // Если строку по ошибке оставили в сцене как шаблон — не показываем её как "лишнюю" запись.
         if (rowPrefab != null && contentRoot != null && rowPrefab.transform.parent == contentRoot)
             rowPrefab.gameObject.SetActive(false);
+    }
+
+    // Фон панели сам растёт по высоте строк (Layout Group), но без квестов остался бы пустой полоской.
+    private void RefreshBackground()
+    {
+        if (background != null) background.enabled = rows.Count > 0;
     }
 
     private void OnEnable()
@@ -37,6 +51,8 @@ public class QuestHudUI : MonoBehaviour
         // менеджера, который может выполниться раньше, чем включится этот компонент).
         foreach (var progress in questManager.ActiveQuests)
             HandleQuestStarted(progress);
+
+        RefreshBackground();
     }
 
     private void OnDisable()
@@ -56,6 +72,7 @@ public class QuestHudUI : MonoBehaviour
         row.gameObject.SetActive(true);
         row.Bind(progress);
         rows[progress] = row;
+        RefreshBackground();
     }
 
     private void HandleQuestProgressChanged(QuestProgress progress)
@@ -67,6 +84,7 @@ public class QuestHudUI : MonoBehaviour
     {
         if (!rows.TryGetValue(progress, out var row)) return;
         rows.Remove(progress);
+        RefreshBackground();
 
         row.Bind(progress);
         row.transform.DOKill();

@@ -6,8 +6,11 @@ using UnityEngine;
 /// (см. TidyUpInventoryRowUI.BindCore), сама она никуда не едет.</summary>
 public class TidyUpInventoryUI : MonoBehaviour
 {
+    [Tooltip("Tidy-up инвентарь, который отображается списком.")]
     public InventorySystem inventory;
+    [Tooltip("Контейнер для строк списка.")]
     public Transform contentRoot;
+    [Tooltip("Префаб строки.")]
     public TidyUpInventoryRowUI rowPrefab;
     private readonly List<TidyUpInventoryRowUI> rows = new List<TidyUpInventoryRowUI>();
 

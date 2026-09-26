@@ -1,31 +1,19 @@
-﻿/*
-            ██╗░░░░░░█████╗░██╗░░░██╗░█████╗░  ░██████╗██╗░░██╗░█████╗░██████╗░███████╗██████╗░
-            ██║░░░░░██╔══██╗██║░░░██║██╔══██╗  ██╔════╝██║░░██║██╔══██╗██╔══██╗██╔════╝██╔══██╗
-            ██║░░░░░███████║╚██╗░██╔╝███████║  ╚█████╗░███████║███████║██║░░██║█████╗░░██████╔╝
-            ██║░░░░░██╔══██║░╚████╔╝░██╔══██║  ░╚═══██╗██╔══██║██╔══██║██║░░██║██╔══╝░░██╔══██╗
-            ███████╗██║░░██║░░╚██╔╝░░██║░░██║  ██████╔╝██║░░██║██║░░██║██████╔╝███████╗██║░░██║
-            ╚══════╝╚═╝░░╚═╝░░░╚═╝░░░╚═╝░░╚═╝  ╚═════╝░╚═╝░░╚═╝╚═╝░░╚═╝╚═════╝░╚══════╝╚═╝░░╚═╝
+/*
+            ██╗░░░░░░█████╗░██╗░░░██╗░█████╗░  ░██████╗██╗░░██╗░█████╗░██████╗░███████╗██████╗░
+            ██║░░░░░██╔══██╗██║░░░██║██╔══██╗  ██╔════╝██║░░██║██╔══██╗██╔══██╗██╔════╝██╔══██╗
+            ██║░░░░░███████║╚██╗░██╔╝███████║  ╚█████╗░███████║███████║██║░░██║█████╗░░██████╔╝
+            ██║░░░░░██╔══██║░╚████╔╝░██╔══██║  ░╚═══██╗██╔══██║██╔══██║██║░░██║██╔══╝░░██╔══██╗
+            ███████╗██║░░██║░░╚██╔╝░░██║░░██║  ██████╔╝██║░░██║██║░░██║██████╔╝███████╗██║░░██║
+            ╚══════╝╚═╝░░╚═╝░░░╚═╝░░░╚═╝░░╚═╝  ╚═════╝░╚═╝░░╚═╝╚═╝░░╚═╝╚═════╝░╚══════╝╚═╝░░╚═╝
 
-                █▀▀▄ █──█ 　 ▀▀█▀▀ █──█ █▀▀ 　 ░█▀▀▄ █▀▀ ▀█─█▀ █▀▀ █── █▀▀█ █▀▀█ █▀▀ █▀▀█ 
-                █▀▀▄ █▄▄█ 　 ─░█── █▀▀█ █▀▀ 　 ░█─░█ █▀▀ ─█▄█─ █▀▀ █── █──█ █──█ █▀▀ █▄▄▀ 
-                ▀▀▀─ ▄▄▄█ 　 ─░█── ▀──▀ ▀▀▀ 　 ░█▄▄▀ ▀▀▀ ──▀── ▀▀▀ ▀▀▀ ▀▀▀▀ █▀▀▀ ▀▀▀ ▀─▀▀
-____________________________________________________________________________________________________________________________________________
-
-        ▄▀█ █▀ █▀ █▀▀ ▀█▀ ▀   █░█ █░░ ▀█▀ █ █▀▄▀█ ▄▀█ ▀█▀ █▀▀   ▄█ █▀█ ▄█▄   █▀ █░█ ▄▀█ █▀▄ █▀▀ █▀█ █▀
-        █▀█ ▄█ ▄█ ██▄ ░█░ ▄   █▄█ █▄▄ ░█░ █ █░▀░█ █▀█ ░█░ ██▄   ░█ █▄█ ░▀░   ▄█ █▀█ █▀█ █▄▀ ██▄ █▀▄ ▄█
-____________________________________________________________________________________________________________________________________________
 License:
     The license is ATTRIBUTION 3.0
-
-    More license info here:
-        https://creativecommons.org/licenses/by/3.0/
+    More license info here: https://creativecommons.org/licenses/by/3.0/
 ____________________________________________________________________________________________________________________________________________
-This shader has NOT been tested on any other PC configuration except the following:
-    CPU: Intel Core i5-6400
-    GPU: NVidia GTX 750Ti
-    RAM: 16GB
-    Windows: 10 x64
-    DirectX: 11
+Портировано на Universal Render Pipeline (было #pragma surface + #pragma vertex / Built-in RP).
+Смещение по heightmap в вершинном шейдере подключено через U10PS_VERTEX_HOOK, используя, как и
+в оригинале, второй канал UV (TEXCOORD1) со сдвигом по времени/направлению потока — Height Map
+читается через SAMPLE_TEXTURE2D_LOD (аналог tex2Dlod, обязателен в вершинном шейдере).
 ____________________________________________________________________________________________________________________________________________
 */
 
@@ -44,66 +32,96 @@ Shader "Ultimate 10+ Shaders/Lava3D"
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" }
+        Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalRenderPipeline" }
         LOD 150
         Cull [_Cull]
 
-        CGPROGRAM
-        // Physically based Standard lighting model, and enable shadows on all light typesv
-        #pragma surface surf Standard addshadow fullforwardshadows
-        #pragma vertex vert
-
-        #ifndef SHADER_API_D3D11
-            #pragma target 3.0
-        #else
-            #pragma target 4.0
-        #endif
-
-        fixed4 _Color;
-
-        sampler2D _MainTex;
-        sampler2D _HeightMap;
-        
-        half4 _FlowDirection;
-        half _Speed;
-        half _Amplitude;
-
-        struct Input
+        Pass
         {
-            float2 uv_MainTex;
-            float2 uv_HeightMap;
-        };
+            Name "ForwardLit"
+            Tags { "LightMode"="UniversalForward" }
 
-        // Add instancing support for this shader. You need to check 'Enable Instancing' on materials that use the shader.
-        // See https://docs.unity3d.com/Manual/GPUInstancing.html for more information about instancing.
-        // #pragma instancing_options assumeuniformscaling
-        UNITY_INSTANCING_BUFFER_START(Props)
-            // put more per-instance properties here
-        UNITY_INSTANCING_BUFFER_END(Props)
+            HLSLPROGRAM
+            #pragma vertex U10PS_LitVertex
+            #pragma fragment frag
 
-        fixed4 pixel;
-        void surf (Input IN, inout SurfaceOutputStandard o)
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
+            #pragma multi_compile _ _ADDITIONAL_LIGHT_SHADOWS
+            #pragma multi_compile _ _SHADOWS_SOFT
+            #pragma multi_compile _ LIGHTMAP_SHADOW_MIXING
+            #pragma multi_compile _ SHADOWMASK
+            #pragma multi_compile_fog
+            #pragma multi_compile_instancing
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+            TEXTURE2D(_MainTex);
+            SAMPLER(sampler_MainTex);
+            TEXTURE2D(_HeightMap);
+            SAMPLER(sampler_HeightMap);
+
+            CBUFFER_START(UnityPerMaterial)
+                float4 _MainTex_ST;
+                half4 _Color;
+                half4 _FlowDirection;
+                half _Speed;
+                half _Amplitude;
+            CBUFFER_END
+
+            #define U10PS_VERTEX_HOOK(input) input.positionOS.y = SAMPLE_TEXTURE2D_LOD(_HeightMap, sampler_HeightMap, input.lightmapUV + _FlowDirection.xy * fmod(_Time.y, 1200) * _Speed, 0).r * _Amplitude
+
+            #include "Includes/U10PS_URPLitCommon.hlsl"
+
+            half4 frag(U10PS_Varyings input) : SV_Target
+            {
+                float2 uv = input.uv + _FlowDirection.xy * fmod(_Time.y, 1200) * _Speed;
+                half4 pixel = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv) * _Color;
+
+                SurfaceData surfaceData = (SurfaceData)0;
+                surfaceData.albedo = pixel.rgb;
+                surfaceData.alpha = 1;
+                surfaceData.metallic = 0;
+                surfaceData.smoothness = 0;
+                surfaceData.occlusion = 1;
+                surfaceData.normalTS = half3(0, 0, 1);
+                surfaceData.emission = 0;
+
+                return U10PS_LitFragment(input, surfaceData);
+            }
+            ENDHLSL
+        }
+
+        Pass
         {
-            pixel = tex2D (_MainTex, IN.uv_MainTex + _FlowDirection * fmod(_Time.y, 1200) * _Speed) * _Color;
-            o.Albedo = pixel.rgb;
-        }
-            
-        struct appdata {
-            float4 vertex : POSITION;
-            float4 tangent : TANGENT;
-            float3 normal : NORMAL;
-            float4 texcoord : TEXCOORD0;
-            float4 texcoord1 : TEXCOORD1;
-            fixed4 color : COLOR;
-            UNITY_VERTEX_INPUT_INSTANCE_ID
-        };
+            Name "ShadowCaster"
+            Tags { "LightMode"="ShadowCaster" }
+            ZWrite On
+            ZTest LEqual
+            ColorMask 0
 
-        fixed4 texPixel;
-        void vert (inout appdata vert){
-            texPixel = tex2Dlod(_HeightMap, vert.texcoord1 + _FlowDirection * fmod(_Time.y, 1200) * _Speed);
-            vert.vertex.y = texPixel.r * _Amplitude;
+            HLSLPROGRAM
+            #pragma vertex U10PS_ShadowVertex
+            #pragma fragment U10PS_ShadowFragment
+            #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
+            #pragma multi_compile_instancing
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+            TEXTURE2D(_HeightMap);
+            SAMPLER(sampler_HeightMap);
+
+            CBUFFER_START(UnityPerMaterial)
+                half4 _FlowDirection;
+                half _Speed;
+                half _Amplitude;
+            CBUFFER_END
+
+            #define U10PS_VERTEX_HOOK(input) input.positionOS.y = SAMPLE_TEXTURE2D_LOD(_HeightMap, sampler_HeightMap, input.lightmapUV + _FlowDirection.xy * fmod(_Time.y, 1200) * _Speed, 0).r * _Amplitude
+
+            #include "Includes/U10PS_URPLitCommon.hlsl"
+            ENDHLSL
         }
-        ENDCG
     }
-    FallBack "Diffuse"
 }

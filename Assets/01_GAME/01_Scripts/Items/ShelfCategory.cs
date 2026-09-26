@@ -8,5 +8,11 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "NewShelfCategory", menuName = "Inventory/Shelf Category", order = 0)]
 public class ShelfCategory : ScriptableObject
 {
+    [Tooltip("Название категории (для отладки и интерфейса).")]
     public string categoryName;
+
+    [Header("Опыт")]
+    [Tooltip("Опыт за каждый предмет этой категории, ВПЕРВЫЕ поставленный на полку " +
+             "(для мусорной категории — за выброс в контейнер).")]
+    [Min(0)] public int xpPerPlacedItem = 2;
 }

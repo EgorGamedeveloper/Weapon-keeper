@@ -7,12 +7,15 @@ using UnityEngine;
 /// </summary>
 public class StartingEquipment : MonoBehaviour
 {
+    [Header("Ссылки")]
+    [Tooltip("Инвентарь экипировки, куда кладутся стартовые инструменты.")]
     public EquipmentInventory equipmentInventory;
 
     [Tooltip("equipmentStorage создаётся динамически в PlayerInventoryModeController.Awake() — берём готовую ссылку оттуда " +
              "(Awake гарантированно отрабатывает раньше Start у всех компонентов сцены), а не заводим свою копию поля.")]
     public PlayerInventoryModeController modeController;
 
+    [Header("Инструменты")]
     [Tooltip("Префабы с компонентом WorldItem, которые нужно сразу положить в экипировку (сейчас — только Crowbar.prefab).")]
     public GameObject[] startingTools;
 
@@ -20,9 +23,13 @@ public class StartingEquipment : MonoBehaviour
     {
         if (equipmentInventory == null || modeController == null) return;
 
+        // При загрузке сейва экипировка (включая лом) восстанавливается SaveLoadService раньше
+        // этого Start (см. DefaultExecutionOrder(-1000)), поэтому выдаём только то, чего в экипировке
+        // ещё нет. Раньше здесь проверялось "нажали Продолжить" — и если сейв не загрузился, игрок
+        // оставался без лома, а автосейв закреплял это навсегда.
         foreach (var prefab in startingTools)
         {
-            if (prefab == null) continue;
+            if (prefab == null || AlreadyEquipped(prefab)) continue;
             GameObject instance = Instantiate(prefab);
             WorldItem item = instance.GetComponent<WorldItem>();
             if (item == null) continue;
@@ -30,5 +37,15 @@ public class StartingEquipment : MonoBehaviour
             item.SetCarriedHidden(modeController.equipmentStorage);
             equipmentInventory.Add(item);
         }
+    }
+
+    private bool AlreadyEquipped(GameObject prefab)
+    {
+        WorldItem prefabItem = prefab.GetComponent<WorldItem>();
+        if (prefabItem == null || prefabItem.itemData == null) return false;
+
+        foreach (var item in equipmentInventory.items)
+            if (item != null && item.itemData == prefabItem.itemData) return true;
+        return false;
     }
 }

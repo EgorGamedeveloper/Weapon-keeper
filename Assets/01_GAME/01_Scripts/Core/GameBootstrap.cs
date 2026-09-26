@@ -29,6 +29,9 @@ public class GameBootstrap : MonoBehaviour
     /// <summary>Нажали «Продолжить» — игровая сцена должна применить сейв вместо старта с нуля.</summary>
     public bool LoadSaveOnStart { get; private set; }
 
+    /// <summary>Сейв, прочитанный и проверенный в ContinueGame; забирается SaveLoadService.</summary>
+    private SaveGameData pendingSave;
+
     private void Awake()
     {
         if (active != null && active != this)
@@ -54,15 +57,42 @@ public class GameBootstrap : MonoBehaviour
     public void StartNewGame()
     {
         LoadSaveOnStart = false;
+        pendingSave = null;
         SceneManager.LoadScene(gameplaySceneName);
     }
 
-    /// <summary>Продолжить с сохранения. Без файла сейва ничего не делает.</summary>
-    public void ContinueGame()
+    /// <summary>
+    /// Продолжить с сохранения. Сейв читается здесь один раз: битый файл или сейв из более новой
+    /// версии игры не запускают уровень вовсе (иначе ближайший автосейв перезаписал бы его пустым
+    /// состоянием). Уровень — тот, в котором сохранялись, если он есть в сборке.
+    /// Возвращает false, если продолжать не с чего.
+    /// </summary>
+    public bool ContinueGame()
     {
-        if (!SaveFileService.HasSave()) return;
+        SaveGameData data = SaveFileService.Load();
+        if (data == null) return false;
 
+        if (data.version > SaveGameData.CurrentVersion)
+        {
+            Debug.LogError($"[GameBootstrap] Сейв версии {data.version} новее поддерживаемой ({SaveGameData.CurrentVersion}) — загрузка отменена.");
+            return false;
+        }
+
+        pendingSave = data;
         LoadSaveOnStart = true;
-        SceneManager.LoadScene(gameplaySceneName);
+
+        string sceneName = !string.IsNullOrEmpty(data.sceneName) && Application.CanStreamedLevelBeLoaded(data.sceneName)
+            ? data.sceneName
+            : gameplaySceneName;
+        SceneManager.LoadScene(sceneName);
+        return true;
+    }
+
+    /// <summary>Отдать сейв, прочитанный в ContinueGame (один раз — повторный вызов вернёт null).</summary>
+    public SaveGameData TakePendingSave()
+    {
+        SaveGameData data = pendingSave;
+        pendingSave = null;
+        return data;
     }
 }

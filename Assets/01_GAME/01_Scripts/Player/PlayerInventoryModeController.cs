@@ -7,15 +7,25 @@ public class PlayerInventoryModeController : MonoBehaviour
 {
     public enum InventoryMode { TidyUp, Equipment }
 
+    [Header("Конфиг")]
     [Tooltip("Если задан — клавиши ниже перекрываются из GameConfig при старте.")]
     public GameConfig config;
 
+    [Header("Ссылки")]
+    [Tooltip("Tidy-up инвентарь (режим 1).")]
     public InventorySystem tidyUpInventory;
+    [Tooltip("Инвентарь экипировки: оружие и инструменты (режим 2).")]
     public EquipmentInventory equipmentInventory;
+    [Tooltip("Держатель предмета tidy-up в руке — прячется вне режима TidyUp.")]
     public EquippedItemHolder tidyUpHolder;
+    [Tooltip("Контейнер для спрятанных предметов экипировки. Пусто — создаётся в Awake.")]
     public Transform equipmentStorage;
+    [Header("Клавиши")]
+    [Tooltip("Переключиться на tidy-up инвентарь.")]
     public KeyCode tidyUpKey = KeyCode.Alpha1;
+    [Tooltip("Переключиться на экипировку.")]
     public KeyCode equipmentKey = KeyCode.Alpha2;
+    [Tooltip("Экипировать активный предмет tidy-up / снять экипированное оружие.")]
     public KeyCode equipKey = KeyCode.Q;
     public InventoryMode CurrentMode { get; private set; } = InventoryMode.TidyUp;
 

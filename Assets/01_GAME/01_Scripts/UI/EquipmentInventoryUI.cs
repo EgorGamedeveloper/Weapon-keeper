@@ -11,14 +11,21 @@ using DG.Tweening;
 /// </summary>
 public class EquipmentInventoryUI : MonoBehaviour
 {
+    [Tooltip("Инвентарь экипировки, который отображается списком.")]
     public EquipmentInventory equipmentInventory;
+    [Tooltip("Контейнер для строк списка.")]
     public RectTransform contentRoot;
+    [Tooltip("Префаб строки.")]
     public TidyUpInventoryRowUI rowPrefab;
 
     [Header("Ручная раскладка строк (без Layout Group)")]
+    [Tooltip("Ширина строки, px.")]
     public float rowWidth = 172f;
+    [Tooltip("Высота строки, px.")]
     public float rowHeight = 48f;
+    [Tooltip("Отступ между строками, px.")]
     public float rowSpacing = 4f;
+    [Tooltip("Время анимации перестановки строк, сек.")]
     public float moveTweenDuration = 0.25f;
 
     private readonly List<TidyUpInventoryRowUI> rows = new List<TidyUpInventoryRowUI>();

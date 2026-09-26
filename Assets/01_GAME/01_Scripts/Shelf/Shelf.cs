@@ -12,6 +12,10 @@ public class Shelf : MonoBehaviour
     [Tooltip("Ячейки полки. Если не заполнено вручную — соберутся автоматически из дочерних объектов.")]
     public ShelfSlot[] slots;
 
+    [Header("Конфиг")]
+    [Tooltip("Если задан — анимации всех ячеек этой полки берутся из GameConfig.shelf. Пусто — у каждой ячейки свои значения.")]
+    public GameConfig config;
+
     private void Awake()
     {
         if (slots == null || slots.Length == 0)
@@ -19,8 +23,9 @@ public class Shelf : MonoBehaviour
 
         foreach (var slot in slots)
         {
-            if (slot != null)
-                slot.parentShelf = this;
+            if (slot == null) continue;
+            slot.parentShelf = this;
+            if (config != null) slot.ApplyShelfSettings(config.shelf);
         }
     }
 

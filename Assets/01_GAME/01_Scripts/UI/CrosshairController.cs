@@ -7,6 +7,7 @@ using UnityEngine;
 public class CrosshairController : MonoBehaviour
 {
     [Header("Ссылки")]
+    [Tooltip("Режим инвентаря: прицел показывается только с экипированным оружием.")]
     public PlayerInventoryModeController modeController;
 
     [Header("UI")]

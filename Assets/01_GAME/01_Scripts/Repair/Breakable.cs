@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// Объект, который можно разобрать ломом (режим Tool, клавиша 3): прибитая доска на окне/двери,
@@ -20,8 +21,11 @@ public class Breakable : MonoBehaviour
     [Tooltip("Случайный разброс точек спавна по X/Z от позиции объекта.")]
     public Vector2 spawnScatterRadius = new Vector2(0.3f, 0.3f);
 
-    [Tooltip("Уничтожить весь объект при поломке. Если выключено — объект остаётся (без коллайдера), просто прячет intactVisual.")]
-    public bool destroySelf = true;
+    [Tooltip("Спрятать весь объект при поломке (SetActive(false)). Если выключено — объект остаётся (без коллайдера), " +
+             "просто прячет intactVisual. Объект сознательно не уничтожается: вместе с ним пропал бы его PersistentId, " +
+             "и сейв не узнал бы, что он разобран, — после загрузки доска снова была бы целой, а её лут задвоился бы.")]
+    [FormerlySerializedAs("destroySelf")]
+    public bool hideSelfOnBreak = true;
 
     [Tooltip("Цвет подсветки (emission) при наведении лучом в режиме Tool.")]
     public Color highlightColor = new Color(1f, 0.85f, 0.2f);
@@ -86,14 +90,31 @@ public class Breakable : MonoBehaviour
 
         OnBroken?.Invoke(this);
 
-        if (destroySelf)
-        {
-            Destroy(gameObject);
-        }
-        else
-        {
-            foreach (var col in GetComponentsInChildren<Collider>())
-                col.enabled = false;
-        }
+        ApplyBrokenVisual();
+    }
+
+    /// <summary>
+    /// Восстановление из сейва: воспроизводит только визуальный итог поломки (прячет intactVisual,
+    /// гасит коллайдеры) — БЕЗ спавна spawnOnBreak (обломки/лут уже восстановлены отдельно, как
+    /// обычные предметы мира) и БЕЗ события OnBroken (иначе сценарные скрипты вроде RevealOnBreak
+    /// среагировали бы повторно при каждой загрузке).
+    ///
+    /// Итог тот же, что у Break(): RevealOnBreak и подобные скрипты держат ссылку на этот Breakable и
+    /// перечитывают board.IsBroken в своём OnEnable — объект только прячется, не уничтожается.
+    /// </summary>
+    public void RestoreBroken()
+    {
+        if (IsBroken) return;
+        IsBroken = true;
+
+        if (intactVisual != null) intactVisual.SetActive(false);
+        ApplyBrokenVisual();
+    }
+
+    private void ApplyBrokenVisual()
+    {
+        foreach (var col in GetComponentsInChildren<Collider>())
+            col.enabled = false;
+        if (hideSelfOnBreak) gameObject.SetActive(false);
     }
 }

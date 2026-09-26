@@ -8,8 +8,11 @@ using DG.Tweening;
 /// </summary>
 public class QuestRowUI : MonoBehaviour
 {
+    [Tooltip("Заголовок квеста.")]
     public Text title;
+    [Tooltip("Текст прогресса (например, 2/5).")]
     public Text progressText;
+    [Tooltip("Полоса прогресса (Image Type = Filled).")]
     public Image progressFill;
 
     [Tooltip("Длительность анимации подтягивания прогресс-бара к новому значению.")]

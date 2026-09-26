@@ -5,8 +5,11 @@ using DG.Tweening;
 /// <summary>Компактный индикатор уровня и опыта игрока: текст уровня + полоса опыта до следующего.</summary>
 public class PlayerProgressionUI : MonoBehaviour
 {
+    [Tooltip("Источник уровня и опыта.")]
     public PlayerProgression playerProgression;
+    [Tooltip("Текст с текущим уровнем.")]
     public Text levelText;
+    [Tooltip("Полоса опыта (Image Type = Filled).")]
     public Image xpFill;
 
     [Tooltip("Длительность анимации подтягивания полосы опыта к новому значению.")]
@@ -15,23 +18,52 @@ public class PlayerProgressionUI : MonoBehaviour
     [Tooltip("Сила эффекта \"щелчка\" текста уровня при левелапе.")]
     public float levelUpPunchScale = 0.15f;
 
+    [Header("Подсказка про очки навыков")]
+    [Tooltip("Текст «+N очков · Tab» под полосой опыта. Виден, только пока есть неизрасходованные очки.")]
+    public Text skillPointsHint;
+
+    [Tooltip("Формат подсказки: {0} — число очков.")]
+    public string skillPointsHintFormat = "+{0} оч. навыков · Tab";
+
+    private Tween hintPulse;
+
     private void OnEnable()
     {
         if (playerProgression == null) return;
 
         playerProgression.OnXPChanged += HandleXPChanged;
         playerProgression.OnLevelUp += HandleLevelUp;
+        playerProgression.OnUnlockPointsChanged += RefreshSkillPointsHint;
 
         RefreshLevelText();
         SetFillImmediate(playerProgression.CurrentXP, playerProgression.XPToNextLevel);
+        RefreshSkillPointsHint(playerProgression.UnlockPoints);
     }
 
     private void OnDisable()
     {
+        hintPulse?.Kill();
         if (playerProgression == null) return;
 
         playerProgression.OnXPChanged -= HandleXPChanged;
         playerProgression.OnLevelUp -= HandleLevelUp;
+        playerProgression.OnUnlockPointsChanged -= RefreshSkillPointsHint;
+    }
+
+    // Мягко мигает, пока очки не потрачены — игрок замечает, что пора открыть дерево навыков.
+    private void RefreshSkillPointsHint(int points)
+    {
+        if (skillPointsHint == null) return;
+
+        bool show = points > 0;
+        skillPointsHint.gameObject.SetActive(show);
+        hintPulse?.Kill();
+        if (!show) return;
+
+        skillPointsHint.text = string.Format(skillPointsHintFormat, points);
+        Color c = skillPointsHint.color;
+        skillPointsHint.color = new Color(c.r, c.g, c.b, 1f);
+        hintPulse = skillPointsHint.DOFade(0.4f, 0.9f).SetEase(Ease.InOutSine).SetLoops(-1, LoopType.Yoyo);
     }
 
     private void HandleXPChanged(int currentXP, int xpToNextLevel)

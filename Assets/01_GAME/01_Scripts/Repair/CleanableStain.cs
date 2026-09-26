@@ -57,8 +57,21 @@ public class CleanableStain : MonoBehaviour
     public void Clean()
     {
         if (IsClean) return;
-        IsClean = true;
+        ApplyClean();
+        OnCleaned?.Invoke(this);
+    }
 
+    /// <summary>Восстановление из сейва: тот же визуальный итог, что и Clean(), но без события —
+    /// иначе при каждой загрузке трекер восстановления и квесты задваивали бы прогресс.</summary>
+    public void RestoreClean()
+    {
+        if (IsClean) return;
+        ApplyClean();
+    }
+
+    private void ApplyClean()
+    {
+        IsClean = true;
         SetHighlight(false);
 
         // Коллайдер выключаем всегда: иначе очищенное пятно продолжает ловить луч игрока
@@ -68,7 +81,5 @@ public class CleanableStain : MonoBehaviour
 
         if (stainVisual != null) stainVisual.SetActive(false);
         else gameObject.SetActive(false);
-
-        OnCleaned?.Invoke(this);
     }
 }

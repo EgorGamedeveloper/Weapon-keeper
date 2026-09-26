@@ -14,11 +14,14 @@ public class ItemData : ScriptableObject
     public string itemId;
 
     [Header("Основная информация")]
+    [Tooltip("Название предмета для интерфейса.")]
     public string itemName = "Новый предмет";
 
     [TextArea(3, 6)]
+    [Tooltip("Описание для панели информации о предмете.")]
     public string description = "Описание предмета";
 
+    [Tooltip("Иконка для инвентаря.")]
     public Sprite icon;
 
     [Header("Инвентарь tidy-up")]
@@ -55,6 +58,10 @@ public class ItemData : ScriptableObject
     [Header("Инструмент (разбор Breakable)")]
     [Tooltip("Инструмент для разбора Breakable-объектов (например, лом). Не оружие — weaponPrefab не участвует.")]
     public bool canBreakObjects = false;
+
+    [Header("Эффекты установки")]
+    [Tooltip("Звук при установке предмета на место (полка и т.п.). Не задан — тихо, без ошибки.")]
+    public AudioClip placementSound;
 
 #if UNITY_EDITOR
     private void OnValidate()

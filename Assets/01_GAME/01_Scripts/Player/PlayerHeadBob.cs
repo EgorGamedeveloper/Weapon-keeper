@@ -50,7 +50,9 @@ public class PlayerHeadBob : MonoBehaviour
     public float landDamping = 12f;
 
     [Header("Звуки")]
+    [Tooltip("Звук прыжка. Пусто — без звука.")]
     public AudioClip jumpSound;
+    [Tooltip("Звук приземления. Пусто — без звука.")]
     public AudioClip landSound;
 
     private Vector3 baseLocalPosition;

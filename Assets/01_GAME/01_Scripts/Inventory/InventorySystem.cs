@@ -1,14 +1,6 @@
 using System;
 using UnityEngine;
 
-/// <summary>Данные одного слота инвентаря.</summary>
-[System.Serializable]
-public class InventorySlotData
-{
-    public ItemData item;
-    public bool IsEmpty => item == null;
-}
-
 [System.Serializable]
 public class InventoryEntry
 {
@@ -34,8 +26,7 @@ public class InventorySystem : MonoBehaviour
     [Tooltip("Список типов подобранных предметов. Каждый экземпляр остаётся существующим WorldItem.")]
     public System.Collections.Generic.List<InventoryEntry> entries = new System.Collections.Generic.List<InventoryEntry>();
 
-    [Tooltip("Устаревшее поле для старого UI. Новые интерфейсы должны использовать entries.")]
-    public InventorySlotData[] slots = System.Array.Empty<InventorySlotData>();
+    [Tooltip("Индекс активной записи в entries (что сейчас в руке).")]
     public int activeSlotIndex = 0;
 
     [Tooltip("Инвертировать направление прокрутки колеса мыши.")]
@@ -79,11 +70,6 @@ public class InventorySystem : MonoBehaviour
     public ItemData GetActiveItem()
     {
         return GetActiveEntry()?.item;
-    }
-
-    public bool HasItemInActiveSlot()
-    {
-        return GetActiveEntry() != null;
     }
 
     public int TotalItemCount

@@ -1,45 +1,21 @@
-﻿/*
-██████╗░███████╗██████╗░████████╗██╗░░██╗  ███╗░░░███╗░█████╗░░██████╗██╗░░██╗  ███████╗██████╗░░██████╗░███████╗
-██╔══██╗██╔════╝██╔══██╗╚══██╔══╝██║░░██║  ████╗░████║██╔══██╗██╔════╝██║░██╔╝  ██╔════╝██╔══██╗██╔════╝░██╔════╝
-██║░░██║█████╗░░██████╔╝░░░██║░░░███████║  ██╔████╔██║███████║╚█████╗░█████═╝░  █████╗░░██║░░██║██║░░██╗░█████╗░░
-██║░░██║██╔══╝░░██╔═══╝░░░░██║░░░██╔══██║  ██║╚██╔╝██║██╔══██║░╚═══██╗██╔═██╗░  ██╔══╝░░██║░░██║██║░░╚██╗██╔══╝░░
-██████╔╝███████╗██║░░░░░░░░██║░░░██║░░██║  ██║░╚═╝░██║██║░░██║██████╔╝██║░╚██╗  ███████╗██████╔╝╚██████╔╝███████╗
-╚═════╝░╚══════╝╚═╝░░░░░░░░╚═╝░░░╚═╝░░╚═╝  ╚═╝░░░░░╚═╝╚═╝░░╚═╝╚═════╝░╚═╝░░╚═╝  ╚══════╝╚═════╝░░╚═════╝░╚══════╝
+/*
+██████╗░███████╗██████╗░████████╗██╗░░██╗  ███╗░░░███╗░█████╗░░██████╗██╗░░██╗  ███████╗██████╗░░██████╗░███████╗
+██╔══██╗██╔════╝██╔══██╗╚══██╔══╝██║░░██║  ████╗░████║██╔══██╗██╔════╝██║░██╔╝  ██╔════╝██╔══██╗██╔════╝░██╔════╝
+██║░░██║█████╗░░██████╔╝░░░██║░░░███████║  ██╔████╔██║███████║╚█████╗░█████═╝░  █████╗░░██║░░██║██║░░██╗░█████╗░░
+██║░░██║██╔══╝░░██╔═══╝░░░░██║░░░██╔══██║  ██║╚██╔╝██║██╔══██║░╚═══██╗██╔═██╗░  ██╔══╝░░██║░░██║██║░░╚██╗██╔══╝░░
+██████╔╝███████╗██║░░░░░░░░██║░░░██║░░██║  ██║░╚═╝░██║██║░░██║██████╔╝██║░╚██╗  ███████╗██████╔╝╚██████╔╝███████╗
+╚═════╝░╚══════╝╚═╝░░░░░░░░╚═╝░░░╚═╝░░╚═╝  ╚═╝░░░░░╚═╝╚═╝░░╚═╝╚═════╝░╚═╝░░╚═╝  ╚══════╝╚═════╝░░╚═════╝░╚══════╝
 
-                    ██████╗░███████╗████████╗███████╗░█████╗░████████╗██╗░█████╗░███╗░░██╗
-                    ██╔══██╗██╔════╝╚══██╔══╝██╔════╝██╔══██╗╚══██╔══╝██║██╔══██╗████╗░██║
-                    ██║░░██║█████╗░░░░░██║░░░█████╗░░██║░░╚═╝░░░██║░░░██║██║░░██║██╔██╗██║
-                    ██║░░██║██╔══╝░░░░░██║░░░██╔══╝░░██║░░██╗░░░██║░░░██║██║░░██║██║╚████║
-                    ██████╔╝███████╗░░░██║░░░███████╗╚█████╔╝░░░██║░░░██║╚█████╔╝██║░╚███║
-                    ╚═════╝░╚══════╝░░░╚═╝░░░╚══════╝░╚════╝░░░░╚═╝░░░╚═╝░╚════╝░╚═╝░░╚══╝
-
-                            ░██████╗██╗░░██╗░█████╗░██████╗░███████╗██████╗░
-                            ██╔════╝██║░░██║██╔══██╗██╔══██╗██╔════╝██╔══██╗
-                            ╚█████╗░███████║███████║██║░░██║█████╗░░██████╔╝
-                            ░╚═══██╗██╔══██║██╔══██║██║░░██║██╔══╝░░██╔══██╗
-                            ██████╔╝██║░░██║██║░░██║██████╔╝███████╗██║░░██║
-                            ╚═════╝░╚═╝░░╚═╝╚═╝░░╚═╝╚═════╝░╚══════╝╚═╝░░╚═╝
-            
-                █▀▀▄ █──█ 　 ▀▀█▀▀ █──█ █▀▀ 　 ░█▀▀▄ █▀▀ ▀█─█▀ █▀▀ █── █▀▀█ █▀▀█ █▀▀ █▀▀█ 
-                █▀▀▄ █▄▄█ 　 ─░█── █▀▀█ █▀▀ 　 ░█─░█ █▀▀ ─█▄█─ █▀▀ █── █──█ █──█ █▀▀ █▄▄▀ 
-                ▀▀▀─ ▄▄▄█ 　 ─░█── ▀──▀ ▀▀▀ 　 ░█▄▄▀ ▀▀▀ ──▀── ▀▀▀ ▀▀▀ ▀▀▀▀ █▀▀▀ ▀▀▀ ▀─▀▀
-____________________________________________________________________________________________________________________________________________
-
-        ▄▀█ █▀ █▀ █▀▀ ▀█▀ ▀   █░█ █░░ ▀█▀ █ █▀▄▀█ ▄▀█ ▀█▀ █▀▀   ▄█ █▀█ ▄█▄   █▀ █░█ ▄▀█ █▀▄ █▀▀ █▀█ █▀
-        █▀█ ▄█ ▄█ ██▄ ░█░ ▄   █▄█ █▄▄ ░█░ █ █░▀░█ █▀█ ░█░ ██▄   ░█ █▄█ ░▀░   ▄█ █▀█ █▀█ █▄▀ ██▄ █▀▄ ▄█
-____________________________________________________________________________________________________________________________________________
 License:
     The license is ATTRIBUTION 3.0
-
-    More license info here:
-        https://creativecommons.org/licenses/by/3.0/
+    More license info here: https://creativecommons.org/licenses/by/3.0/
 ____________________________________________________________________________________________________________________________________________
-This shader has NOT been tested on any other PC configuration except the following:
-    CPU: Intel Core i5-6400
-    GPU: NVidia GTX 750Ti
-    RAM: 16GB
-    Windows: 10 x64
-    DirectX: 11
+Портировано на Universal Render Pipeline (было CGPROGRAM/Built-in RP).
+_CameraDepthTexture теперь объявляется через DeclareDepthTexture.hlsl и SampleSceneDepth (нужно
+включить Depth Texture в URP Asset — сделано автоматически при миграции). Порядок операций
+(разница четырёх сэмплов глубины, затем Linear01Depth от этой разницы) сохранён таким же
+странноватым, каким был в оригинале, чтобы не менять визуальный результат.
+Работает только при наличии Directional Light в сцене (ограничение оригинального шейдера).
 ____________________________________________________________________________________________________________________________________________
 */
 
@@ -51,65 +27,66 @@ Shader "Ultimate 10+ Shaders/Depth Mask Edge Detection"
     }
     SubShader
     {
-        Tags { "Queue"="Transparent" }
+        Tags { "Queue"="Transparent" "RenderPipeline"="UniversalRenderPipeline" }
         Cull Back
         ZTest Always
 
         Pass
         {
-            CGPROGRAM
+            Name "ForwardUnlit"
+            Tags { "LightMode"="UniversalForward" }
+
+            HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
 
-            #include "UnityCG.cginc"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
 
-            struct appdata
+            struct Attributes
             {
-                float4 vertex : POSITION;
-                float3 normal : NORMAL;
-            };    
-
-            struct v2f
-            {
-                float4 position : POSITION;
-                float4 screenPos : TEXCOORD0;
+                float4 positionOS : POSITION;
+                float3 normalOS   : NORMAL;
             };
 
-            fixed4 _Color;
-            sampler2D _CameraDepthTexture;
-
-            v2f vert(appdata input)
+            struct Varyings
             {
-                v2f output;
+                float4 positionCS : SV_POSITION;
+                float4 screenPos  : TEXCOORD0;
+            };
 
-                output.position = UnityObjectToClipPos(input.vertex);
-                output.screenPos = output.position;
+            CBUFFER_START(UnityPerMaterial)
+                half4 _Color;
+            CBUFFER_END
+
+            Varyings vert(Attributes input)
+            {
+                Varyings output;
+
+                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                output.screenPos = ComputeScreenPos(output.positionCS);
 
                 return output;
             }
 
-            half4 pixel;
-            half2 uv;
-            fixed onePixelW, onePixelH;
-            half4 frag(v2f input) : SV_Target
-            {    
-                uv = input.screenPos.xy / input.screenPos.w;
-                uv.x = (uv.x + 1) * .5;
-                uv.y = (uv.y + 1) * .5;
+            half4 frag(Varyings input) : SV_Target
+            {
+                float2 uv = input.screenPos.xy / input.screenPos.w;
 
-                onePixelW = 1.0 / _ScreenParams.x;
-                onePixelH = 1.0 / _ScreenParams.y;
+                float onePixelW = 1.0 / _ScaledScreenParams.x;
+                float onePixelH = 1.0 / _ScaledScreenParams.y;
 
-                pixel = Linear01Depth(abs(
-                        tex2D(_CameraDepthTexture, float2(uv.x - onePixelW, uv.y)) - 
-                        tex2D(_CameraDepthTexture, float2(uv.x + onePixelW, uv.y)) + 
-                        tex2D(_CameraDepthTexture, float2(uv.x, uv.y + onePixelH)) -
-                        tex2D(_CameraDepthTexture, float2(uv.x, uv.y - onePixelH))
-                    ));
+                float rawDiff =
+                        SampleSceneDepth(float2(uv.x - onePixelW, uv.y)) -
+                        SampleSceneDepth(float2(uv.x + onePixelW, uv.y)) +
+                        SampleSceneDepth(float2(uv.x, uv.y + onePixelH)) -
+                        SampleSceneDepth(float2(uv.x, uv.y - onePixelH));
+
+                half4 pixel = Linear01Depth(abs(rawDiff), _ZBufferParams);
 
                 return pixel * _Color;
-            }    
-            ENDCG
+            }
+            ENDHLSL
         }
     }
 }

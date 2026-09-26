@@ -7,9 +7,15 @@ using UnityEngine;
 ///
 /// Escape освобождает курсор (чтобы можно было выйти из игры или переключить окно),
 /// клик по игровому окну захватывает обратно.
+///
+/// Выполняется ПОСЛЕ остальных скриптов кадра: клик, который возвращает захват, в этом кадре ещё
+/// видится всем как "курсор свободен" — PlayerItemInteraction его не обрабатывает, а
+/// EquipmentWeaponBridge блокирует выстрел до отпускания кнопки.
 /// </summary>
+[DefaultExecutionOrder(1000)]
 public class CursorLockController : MonoBehaviour
 {
+    [Header("Захват курсора")]
     [Tooltip("Захватывать курсор сразу при старте сцены.")]
     public bool lockOnStart = true;
 

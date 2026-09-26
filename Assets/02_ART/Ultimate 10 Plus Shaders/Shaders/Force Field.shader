@@ -1,10 +1,10 @@
-﻿/*
-               ███████╗░█████╗░██████╗░░█████╗░███████╗  ███████╗██╗███████╗██╗░░░░░██████╗░
-               ██╔════╝██╔══██╗██╔══██╗██╔══██╗██╔════╝  ██╔════╝██║██╔════╝██║░░░░░██╔══██╗
-               █████╗░░██║░░██║██████╔╝██║░░╚═╝█████╗░░  █████╗░░██║█████╗░░██║░░░░░██║░░██║
-               ██╔══╝░░██║░░██║██╔══██╗██║░░██╗██╔══╝░░  ██╔══╝░░██║██╔══╝░░██║░░░░░██║░░██║
-               ██║░░░░░╚█████╔╝██║░░██║╚█████╔╝███████╗  ██║░░░░░██║███████╗███████╗██████╔╝
-               ╚═╝░░░░░░╚════╝░╚═╝░░╚═╝░╚════╝░╚══════╝  ╚═╝░░░░░╚═╝╚══════╝╚══════╝╚═════╝░
+/*
+               ███████╗░█████╗░██████╗░░█████╗░███████╗  ███████╗██╗███████╗██╗░░░░░██████╗░
+               ██╔════╝██╔══██╗██╔══██╗██╔══██╗██╔════╝  ██╔════╝██║██╔════╝██║░░░░░██╔══██╗
+               █████╗░░██║░░██║██████╔╝██║░░╚═╝█████╗░░  █████╗░░██║█████╗░░██║░░░░░██║░░██║
+               ██╔══╝░░██║░░██║██╔══██╗██║░░██╗██╔══╝░░  ██╔══╝░░██║██╔══╝░░██║░░░░░██║░░██║
+               ██║░░░░░╚█████╔╝██║░░██║╚█████╔╝███████╗  ██║░░░░░██║███████╗███████╗██████╔╝
+               ╚═╝░░░░░░╚════╝░╚═╝░░╚═╝░╚════╝░╚══════╝  ╚═╝░░░░░╚═╝╚══════╝╚══════╝╚═════╝░
 
                            ░██████╗██╗░░██╗░█████╗░██████╗░███████╗██████╗░
                            ██╔════╝██║░░██║██╔══██╗██╔══██╗██╔════╝██╔══██╗
@@ -13,13 +13,13 @@
                            ██████╔╝██║░░██║██║░░██║██████╔╝███████╗██║░░██║
                            ╚═════╝░╚═╝░░╚═╝╚═╝░░╚═╝╚═════╝░╚══════╝╚═╝░░╚═╝
 
-                █▀▀▄ █──█ 　 ▀▀█▀▀ █──█ █▀▀ 　 ░█▀▀▄ █▀▀ ▀█─█▀ █▀▀ █── █▀▀█ █▀▀█ █▀▀ █▀▀█ 
-                █▀▀▄ █▄▄█ 　 ─░█── █▀▀█ █▀▀ 　 ░█─░█ █▀▀ ─█▄█─ █▀▀ █── █──█ █──█ █▀▀ █▄▄▀ 
+                █▀▀▄ █──█ 　 ▀▀█▀▀ █──█ █▀▀ 　 ░█▀▀▄ █▀▀ ▀█─█▀ █▀▀ █── █▀▀█ █▀▀█ █▀▀ █▀▀█
+                █▀▀▄ █▄▄█ 　 ─░█── █▀▀█ █▀▀ 　 ░█─░█ █▀▀ ─█▄█─ █▀▀ █── █──█ █──█ █▀▀ █▄▄▀
                 ▀▀▀─ ▄▄▄█ 　 ─░█── ▀──▀ ▀▀▀ 　 ░█▄▄▀ ▀▀▀ ──▀── ▀▀▀ ▀▀▀ ▀▀▀▀ █▀▀▀ ▀▀▀ ▀─▀▀
 ____________________________________________________________________________________________________________________________________________
 
-        ▄▀█ █▀ █▀ █▀▀ ▀█▀ ▀   █░█ █░░ ▀█▀ █ █▀▄▀█ ▄▀█ ▀█▀ █▀▀   ▄█ █▀█ ▄█▄   █▀ █░█ ▄▀█ █▀▄ █▀▀ █▀█ █▀
-        █▀█ ▄█ ▄█ ██▄ ░█░ ▄   █▄█ █▄▄ ░█░ █ █░▀░█ █▀█ ░█░ ██▄   ░█ █▄█ ░▀░   ▄█ █▀█ █▀█ █▄▀ ██▄ █▀▄ ▄█
+        ▄▀█ █▀ █▀ █▀▀ ▀█▀ ▀   █░█ █░░ ▀█▀ █ █▀▄▀█ ▄▀█ ▀█▀ █▀▀   ▄█ █▀█ ▄█▄   █▀ █░█ ▄▀█ █▀▄ █▀▀ █▀█ █▀
+        █▀█ ▄█ ▄█ ██▄ ░█░ ▄   █▄█ █▄▄ ░█░ █ █░▀░█ █▀█ ░█░ ██▄   ░█ █▄█ ░▀░   ▄█ █▀█ █▀█ █▄▀ ██▄ █▀▄ ▄█
 ____________________________________________________________________________________________________________________________________________
 License:
     The license is ATTRIBUTION 3.0
@@ -27,12 +27,7 @@ License:
     More license info here:
         https://creativecommons.org/licenses/by/3.0/
 ____________________________________________________________________________________________________________________________________________
-This shader has NOT been tested on any other PC configuration except the following:
-    CPU: Intel Core i5-6400
-    GPU: NVidia GTX 750Ti
-    RAM: 16GB
-    Windows: 10 x64
-    DirectX: 11
+Портировано на Universal Render Pipeline (было CGPROGRAM/Built-in RP).
 ____________________________________________________________________________________________________________________________________________
 */
 
@@ -48,82 +43,72 @@ Shader "Ultimate 10+ Shaders/Force Field"
     }
     SubShader
     {
-        Tags { "RenderType"="Transparent" "IgnoreProjector"="True" "Queue"="Transparent" }
-        Blend SrcAlpha OneMinusSrcAlpha
+        Tags { "RenderType"="Transparent" "IgnoreProjector"="True" "Queue"="Transparent" "RenderPipeline"="UniversalRenderPipeline" }
         LOD 100
         Cull Back
-        Lighting Off
         ZWrite On
+        Blend SrcAlpha OneMinusSrcAlpha
 
         Pass
         {
-            CGPROGRAM
+            Name "ForwardUnlit"
+            Tags { "LightMode"="UniversalForward" }
+
+            HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
 
-            #include "UnityCG.cginc"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
-            #ifndef SHADER_API_D3D11
-                #pragma target 3.0
-            #else
-                #pragma target 4.0
-            #endif
-
-            struct appdata
+            struct Attributes
             {
-                float4 vertex : POSITION;
-                float2 uv : TEXCOORD0;
-                fixed3 normal : NORMAL;
+                float4 positionOS : POSITION;
+                float3 normalOS   : NORMAL;
+                float2 uv         : TEXCOORD0;
             };
 
-            struct v2f
+            struct Varyings
             {
-                float2 uv : TEXCOORD0;
-                float rim : TEXCOORD1;
-                float4 position : SV_POSITION;
+                float4 positionCS : SV_POSITION;
+                float2 uv         : TEXCOORD0;
+                float rim         : TEXCOORD1;
             };
 
-            sampler2D _MainTex;
-            float4 _MainTex_ST;
+            TEXTURE2D(_MainTex);
+            SAMPLER(sampler_MainTex);
 
-            fixed4 _Color;
-            half _FresnelPower;
-            half2 _ScrollDirection;
+            CBUFFER_START(UnityPerMaterial)
+                float4 _MainTex_ST;
+                half4 _Color;
+                half _FresnelPower;
+                half2 _ScrollDirection;
+            CBUFFER_END
 
-            
-            // Add instancing support for this shader. You need to check 'Enable Instancing' on materials that use the shader.
-            // See https://docs.unity3d.com/Manual/GPUInstancing.html for more information about instancing.
-            // #pragma instancing_options assumeuniformscaling
-            UNITY_INSTANCING_BUFFER_START(Props)
-                // put more per-instance properties here
-            UNITY_INSTANCING_BUFFER_END(Props)
-
-            fixed3 viewDir;
-            v2f vert (appdata vert)
+            Varyings vert (Attributes input)
             {
-                v2f output;
+                Varyings output;
 
-                output.position = UnityObjectToClipPos(vert.vertex);
-                output.uv = TRANSFORM_TEX(vert.uv, _MainTex);
+                VertexPositionInputs positionInputs = GetVertexPositionInputs(input.positionOS.xyz);
+                output.positionCS = positionInputs.positionCS;
 
-                viewDir = normalize(ObjSpaceViewDir(vert.vertex));
-                output.rim = 1.0 - saturate(dot(viewDir, vert.normal));
-
+                output.uv = TRANSFORM_TEX(input.uv, _MainTex);
                 output.uv += _ScrollDirection * _Time.y;
+
+                float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
+                float3 viewDirWS = normalize(GetWorldSpaceViewDir(positionInputs.positionWS));
+                output.rim = 1.0 - saturate(dot(viewDirWS, normalWS));
 
                 return output;
             }
 
-            fixed4 pixel;
-            fixed4 frag (v2f input) : SV_Target
+            half4 frag (Varyings input) : SV_Target
             {
-                pixel = tex2D(_MainTex, input.uv) * _Color * pow(_FresnelPower, input.rim);
+                half4 pixel = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * _Color * pow(_FresnelPower, input.rim);
                 pixel = lerp(0, pixel, input.rim);
-                
+
                 return clamp(pixel, 0, _Color);
             }
-            ENDCG
+            ENDHLSL
         }
     }
-    FallBack "Diffuse"
 }

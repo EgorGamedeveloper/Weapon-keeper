@@ -1,31 +1,19 @@
-﻿/*
-    ░█████╗░██╗░░░██╗████████╗██╗░░░░░██╗███╗░░██╗███████╗  ░██████╗██╗░░██╗░█████╗░██████╗░███████╗██████╗░
-    ██╔══██╗██║░░░██║╚══██╔══╝██║░░░░░██║████╗░██║██╔════╝  ██╔════╝██║░░██║██╔══██╗██╔══██╗██╔════╝██╔══██╗
-    ██║░░██║██║░░░██║░░░██║░░░██║░░░░░██║██╔██╗██║█████╗░░  ╚█████╗░███████║███████║██║░░██║█████╗░░██████╔╝
-    ██║░░██║██║░░░██║░░░██║░░░██║░░░░░██║██║╚████║██╔══╝░░  ░╚═══██╗██╔══██║██╔══██║██║░░██║██╔══╝░░██╔══██╗
-    ╚█████╔╝╚██████╔╝░░░██║░░░███████╗██║██║░╚███║███████╗  ██████╔╝██║░░██║██║░░██║██████╔╝███████╗██║░░██║
-    ░╚════╝░░╚═════╝░░░░╚═╝░░░╚══════╝╚═╝╚═╝░░╚══╝╚══════╝  ╚═════╝░╚═╝░░╚═╝╚═╝░░╚═╝╚═════╝░╚══════╝╚═╝░░╚═╝
+/*
+    ░█████╗░██╗░░░██╗████████╗██╗░░░░░██╗███╗░░██╗███████╗  ░██████╗██╗░░██╗░█████╗░██████╗░███████╗██████╗░
+    ██╔══██╗██║░░░██║╚══██╔══╝██║░░░░░██║████╗░██║██╔════╝  ██╔════╝██║░░██║██╔══██╗██╔══██╗██╔════╝██╔══██╗
+    ██║░░██║██║░░░██║░░░██║░░░██║░░░░░██║██╔██╗██║█████╗░░  ╚█████╗░███████║███████║██║░░██║█████╗░░██████╔╝
+    ██║░░██║██║░░░██║░░░██║░░░██║░░░░░██║██║╚████║██╔══╝░░  ░╚═══██╗██╔══██║██╔══██║██║░░██║██╔══╝░░██╔══██╗
+    ╚█████╔╝╚██████╔╝░░░██║░░░███████╗██║██║░╚███║███████╗  ██████╔╝██║░░██║██║░░██║██████╔╝███████╗██║░░██║
+    ░╚════╝░░╚═════╝░░░░╚═╝░░░╚══════╝╚═╝╚═╝░░╚══╝╚══════╝  ╚═════╝░╚═╝░░╚═╝╚═╝░░╚═╝╚═════╝░╚══════╝╚═╝░░╚═╝
 
-                █▀▀▄ █──█ 　 ▀▀█▀▀ █──█ █▀▀ 　 ░█▀▀▄ █▀▀ ▀█─█▀ █▀▀ █── █▀▀█ █▀▀█ █▀▀ █▀▀█ 
-                █▀▀▄ █▄▄█ 　 ─░█── █▀▀█ █▀▀ 　 ░█─░█ █▀▀ ─█▄█─ █▀▀ █── █──█ █──█ █▀▀ █▄▄▀ 
-                ▀▀▀─ ▄▄▄█ 　 ─░█── ▀──▀ ▀▀▀ 　 ░█▄▄▀ ▀▀▀ ──▀── ▀▀▀ ▀▀▀ ▀▀▀▀ █▀▀▀ ▀▀▀ ▀─▀▀
-____________________________________________________________________________________________________________________________________________
-
-        ▄▀█ █▀ █▀ █▀▀ ▀█▀ ▀   █░█ █░░ ▀█▀ █ █▀▄▀█ ▄▀█ ▀█▀ █▀▀   ▄█ █▀█ ▄█▄   █▀ █░█ ▄▀█ █▀▄ █▀▀ █▀█ █▀
-        █▀█ ▄█ ▄█ ██▄ ░█░ ▄   █▄█ █▄▄ ░█░ █ █░▀░█ █▀█ ░█░ ██▄   ░█ █▄█ ░▀░   ▄█ █▀█ █▀█ █▄▀ ██▄ █▀▄ ▄█
-____________________________________________________________________________________________________________________________________________
 License:
     The license is ATTRIBUTION 3.0
-
-    More license info here:
-        https://creativecommons.org/licenses/by/3.0/
+    More license info here: https://creativecommons.org/licenses/by/3.0/
 ____________________________________________________________________________________________________________________________________________
-This shader has NOT been tested on any other PC configuration except the following:
-    CPU: Intel Core i5-6400
-    GPU: NVidia GTX 750Ti
-    RAM: 16GB
-    Windows: 10 x64
-    DirectX: 11
+Портировано на Universal Render Pipeline (было #pragma surface / Built-in RP).
+URP не поддерживает Surface Shader — второй проход переписан вручную на URP Lit
+(SurfaceData/InputData + UniversalFragmentPBR из Lighting.hlsl, см. Includes/U10PS_URPLitCommon.hlsl),
+Metallic/Smoothness по умолчанию 0, как и было в исходном SurfaceOutputStandard.
 ____________________________________________________________________________________________________________________________________________
 */
 
@@ -38,90 +26,125 @@ Shader "Ultimate 10+ Shaders/Outline"
 
         _OutlineColor ("Outline Color", Color) = (1,1,1,1)
         _OutlineWidth ("Outline Width", Range(0, 4)) = 0.25
-        
+
         [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull", Float) = 2
     }
     SubShader
     {
-        Tags { "RenderType"="Geometry" "Queue"="Transparent" }
+        Tags { "RenderType"="Geometry" "Queue"="Transparent" "RenderPipeline"="UniversalRenderPipeline" }
         LOD 200
         Cull [_Cull]
 
-        Pass{
+        Pass
+        {
+            Name "OutlineHull"
+            Tags { "LightMode"="SRPDefaultUnlit" }
+            Cull Front
             ZWrite Off
-            CGPROGRAM
-            
+
+            HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
 
-            struct appdata {
-                float4 vertex : POSITION;
-                float4 tangent : TANGENT;
-                float3 normal : NORMAL;
-                float4 texcoord : TEXCOORD0;
-                fixed4 color : COLOR;
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+
+            struct Attributes
+            {
+                float4 positionOS : POSITION;
+                float3 normalOS   : NORMAL;
             };
 
-            struct v2f{
-                float4 pos : SV_POSITION;
-                float3 normal : NORMAL;
+            struct Varyings
+            {
+                float4 positionCS : SV_POSITION;
             };
 
-            fixed4 _OutlineColor;
-            half _OutlineWidth;
+            CBUFFER_START(UnityPerMaterial)
+                half4 _OutlineColor;
+                half _OutlineWidth;
+            CBUFFER_END
 
-            v2f vert(appdata input){
-                input.vertex += float4(input.normal * _OutlineWidth, 1);
+            Varyings vert(Attributes input)
+            {
+                Varyings output;
 
-                v2f output;
-
-                output.pos = UnityObjectToClipPos(input.vertex);
-                output.normal = mul(unity_ObjectToWorld, input.normal);
+                float3 positionOS = input.positionOS.xyz + input.normalOS * _OutlineWidth;
+                output.positionCS = TransformObjectToHClip(positionOS);
 
                 return output;
             }
 
-            fixed4 frag(v2f input) : SV_Target
+            half4 frag(Varyings input) : SV_Target
             {
                 return _OutlineColor;
             }
-
-            ENDCG
+            ENDHLSL
         }
 
-        ZWrite On
-        CGPROGRAM
-        // Physically based Standard lighting model, and enable shadows on all light types
-        #pragma surface surf Standard fullforwardshadows
-
-        #ifndef SHADER_API_D3D11
-            #pragma target 3.0
-        #else
-            #pragma target 4.0
-        #endif
-
-        // Add instancing support for this shader. You need to check 'Enable Instancing' on materials that use the shader.
-        // See https://docs.unity3d.com/Manual/GPUInstancing.html for more information about instancing.
-        // #pragma instancing_options assumeuniformscaling
-        UNITY_INSTANCING_BUFFER_START(Props)
-            // put more per-instance properties here
-        UNITY_INSTANCING_BUFFER_END(Props)
-
-        struct Input
+        Pass
         {
-            float2 uv_MainTex;
-        };
+            Name "ForwardLit"
+            Tags { "LightMode"="UniversalForward" }
+            ZWrite On
 
-        fixed4 _Color;
-        sampler2D _MainTex;
+            HLSLPROGRAM
+            #pragma vertex U10PS_LitVertex
+            #pragma fragment frag
 
-        fixed4 pixel;
-        void surf (Input IN, inout SurfaceOutputStandard o)
-        {
-            pixel = tex2D (_MainTex, IN.uv_MainTex) * _Color;
-            o.Albedo = pixel.rgb;
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
+            #pragma multi_compile _ _ADDITIONAL_LIGHT_SHADOWS
+            #pragma multi_compile _ _SHADOWS_SOFT
+            #pragma multi_compile _ LIGHTMAP_SHADOW_MIXING
+            #pragma multi_compile _ SHADOWMASK
+            #pragma multi_compile_fog
+            #pragma multi_compile_instancing
+
+            #include "Includes/U10PS_URPLitCommon.hlsl"
+
+            TEXTURE2D(_MainTex);
+            SAMPLER(sampler_MainTex);
+
+            CBUFFER_START(UnityPerMaterial)
+                float4 _MainTex_ST;
+                half4 _Color;
+            CBUFFER_END
+
+            half4 frag(U10PS_Varyings input) : SV_Target
+            {
+                half4 pixel = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, input.uv) * _Color;
+
+                SurfaceData surfaceData = (SurfaceData)0;
+                surfaceData.albedo = pixel.rgb;
+                surfaceData.alpha = 1;
+                surfaceData.metallic = 0;
+                surfaceData.smoothness = 0;
+                surfaceData.occlusion = 1;
+                surfaceData.normalTS = half3(0, 0, 1);
+                surfaceData.emission = 0;
+
+                return U10PS_LitFragment(input, surfaceData);
+            }
+            ENDHLSL
         }
-        ENDCG
+
+        Pass
+        {
+            Name "ShadowCaster"
+            Tags { "LightMode"="ShadowCaster" }
+            ZWrite On
+            ZTest LEqual
+            ColorMask 0
+
+            HLSLPROGRAM
+            #pragma vertex U10PS_ShadowVertex
+            #pragma fragment U10PS_ShadowFragment
+            #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
+            #pragma multi_compile_instancing
+
+            #include "Includes/U10PS_URPLitCommon.hlsl"
+            ENDHLSL
+        }
     }
-    FallBack "Diffuse"
 }

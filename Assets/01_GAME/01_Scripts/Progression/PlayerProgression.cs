@@ -1,14 +1,15 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
 /// Опыт, уровень и очки способностей игрока. Начисляет XP за завершение квестов (QuestManager)
-/// и за расстановку товара по полкам (ShelvingProgressTracker). Синглтона нет — как и другие
+/// и за обычные действия: каждый предмет, впервые поставленный на полку (в т.ч. обломок в мусорный
+/// контейнер), приносит ShelfCategory.xpPerPlacedItem своей категории. Синглтона нет — как и другие
 /// новые компоненты проекта, потребители находят его через ссылку в инспекторе.
 ///
-/// Очки способностей (UnlockPoints) в этой итерации только копятся: сама система их траты
-/// (скорость ходьбы, вместимость инвентаря, доступ к редкому оружию/поставкам) появится позже
-/// как отдельный компонент/каталог способностей, подписанный на OnUnlockPointsChanged.
+/// Очки навыков (UnlockPoints) тратит PlayerSkills через TrySpendUnlockPoints — при покупке узла
+/// дерева прокачки.
 /// </summary>
 public class PlayerProgression : MonoBehaviour
 {
@@ -20,9 +21,6 @@ public class PlayerProgression : MonoBehaviour
     [Tooltip("Пусто — опыт за завершение квестов не начисляется.")]
     public QuestManager questManager;
 
-    [Tooltip("Пусто — опыт за расстановку товара по полкам не начисляется.")]
-    public ShelvingProgressTracker shelvingTracker;
-
     [Header("Кривая опыта")]
     [Tooltip("Опыт, необходимый для перехода с 1 на 2 уровень.")]
     [Min(1)] public int baseXPToLevel2 = 100;
@@ -30,11 +28,9 @@ public class PlayerProgression : MonoBehaviour
     [Tooltip("Насколько растёт требуемый опыт с каждым следующим уровнем (линейно).")]
     [Min(0)] public int xpGrowthPerLevel = 50;
 
-    [Tooltip("Сколько очков способностей (unlock points) начисляется за каждый левелап.")]
-    [Min(0)] public int unlockPointsPerLevel = 1;
-
-    [Tooltip("Опыт за одну единицу товара, расставленную по полке (см. ShelvingProgressTracker).")]
-    [Min(0)] public int xpPerShelvedUnit = 2;
+    [Tooltip("Сколько очков навыков начисляется за каждый левелап. Навыки стоят 3/5/10 очков, " +
+             "поэтому за уровень даётся с запасом — игрок сам решает, копить или тратить.")]
+    [Min(0)] public int unlockPointsPerLevel = 5;
 
     public int CurrentLevel { get; private set; } = 1;
     public int CurrentXP { get; private set; }
@@ -52,7 +48,8 @@ public class PlayerProgression : MonoBehaviour
     /// <summary>Изменилось количество очков способностей — точка расширения под будущий SkillTree.</summary>
     public event Action<int> OnUnlockPointsChanged;
 
-    private int lastPlacedUnits;
+    private readonly List<ShelfSlot> subscribedSlots = new List<ShelfSlot>();
+
 
     private void Awake()
     {
@@ -61,19 +58,58 @@ public class PlayerProgression : MonoBehaviour
         baseXPToLevel2 = config.progression.baseXPToLevel2;
         xpGrowthPerLevel = config.progression.xpGrowthPerLevel;
         unlockPointsPerLevel = config.progression.unlockPointsPerLevel;
-        xpPerShelvedUnit = config.progression.xpPerShelvedUnit;
     }
 
     private void OnEnable()
     {
         if (questManager != null) questManager.OnQuestCompleted += HandleQuestCompleted;
-        if (shelvingTracker != null) shelvingTracker.OnShelvingProgressChanged += HandleShelvingProgressChanged;
     }
 
     private void OnDisable()
     {
         if (questManager != null) questManager.OnQuestCompleted -= HandleQuestCompleted;
-        if (shelvingTracker != null) shelvingTracker.OnShelvingProgressChanged -= HandleShelvingProgressChanged;
+    }
+
+    // Start, а не Awake/OnEnable: Shelf.Awake() проставляет slot.parentShelf, а порядок Awake
+    // между компонентами Unity не гарантирует (тот же приём, что в ShelvingProgressTracker).
+    private void Start()
+    {
+        foreach (var slot in FindObjectsByType<ShelfSlot>(FindObjectsSortMode.None))
+        {
+            slot.OnItemPlaced += HandleItemPlaced;
+            subscribedSlots.Add(slot);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        foreach (var slot in subscribedSlots)
+            if (slot != null) slot.OnItemPlaced -= HandleItemPlaced;
+    }
+
+    /// <summary>
+    /// Восстановление из сейва: пишет уровень/опыт/очки напрямую, минуя AddXP, и намеренно НЕ
+    /// поднимает OnXPChanged/OnLevelUp/OnUnlockPointsChanged — иначе при каждой загрузке игрок
+    /// получал бы повторные очки способностей за уже пройденные левелапы. PlayerProgressionUI
+    /// не останется с нулями: он сам читает CurrentLevel/CurrentXP в своём OnEnable (см. код там),
+    /// не дожидаясь события.
+    /// </summary>
+    public void RestoreState(int level, int xp, int unlockPoints)
+    {
+        CurrentLevel = Mathf.Max(1, level);
+        CurrentXP = Mathf.Max(0, xp);
+        UnlockPoints = Mathf.Max(0, unlockPoints);
+    }
+
+    /// <summary>Потратить очки навыков (покупка в PlayerSkills). false — очков не хватает, ничего не списано.</summary>
+    public bool TrySpendUnlockPoints(int amount)
+    {
+        if (amount < 0 || amount > UnlockPoints) return false;
+        if (amount == 0) return true;
+
+        UnlockPoints -= amount;
+        OnUnlockPointsChanged?.Invoke(UnlockPoints);
+        return true;
     }
 
     /// <summary>Начислить опыт напрямую — публичный метод на случай других будущих источников XP.</summary>
@@ -98,10 +134,18 @@ public class PlayerProgression : MonoBehaviour
 
     private void HandleQuestCompleted(QuestProgress quest) => AddXP(quest.data.xpReward);
 
-    private void HandleShelvingProgressChanged(int placed, int total, float percent)
+    private void HandleItemPlaced(ShelfSlot slot)
     {
-        int delta = placed - lastPlacedUnits;
-        lastPlacedUnits = placed;
-        if (delta > 0) AddXP(delta * xpPerShelvedUnit);
+        if (slot.placedItems.Count == 0 || slot.parentShelf == null) return;
+
+        // PlaceItem добавляет предмет в конец списка и только потом поднимает событие.
+        WorldItem item = slot.placedItems[slot.placedItems.Count - 1];
+        ShelfCategory category = slot.parentShelf.acceptedCategory;
+        // Награда один раз на экземпляр предмета: иначе «снял с полки — поставил снова» фармило бы
+        // опыт. Флаг живёт на предмете и сохраняется вместе с ним (см. WorldItem.PlacementRewarded).
+        if (item == null || category == null || item.PlacementRewarded) return;
+
+        item.SetPlacementRewarded(true);
+        AddXP(category.xpPerPlacedItem);
     }
 }

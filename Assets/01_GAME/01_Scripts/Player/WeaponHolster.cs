@@ -13,11 +13,9 @@ using UnityEngine;
 ///  - Оружие можно снова "достать" — при этом возвращается ровно то же
 ///    оружие, которое было активно до скрытия (а не переключится на первое).
 ///
-/// Управление:
-///  - Клавиша H (toggleKey) — переключает скрытие/показ вручную.
-///  - Методы Holster() / Unholster() — публичные. Их можно вызывать из
-///    других скриптов, например при входе/выходе игрока в триггерную зону
-///    (крыша = можно стрелять, внутри магазина = оружие убрано).
+/// Управление — только из кода: Holster() / Unholster() зовёт EquipmentWeaponBridge при смене
+/// режима инвентаря; позже их же могут звать триггерные зоны (крыша = можно стрелять, внутри
+/// магазина = оружие убрано). Ручной клавиши (раньше H) нет — по решению дизайна.
 ///
 /// Как это работает:
 ///  При скрытии запоминается индекс активного ствола (lastActiveWeaponIndex),
@@ -38,12 +36,9 @@ public class WeaponHolster : MonoBehaviour
     [Tooltip("Система переключения оружия. Если не заполнено — ищется на этом же объекте.")]
     [SerializeField] private WeaponSystem weaponSystem;
 
-    [Header("Settings")]
-    [Tooltip("Если задан — клавиша берётся из GameConfig при старте.")]
-    [SerializeField] private GameConfig config;
-
-    [Tooltip("Клавиша ручного скрытия/показа оружия.")]
-    [SerializeField] private KeyCode toggleKey = KeyCode.H;
+    [Tooltip("Режим инвентаря: оружие достаётся, только пока в руках экипированное оружие. " +
+             "Если не заполнено — ищется на родителях.")]
+    [SerializeField] private PlayerInventoryModeController modeController;
 
     // Скрыто ли сейчас оружие
     public bool IsHolstered { get; private set; }
@@ -59,10 +54,11 @@ public class WeaponHolster : MonoBehaviour
 
     private void Awake()
     {
-        if (config != null) toggleKey = config.input.holsterKey;
-
         if (weaponSystem == null)
             weaponSystem = GetComponent<WeaponSystem>();
+
+        if (modeController == null)
+            modeController = GetComponentInParent<PlayerInventoryModeController>();
 
         if (weaponSystem == null)
         {
@@ -70,21 +66,6 @@ public class WeaponHolster : MonoBehaviour
                            "Повесьте WeaponHolster на объект, где есть WeaponSystem, " +
                            "или укажите WeaponSystem вручную в инспекторе.", this);
         }
-    }
-
-    private void Update()
-    {
-        if (Input.GetKeyDown(toggleKey))
-            ToggleHolster();
-    }
-
-    /// <summary>Переключает состояние скрытия/показа.</summary>
-    public void ToggleHolster()
-    {
-        if (IsHolstered)
-            Unholster();
-        else
-            Holster();
     }
 
     /// <summary>
@@ -102,8 +83,10 @@ public class WeaponHolster : MonoBehaviour
             return;
         }
 
-        // 1. Запоминаем, какое оружие сейчас активно (чтобы вернуть то же самое)
-        lastActiveWeaponIndex = FindActiveWeaponIndex();
+        // 1. Запоминаем, какое оружие сейчас активно (чтобы вернуть то же самое). Если стволы уже
+        //    погашены (EquipmentWeaponBridge гасит их перед вызовом Holster), оставляем прежний индекс.
+        int activeIndex = FindActiveWeaponIndex();
+        if (activeIndex >= 0) lastActiveWeaponIndex = activeIndex;
 
         // 2. Полностью выключаем все стволы — оружие исчезает, стрельба и прицел гаснут
         for (int i = 0; i < weaponSystem.weapons.Length; i++)
@@ -129,6 +112,9 @@ public class WeaponHolster : MonoBehaviour
     {
         if (!IsHolstered)
             return;                 // уже показано
+
+        if (!IsArmed())
+            return;                 // не в режиме оружия — доставать нечего
 
         if (weaponSystem == null || weaponSystem.weapons == null)
         {
@@ -156,6 +142,8 @@ public class WeaponHolster : MonoBehaviour
 
         IsHolstered = false;
     }
+
+    private bool IsArmed() => modeController == null || modeController.IsWeaponEquipped();
 
     /// <summary>Находит индекс активного (включённого) ствола в массиве WeaponSystem.</summary>
     private int FindActiveWeaponIndex()

@@ -40,34 +40,62 @@ public class ItemCatalog : ScriptableObject
     }
 
 #if UNITY_EDITOR
+    // Пересборка отложена на delayCall: в самом OnValidate трогать AssetDatabase небезопасно.
     private void OnValidate()
+    {
+        UnityEditor.EditorApplication.delayCall += () =>
+        {
+            if (this != null) Rebuild();
+        };
+    }
+
+    /// <summary>
+    /// Пересобрать список по всем ItemData проекта. Помечает ассет изменённым только если список
+    /// реально поменялся — иначе правка не доживала до диска, и в сборку уходил устаревший каталог.
+    /// Зовётся из OnValidate и из ItemCatalogAutoRebuild (импорт/удаление/перенос ассетов).
+    /// </summary>
+    public bool Rebuild()
     {
         var guids = UnityEditor.AssetDatabase.FindAssets("t:ItemData");
         var found = new List<ItemData>(guids.Length);
-        var seen = new Dictionary<string, ItemData>(guids.Length);
-
         foreach (string guid in guids)
         {
-            string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
-            var item = UnityEditor.AssetDatabase.LoadAssetAtPath<ItemData>(path);
-            if (item == null) continue;
-            found.Add(item);
-
-            if (string.IsNullOrEmpty(item.itemId))
-            {
-                Debug.LogError($"[ItemCatalog] У предмета '{item.name}' пустой itemId — сейв его не восстановит.", item);
-                continue;
-            }
-
-            // Дубликат id — самая коварная ошибка: сейв тихо подставит не тот предмет.
-            if (seen.TryGetValue(item.itemId, out ItemData clash))
-                Debug.LogError($"[ItemCatalog] Одинаковый itemId '{item.itemId}' у '{clash.name}' и '{item.name}'.", item);
-            else
-                seen[item.itemId] = item;
+            var item = UnityEditor.AssetDatabase.LoadAssetAtPath<ItemData>(UnityEditor.AssetDatabase.GUIDToAssetPath(guid));
+            if (item != null) found.Add(item);
         }
+        found.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
+
+        bool changed = found.Count != items.Length;
+        for (int i = 0; !changed && i < found.Count; i++)
+            changed = found[i] != items[i];
+
+        if (!changed) return false;
 
         items = found.ToArray();
         byId = null;
+        UnityEditor.EditorUtility.SetDirty(this);
+        return true;
+    }
+
+    /// <summary>Проблемы, из-за которых сейв не сможет восстановить предметы: пустой каталог,
+    /// пустые и повторяющиеся itemId. Пустая строка — всё в порядке.</summary>
+    public string Validate()
+    {
+        if (items.Length == 0) return $"каталог '{name}' пуст";
+
+        var problems = new List<string>();
+        var seen = new Dictionary<string, ItemData>(items.Length);
+        foreach (var item in items)
+        {
+            if (item == null) continue;
+            if (string.IsNullOrEmpty(item.itemId))
+                problems.Add($"у '{item.name}' пустой itemId");
+            else if (seen.TryGetValue(item.itemId, out ItemData clash))
+                problems.Add($"одинаковый itemId '{item.itemId}' у '{clash.name}' и '{item.name}'");
+            else
+                seen[item.itemId] = item;
+        }
+        return string.Join("; ", problems);
     }
 #endif
 }

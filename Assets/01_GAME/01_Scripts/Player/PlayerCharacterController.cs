@@ -11,8 +11,8 @@ using UnityEngine;
 /// там писалась в linearVelocity напрямую, без какой-либо модели разгона, а склоны не
 /// обрабатывались вовсе.
 ///
-/// Здесь же подъём по ступеням делает встроенный CharacterController.stepOffset — поэтому
-/// отдельный костыль PlayerStepClimber больше не нужен.
+/// Здесь же подъём по ступеням делает встроенный CharacterController.stepOffset — отдельный
+/// костыль для ступеней (был PlayerStepClimber) не нужен.
 ///
 /// Работает в Update, а не в FixedUpdate: CharacterController не шагает вместе с физикой,
 /// и один Move за кадр даёт ровное движение без дрожания.
@@ -53,8 +53,16 @@ public class PlayerCharacterController : MonoBehaviour
     [Tooltip("На какую глубину доводить игрока к опоре, если контакт потерян не из-за прыжка. Замена «прилипания» старого контроллера — без него на спуске игрок отрывается и падает ступеньками.")]
     public float groundSnapDistance = 0.25f;
 
+    [Header("Крутые склоны")]
+    [Tooltip("Предельная скорость соскальзывания с поверхностей круче slopeLimit CharacterController'а, м/с. " +
+             "Разгон — от гравитации.")]
+    public float maxSlideSpeed = 10f;
+
     [Header("Клавиши")]
+    [Tooltip("Прыжок. Перекрывается GameConfig.input.jumpKey, если задан конфиг.")]
     public KeyCode jumpKey = KeyCode.Space;
+
+    [Tooltip("Бег (удерживать). Перекрывается GameConfig.input.sprintKey, если задан конфиг.")]
     public KeyCode sprintKey = KeyCode.LeftShift;
 
     [Header("Слои")]
@@ -84,6 +92,15 @@ public class PlayerCharacterController : MonoBehaviour
     private float lastJumpPressedTime = float.NegativeInfinity;
     private Vector3 groundNormal = Vector3.up;
     private bool jumpedThisFrame;
+    private bool onSteepSlope;
+    private Vector3 steepNormal = Vector3.up;
+    private float slideSpeed;
+
+    // Контакты последнего controller.Move (OnControllerColliderHit): было ли касание нижней частью
+    // капсулы, было ли среди них пологое, и самая пологая из крутых нормалей.
+    private bool moveLowerContact;
+    private bool moveWalkableContact;
+    private Vector3 moveSteepNormal = Vector3.up;
 
     private void Awake()
     {
@@ -105,6 +122,7 @@ public class PlayerCharacterController : MonoBehaviour
         coyoteTime = m.coyoteTime;
         jumpBuffer = m.jumpBuffer;
         groundSnapDistance = m.groundSnapDistance;
+        maxSlideSpeed = m.maxSlideSpeed;
 
         jumpKey = config.input.jumpKey;
         sprintKey = config.input.sprintKey;
@@ -120,6 +138,10 @@ public class PlayerCharacterController : MonoBehaviour
 
         if (Input.GetKeyDown(jumpKey)) lastJumpPressedTime = Time.time;
 
+        // Скорость удара запоминаем ДО ApplyVertical: на земле он сразу сбрасывает её в -2, и
+        // Landed всегда получал бы одно и то же число вместо реальной высоты падения.
+        float fallSpeed = verticalVelocity;
+
         ApplyHorizontalInput(deltaTime);
         ApplyVertical(deltaTime);
 
@@ -130,20 +152,25 @@ public class PlayerCharacterController : MonoBehaviour
         if (IsGrounded && !jumpedThisFrame && groundNormal != Vector3.up)
             motion = Vector3.ProjectOnPlane(motion, groundNormal);
 
+        motion += ApplySlide(deltaTime);
         motion += Vector3.up * verticalVelocity;
 
+        moveLowerContact = false;
+        moveWalkableContact = false;
+        moveSteepNormal = Vector3.up;
         CollisionFlags flags = controller.Move(motion * deltaTime);
 
         // Упёрлись головой — гасим подъём, иначе игрок «липнет» к потолку до конца прыжка.
         if ((flags & CollisionFlags.Above) != 0 && verticalVelocity > 0f) verticalVelocity = 0f;
-        if ((flags & CollisionFlags.Below) != 0) IsGrounded = true;
+        bool steepContact = moveLowerContact && !moveWalkableContact;
+        if ((flags & CollisionFlags.Below) != 0 && verticalVelocity <= 0f && !onSteepSlope && !steepContact) IsGrounded = true;
 
         if (!IsGrounded && !jumpedThisFrame) SnapToGround();
 
         if (IsGrounded)
         {
             lastGroundedTime = Time.time;
-            if (!groundedBefore) Landed?.Invoke(verticalVelocity);
+            if (!groundedBefore) Landed?.Invoke(Mathf.Min(fallSpeed, verticalVelocity));
         }
 
         jumpedThisFrame = false;
@@ -157,6 +184,15 @@ public class PlayerCharacterController : MonoBehaviour
     private void ProbeGround()
     {
         groundNormal = Vector3.up;
+        onSteepSlope = false;
+
+        // Летим вверх (прыжок) — опоры нет по определению. Раньше в первые кадры после толчка щуп
+        // ещё доставал до пола: срабатывал Landed, сбрасывался coyote time, и можно было прыгнуть второй раз.
+        if (verticalVelocity > 0f)
+        {
+            IsGrounded = false;
+            return;
+        }
 
         float probeRadius = Mathf.Max(0.01f, controller.radius - controller.skinWidth);
         Vector3 origin = transform.TransformPoint(controller.center)
@@ -167,14 +203,98 @@ public class PlayerCharacterController : MonoBehaviour
         bool probed = Physics.SphereCast(origin, probeRadius, Vector3.down, out hit, distance,
                                          groundLayers, QueryTriggerInteraction.Ignore);
 
-        if (probed && Vector3.Angle(hit.normal, Vector3.up) <= controller.slopeLimit)
+        if (probed)
         {
-            groundNormal = hit.normal;
-            IsGrounded = true;
+            if (Vector3.Angle(hit.normal, Vector3.up) <= controller.slopeLimit)
+            {
+                groundNormal = hit.normal;
+                IsGrounded = true;
+                return;
+            }
+
+            // Сфера часто цепляет кромку ступени и отдаёт «крутую» нормаль ребра. Настоящий крутой
+            // склон отличаем проверкой поверхности прямо под центром.
+            if (Physics.Raycast(origin, Vector3.down, out RaycastHit under, controller.radius + distance,
+                                groundLayers, QueryTriggerInteraction.Ignore)
+                && Vector3.Angle(under.normal, Vector3.up) <= controller.slopeLimit)
+            {
+                groundNormal = under.normal;
+                IsGrounded = true;
+                return;
+            }
+
+            // Круче slopeLimit — не опора: игрок соскальзывает (ApplySlide) и не может запрыгнуть
+            // наверх серией прыжков (раньше здесь срабатывал запасной controller.isGrounded).
+            onSteepSlope = true;
+            steepNormal = hit.normal;
+            IsGrounded = false;
+            return;
+        }
+
+        // Щуп опоры не нашёл. Запасной controller.isGrounded верит любому касанию снизу — в том числе
+        // крутому склону, если капсула касается его боком (щуп вниз его не достаёт). Поэтому смотрим,
+        // чем было это касание в прошлом Move.
+        if (controller.isGrounded && moveLowerContact && !moveWalkableContact)
+        {
+            if (Physics.Raycast(origin, Vector3.down, out RaycastHit below, controller.radius + distance,
+                                groundLayers, QueryTriggerInteraction.Ignore)
+                && Vector3.Angle(below.normal, Vector3.up) <= controller.slopeLimit)
+            {
+                groundNormal = below.normal;
+                IsGrounded = true;
+                return;
+            }
+
+            onSteepSlope = true;
+            steepNormal = moveSteepNormal;
+            IsGrounded = false;
             return;
         }
 
         IsGrounded = controller.isGrounded;
+    }
+
+    /// <summary>
+    /// Соскальзывание с крутого склона. CharacterController сам по такой поверхности вниз не едет —
+    /// упирается и «стоит», — поэтому движение вдоль склона вниз добавляется явно, с разгоном от
+    /// гравитации. Ввод игрока не может толкать его вверх по склону. Вне склона — обнуляется.
+    /// </summary>
+    private Vector3 ApplySlide(float deltaTime)
+    {
+        if (!onSteepSlope)
+        {
+            slideSpeed = 0f;
+            return Vector3.zero;
+        }
+
+        Vector3 slideDirection = Vector3.ProjectOnPlane(Vector3.down, steepNormal).normalized;
+        slideSpeed = Mathf.Min(maxSlideSpeed, slideSpeed + Mathf.Abs(Physics.gravity.y) * gravityMultiplier * deltaTime);
+
+        Vector3 upSlope = -new Vector3(slideDirection.x, 0f, slideDirection.z).normalized;
+        float intoSlope = Vector3.Dot(horizontalVelocity, upSlope);
+        if (intoSlope > 0f) horizontalVelocity -= upSlope * intoSlope;
+
+        // Вниз ведёт само скольжение; копить свободное падение, упираясь в склон, незачем —
+        // иначе при сходе со склона игрок получил бы огромную скорость падения.
+        verticalVelocity = Mathf.Max(verticalVelocity, -2f);
+        return slideDirection * slideSpeed;
+    }
+
+    /// <summary>Контакты капсулы во время controller.Move — по ним видно, стоит ли игрок на крутом склоне,
+    /// которого не достал щуп опоры.</summary>
+    private void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        if (hit.normal.y <= 0.01f) return; // стены и потолок
+
+        Vector3 bottomSphereCenter = transform.TransformPoint(controller.center)
+                                     + Vector3.down * (controller.height * 0.5f - controller.radius);
+        if (hit.point.y > bottomSphereCenter.y) return; // касание боком выше низа капсулы
+
+        moveLowerContact = true;
+        if (Vector3.Angle(hit.normal, Vector3.up) <= controller.slopeLimit)
+            moveWalkableContact = true;
+        else if (moveSteepNormal == Vector3.up || hit.normal.y > moveSteepNormal.y)
+            moveSteepNormal = hit.normal;
     }
 
     private void ApplyHorizontalInput(float deltaTime)
@@ -241,14 +361,4 @@ public class PlayerCharacterController : MonoBehaviour
         IsGrounded = true;
     }
 
-    /// <summary>
-    /// Толчок извне (отдача, взрыв). CharacterController — не Rigidbody, физика его не двигает,
-    /// поэтому импульс добавляется вручную.
-    /// </summary>
-    public void AddImpulse(Vector3 impulse)
-    {
-        horizontalVelocity += new Vector3(impulse.x, 0f, impulse.z);
-        verticalVelocity += impulse.y;
-        if (impulse.y > 0f) IsGrounded = false;
-    }
 }

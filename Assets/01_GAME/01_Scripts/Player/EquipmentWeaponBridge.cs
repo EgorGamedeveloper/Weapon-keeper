@@ -21,7 +21,10 @@ using UnityEngine;
 public class EquipmentWeaponBridge : MonoBehaviour
 {
     [Header("Ссылки")]
+    [Tooltip("Инвентарь экипировки: активный предмет-оружие становится оружием WeaponSystem.")]
     public EquipmentInventory equipmentInventory;
+
+    [Tooltip("Система оружия Easy Weapons, в массив weapons которой мост кладёт заспавненные стволы.")]
     public WeaponSystem weaponSystem;
 
     [Tooltip("Режим tidy-up/экипировки — оружие активно и видимо только в режиме экипировки.")]
@@ -49,6 +52,7 @@ public class EquipmentWeaponBridge : MonoBehaviour
     private GameObject activeWeaponGO;
     private GameObject drawingWeapon;
     private Vector3 drawVelocity;
+    private bool waitForFireRelease;
 
     private void OnEnable()
     {
@@ -69,8 +73,15 @@ public class EquipmentWeaponBridge : MonoBehaviour
     {
         // Пока прицел наведён на предмет/полку — стрелять нельзя, клик должен подбирать/ставить
         // предмет (это уже делает PlayerItemInteraction.HandleClick независимо от режима).
+        // Пока курсор не захвачен (Esc), стрелять нельзя; клик, которым игрок возвращает захват
+        // (CursorLockController выполняется позже в кадре), тоже не должен стрелять — блокируем до
+        // отпускания кнопки.
+        if (Cursor.lockState != CursorLockMode.Locked) waitForFireRelease = true;
+        else if (!Input.GetMouseButton(0)) waitForFireRelease = false;
+
         if (activeWeaponGO != null && weaponComponents.TryGetValue(activeWeaponGO, out Weapon activeWeapon) && activeWeapon != null)
-            activeWeapon.fireBlocked = playerItemInteraction != null && playerItemInteraction.IsAimingAtInteractable;
+            activeWeapon.fireBlocked = waitForFireRelease
+                || (playerItemInteraction != null && playerItemInteraction.IsAimingAtInteractable);
 
         if (drawingWeapon == null) return;
 
@@ -107,6 +118,8 @@ public class EquipmentWeaponBridge : MonoBehaviour
         foreach (var item in equipmentInventory.items)
             if (item != null && item.itemData != null && item.itemData.IsWeapon)
                 weaponItems.Add(item);
+
+        RemoveStaleWeapons(weaponItems);
 
         // Спавним недостающие (один раз на предмет, дальше переиспользуем инстанс). Боевая
         // позиция всегда локальный ноль/identity — она уже обеспечена weaponMountPoint.
@@ -177,6 +190,29 @@ public class EquipmentWeaponBridge : MonoBehaviour
             // Update() (клавиши 1-9 / колесо) может сам включить оружие обратно поверх нашей логики.
             if (weaponHolster != null) weaponHolster.Holster();
             else weaponSystem.enabled = false;
+        }
+    }
+
+    /// <summary>Оружие, которого больше нет в экипировке (сняли в tidy-up, уничтожили в зоне доставки),
+    /// удаляется вместе со своим стволом — иначе инстансы копились бы под weaponMountPoint, а словари
+    /// держали мёртвые ключи. Боезапас при повторной экипировке начнётся заново — как и после
+    /// загрузки сейва (он не сохраняется).</summary>
+    private void RemoveStaleWeapons(List<WorldItem> weaponItems)
+    {
+        var stale = new List<WorldItem>();
+        foreach (var pair in spawnedWeapons)
+            if (pair.Key == null || !weaponItems.Contains(pair.Key)) stale.Add(pair.Key);
+
+        foreach (var key in stale)
+        {
+            GameObject weapon = spawnedWeapons[key];
+            spawnedWeapons.Remove(key);
+            if (weapon == null) continue;
+
+            weaponComponents.Remove(weapon);
+            if (weapon == activeWeaponGO) activeWeaponGO = null;
+            if (weapon == drawingWeapon) drawingWeapon = null;
+            Destroy(weapon);
         }
     }
 }

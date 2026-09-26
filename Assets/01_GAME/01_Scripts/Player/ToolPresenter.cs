@@ -6,7 +6,9 @@ using UnityEngine;
 [Serializable]
 public class ToolVisual
 {
+    [Tooltip("Предмет экипировки (например, лом).")]
     public ItemData item;
+    [Tooltip("Его модель в руке — включается, пока предмет активен.")]
     public GameObject visual;
 }
 
@@ -18,6 +20,8 @@ public class ToolVisual
 /// </summary>
 public class ToolPresenter : MonoBehaviour
 {
+    [Header("Ссылки")]
+    [Tooltip("Инвентарь экипировки: показывается модель его активного инструмента.")]
     public EquipmentInventory equipmentInventory;
 
     [Tooltip("Вне режима Equipment модель инструмента прячется, даже если он всё ещё активная запись экипировки.")]
