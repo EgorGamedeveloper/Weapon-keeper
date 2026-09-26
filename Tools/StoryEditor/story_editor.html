@@ -79,6 +79,30 @@ button { cursor: pointer; }
   margin: 0; font: 600 20px/1 var(--font-head); letter-spacing: .04em; text-transform: uppercase; white-space: nowrap;
 }
 .brand .sub { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search { position: relative; }
+.search input {
+  width: 170px; box-sizing: border-box; border: 1px solid var(--line); background: var(--node); border-radius: 6px; padding: 5px 8px 5px 26px;
+  font-size: 13px; transition: width .15s;
+}
+.search input:focus { width: 260px; outline: 2px solid var(--accent); outline-offset: -1px; }
+.search::before { content: "⌕"; position: absolute; left: 8px; top: 50%; transform: translateY(-52%); color: var(--muted); font-size: 15px; pointer-events: none; }
+.search-results {
+  position: absolute; right: 0; top: calc(100% + 4px); width: 380px; max-height: 60vh; overflow-y: auto; z-index: 20; list-style: none; margin: 0;
+  padding: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--node-shadow);
+}
+.search-results li { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.search-results li.on, .search-results li:hover { background: var(--panel-2); }
+.search-results .chip { grid-row: span 2; align-self: start; font: 600 10.5px var(--font-head); letter-spacing: .05em; text-transform: uppercase;
+  color: #fff; border-radius: 4px; padding: 2px 6px; }
+.search-results .ttl { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-results .snip { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-results .snip mark { background: color-mix(in srgb, var(--accent) 35%, transparent); color: inherit; border-radius: 2px; }
+.search-results .empty { color: var(--muted); font-size: 12.5px; cursor: default; }
+.node.dim, .bi.dim { opacity: .28; }
+.node.hit { box-shadow: 0 0 0 2px var(--accent), var(--node-shadow); }
+@keyframes flash { 0%, 100% { box-shadow: 0 0 0 2px var(--accent), var(--node-shadow); } 50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent) 45%, transparent), var(--node-shadow); } }
+.node.flash, .bi.flash { animation: flash .45s ease-in-out 3; }
+@media (prefers-reduced-motion: reduce) { .node.flash, .bi.flash { animation: none; } }
 .status { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
 .status[data-state="saved"]::before { background: var(--ok); }
@@ -379,6 +403,10 @@ body.resizing-h, body.resizing-h * { cursor: row-resize !important; }
       <span class="sub" id="brandSub">Weapon Keeper · квесты, рация, триггеры</span>
     </div>
     <span class="status" id="status" data-state="idle">Загрузка…</span>
+    <div class="search" role="search">
+      <input type="search" id="searchInput" placeholder="Поиск по нодам" autocomplete="off" aria-label="Поиск по нодам (Ctrl+F)" title="Поиск по нодам всех линий (Ctrl+F)">
+      <ul class="search-results" id="searchResults" hidden role="listbox"></ul>
+    </div>
     <button class="btn" id="btnIssues" type="button" title="Проверка графа">Проверка <span class="count" id="issueCount">0</span></button>
     <button class="btn theme-btn" id="btnTheme" type="button" title="Светлая / тёмная тема" aria-label="Переключить тему">☾</button>
     <button class="btn" id="btnColors" type="button" title="Цвета редактора">Цвета</button>
@@ -781,7 +809,8 @@ function redo() {
 
 // После любой правки: перерисовать, проверить, сохранить.
 function changed(structural) {
-  if (structural) renderAll(); else { renderBoard(); renderNodesLight(); renderWires(); }
+  if (search.query.trim()) search.results = searchAll(search.query);
+  if (structural) renderAll(); else { renderBoard(); renderNodesLight(); renderWires(); applySearchHighlight(); }
   validate();
   scheduleSync();
 }
@@ -946,6 +975,7 @@ function renderAll() {
   renderTabs();
   renderBoard();
   renderNodes();
+  applySearchHighlight();
   renderWires();
   renderInspector();
   renderBanner();
@@ -1729,6 +1759,113 @@ function removeUnusedImages() {
   if (n) { if (state.isExample) adoptExample(); scheduleSync(); buildPalette(); }
 }
 
+// ───────────────────────── Поиск по нодам ─────────────────────────
+// По всем линиям: id, id квеста, тексты на всех языках, виды триггеров/событий, цели (id и имя из каталога),
+// названия рамок и надписи. Результат — переход к ноде (с переключением линии), совпадения подсвечиваются на холсте.
+
+const norm = (v) => String(v || '').toLowerCase().replace(/ё/g, 'е');
+function nodeSearchTexts(n) {
+  const out = [n.id, n.questId, TYPES[n.type] && TYPES[n.type].label];
+  for (const k of LOC_KEYS) if (n[k]) out.push(...Object.values(n[k]));
+  if (Array.isArray(n.lines)) for (const l of n.lines) out.push(...Object.values(l.text || {}));
+  if (n.text) out.push(n.text);
+  if (n.type === 'trigger') { const t = TRIGGERS.find((x) => x.id === n.trigger); out.push(t && t.label, t && triggerDetail(n, t)); }
+  if (n.type === 'action') { const a = ACTIONS.find((x) => x.id === n.action); out.push(a && a.label); }
+  if (n.type === 'cutscene') out.push(catalogName('cutscenes', n.target));
+  for (const k of ['target', 'category', 'item', 'zone', 'orderId', 'lootBoxId', 'enemyType', 'skillId', 'portrait']) if (n[k]) out.push(n[k]);
+  return out.filter(Boolean).map(String);
+}
+function snippet(text, q) {
+  const i = norm(text).indexOf(q);
+  const from = Math.max(0, i - 24), to = Math.min(text.length, i + q.length + 36);
+  return { pre: (from > 0 ? '…' : '') + text.slice(from, i), hit: text.slice(i, i + q.length), post: text.slice(i + q.length, to) + (to < text.length ? '…' : '') };
+}
+function searchAll(query) {
+  const q = norm(query.trim());
+  if (!q) return [];
+  const res = [];
+  for (const n of state.graph.nodes.values()) {
+    const text = nodeSearchTexts(n).find((t) => norm(t).includes(q));
+    if (text) res.push({ kind: 'node', id: n.id, line: n.storyline, type: n.type, title: nodeTitle(n.id), text });
+  }
+  for (const g of state.graph.groups) if (norm(g.title).includes(q)) res.push({ kind: 'group', id: g.id, line: g.storyline, title: g.title, text: g.title });
+  for (const d of state.graph.decor) if (d.text && norm(d.text).includes(q)) res.push({ kind: 'decor', id: d.id, line: d.storyline, title: 'Надпись', text: d.text });
+  return res.slice(0, 50);
+}
+
+const search = { results: [], active: 0, query: '' };
+function renderSearch() {
+  const ul = $('searchResults');
+  ul.textContent = '';
+  if (!search.query.trim()) { ul.hidden = true; return; }
+  ul.hidden = false;
+  if (!search.results.length) { ul.append(el('li', { class: 'empty', text: 'Ничего не найдено' })); return; }
+  const multi = state.graph.storylines.length > 1;
+  search.results.forEach((r, i) => {
+    const sn = snippet(r.text, norm(search.query.trim()));
+    const chipColor = r.kind === 'node' ? typeColor(r.type) : 'var(--muted)';
+    const chipText = r.kind === 'node' ? TYPES[r.type].label : r.kind === 'group' ? 'Рамка' : 'Надпись';
+    const snip = el('span', { class: 'snip' }, sn.pre, el('mark', { text: sn.hit }), sn.post);
+    ul.append(el('li', { class: i === search.active ? 'on' : '', role: 'option', 'aria-selected': String(i === search.active),
+      onpointerdown: (e) => { e.preventDefault(); goToResult(r); } },
+    el('span', { class: 'chip', style: `background:${chipColor}`, text: chipText }),
+    el('span', { class: 'ttl', text: (multi ? `[${lineTitle(r.line)}] ` : '') + r.title }), snip));
+  });
+}
+function applySearchHighlight() {
+  const q = search.query.trim();
+  const hits = new Set(q ? search.results.map((r) => r.kind + ':' + r.id) : []);
+  for (const [id, div] of nodeEls) { div.classList.toggle('hit', !!q && hits.has('node:' + id)); div.classList.toggle('dim', !!q && !hits.has('node:' + id)); }
+  for (const [key, div] of boardEls) div.classList.toggle('dim', !!q && !hits.has(key));
+}
+function runSearch() {
+  search.query = $('searchInput').value;
+  search.results = searchAll(search.query);
+  search.active = 0;
+  renderSearch();
+  applySearchHighlight();
+}
+function flash(div) {
+  if (!div) return;
+  div.classList.remove('flash');
+  void div.offsetWidth;
+  div.classList.add('flash');
+  setTimeout(() => div.classList.remove('flash'), 1500);
+}
+function goToResult(r) {
+  if (r.kind === 'node') {
+    focusNode(r.id);
+    flash(nodeEls.get(r.id));
+  } else {
+    const o = findItem(r.kind, r.id);
+    if (!o) return;
+    if (o.storyline !== state.line) switchLine(o.storyline, true);
+    const rc = canvas.getBoundingClientRect();
+    state.view.x = rc.width / 2 - (o.x + o.w / 2) * state.view.k;
+    state.view.y = rc.height / 2 - (o.y + Math.min(o.h, 200) / 2) * state.view.k;
+    applyView();
+    selectItem(r.kind, r.id);
+    flash(boardEls.get(r.kind + ':' + r.id));
+  }
+  applySearchHighlight();
+}
+$('searchInput').addEventListener('input', runSearch);
+$('searchInput').addEventListener('focus', () => { if (search.query.trim()) renderSearch(); });
+$('searchInput').addEventListener('blur', () => { $('searchResults').hidden = true; });
+$('searchInput').addEventListener('keydown', (e) => {
+  const n = search.results.length;
+  if (e.key === 'ArrowDown' && n) { e.preventDefault(); search.active = (search.active + 1) % n; renderSearch(); }
+  else if (e.key === 'ArrowUp' && n) { e.preventDefault(); search.active = (search.active - 1 + n) % n; renderSearch(); }
+  else if (e.key === 'Enter' && n) { e.preventDefault(); goToResult(search.results[search.active]); }
+  else if (e.key === 'Escape') {
+    e.preventDefault();
+    e.stopPropagation();
+    $('searchInput').value = '';
+    runSearch();
+    $('searchInput').blur();
+  }
+});
+
 // ───────────────────────── Сюжетные линии (вкладки) ─────────────────────────
 
 function renderTabs() {
@@ -2124,6 +2261,7 @@ document.addEventListener('keydown', (e) => {
   const mod = e.ctrlKey || e.metaKey;
   if (mod && e.key.toLowerCase() === 'z' && !typing) { e.preventDefault(); if (e.shiftKey) redoOnce(); else undoOnce(); return; }
   if (mod && e.key.toLowerCase() === 'y' && !typing) { e.preventDefault(); redoOnce(); return; }
+  if (mod && e.key.toLowerCase() === 'f') { e.preventDefault(); $('searchInput').focus(); $('searchInput').select(); return; }
   if (typing) return;
   if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicateSelection(); return; }
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSelection(); }
