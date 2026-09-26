@@ -1,0 +1,17 @@
+<script>
+// Поддельный db в памяти (контракт claude.use('db')) — для проверки синхронизации.
+window.__store = JSON.parse(sessionStorage.getItem('mockstore') || '{}');
+const persist = () => sessionStorage.setItem('mockstore', JSON.stringify(window.__store));
+const snap = (path) => ({ id: path.split('/').pop(), exists: path in window.__store, data: () => window.__store[path] ? JSON.parse(JSON.stringify(window.__store[path])) : undefined, metadata: {} });
+const docRef = (path) => ({ path, id: path.split('/').pop(),
+  get: async () => snap(path),
+  set: async (d) => { window.__store[path] = JSON.parse(JSON.stringify(d)); window.__writes = (window.__writes||0)+1; persist(); },
+  update: async (d) => { Object.assign(window.__store[path], d); persist(); },
+  delete: async () => { delete window.__store[path]; persist(); },
+  onSnapshot: () => () => {} });
+const colRef = (path) => ({ path,
+  doc: (id) => docRef(path + '/' + id),
+  get: async () => { const docs = Object.keys(window.__store).filter(k => k.startsWith(path + '/') && k.split('/').length === path.split('/').length + 1).map(snap); return { docs, size: docs.length, empty: !docs.length, docChanges: () => [] }; },
+  onSnapshot: () => () => {} });
+window.claude = { use: async (name) => name === 'db' ? { doc: docRef, collection: colRef } : null };
+</script>

@@ -148,3 +148,8 @@
   миграция в `SaveLoadService.MigrateToCurrent`); сейв проверяется по `ItemCatalog` ДО уничтожения
   предметов сцены. Сохранение выключено, если сцену запустили без `Bootstrap` (Play на `TestScene` в
   редакторе не перезаписывает настоящий сейв).
+
+- **Сюжет** (граф квестов/рации/триггеров/кат-сцен, редактор `Tools/StoryEditor/` — страница и приложение для Mac,
+  импорт в Unity `Tools → Weapon Keeper → Story`, рантайм `01_Scripts/Story/`): устройство, формат `story_graph.json`,
+  рецепты «как добавить триггер/ноду/событие» и автотесты `Tools/StoryEditor/tests/run.sh` — в
+  `Docs/Story/STORY_EDITOR_ARCHITECTURE.md`. Прочитать перед любой правкой сюжетной системы.
