@@ -41,13 +41,24 @@ public class EquipmentInventoryUI : MonoBehaviour
         if (equipmentInventory == null) return;
         equipmentInventory.OnChanged += HandleChanged;
         Refresh(instant: true);
+
+        // Язык сменили в настройках — названия оружия перерисовываются сразу.
+        localization = LocalizationService.Instance;
+        if (localization != null) localization.OnLanguageChanged += HandleLanguageChanged;
     }
 
     private void OnDisable()
     {
+        if (localization != null) localization.OnLanguageChanged -= HandleLanguageChanged;
+        localization = null;
+
         if (equipmentInventory == null) return;
         equipmentInventory.OnChanged -= HandleChanged;
     }
+
+    private LocalizationService localization;
+
+    private void HandleLanguageChanged() => Refresh(instant: true);
 
     private void HandleChanged() => Refresh(instant: false);
 

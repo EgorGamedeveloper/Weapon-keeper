@@ -61,11 +61,12 @@ public class SkillNodeUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
         selected = isSelected;
 
         if (icon != null) { icon.sprite = skill.icon; icon.enabled = skill.icon != null; }
-        if (title != null) title.text = skill.title;
+        if (title != null) title.text = skill.DisplayTitle;
         if (subtitle != null)
             subtitle.text = state == SkillState.Owned
-                ? "Изучено"
-                : (skill.cost > 0 ? skill.cost + " оч." : "Бесплатно") + "  ·  ур. " + skill.requiredLevel;
+                ? Loc.Get("skills.state.owned")
+                : Loc.Get("skills.node.subtitle",
+                    skill.cost > 0 ? Loc.Get("skills.node.cost", skill.cost) : Loc.Get("skills.node.free"), skill.requiredLevel);
 
         Color stateColor = StateColor(state);
         bool locked = state == SkillState.Locked;

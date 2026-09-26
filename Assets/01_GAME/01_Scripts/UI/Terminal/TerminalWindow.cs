@@ -31,10 +31,13 @@ public class TerminalWindow : MonoBehaviour
 
     public Button closeButton;
 
+    /// <summary>Заголовок по умолчанию: пока headerLine совпадает с ним, показывается перевод terminal.header.</summary>
+    private const string DefaultHeaderLine = "GUN KEEPER // ТЕРМИНАЛ СНАБЖЕНИЯ v1.3";
+
     [Header("Шапка")]
     [Tooltip("Заголовок — печатается по буквам при открытии.")]
     public Text headerText;
-    public string headerLine = "GUN KEEPER // ТЕРМИНАЛ СНАБЖЕНИЯ v1.3";
+    public string headerLine = DefaultHeaderLine;
     public Text balanceText;
 
     [Header("Вкладки")]
@@ -166,16 +169,18 @@ public class TerminalWindow : MonoBehaviour
         typing?.Kill();
         headerText.text = "";
         int length = 0;
-        typing = DOTween.To(() => length, v => { length = v; headerText.text = headerLine.Substring(0, v) + "_"; }, headerLine.Length, 0.6f)
+        // Заголовок по умолчанию переводится (terminal.header); свой текст из инспектора показывается как есть.
+        string header = headerLine == DefaultHeaderLine ? Loc.Get("terminal.header") : headerLine;
+        typing = DOTween.To(() => length, v => { length = v; headerText.text = header.Substring(0, v) + "_"; }, header.Length, 0.6f)
             .SetEase(Ease.Linear).SetDelay(0.3f)
-            .OnComplete(() => headerText.text = headerLine);
+            .OnComplete(() => headerText.text = header);
     }
 
     private void ShowTab(bool orders, bool animate)
     {
         ordersTabActive = orders;
-        SetTabLabel(suppliesTabLabel, !orders, "ПОСТАВКИ");
-        SetTabLabel(ordersTabLabel, orders, "ЗАКАЗЫ");
+        SetTabLabel(suppliesTabLabel, !orders, Loc.Get("terminal.tab.supplies"));
+        SetTabLabel(ordersTabLabel, orders, Loc.Get("terminal.tab.orders"));
         ShowPage(suppliesPage, !orders, animate);
         ShowPage(ordersPage, orders, animate);
         Refresh();
@@ -215,7 +220,7 @@ public class TerminalWindow : MonoBehaviour
 
     private void SetBalanceText()
     {
-        if (balanceText != null && wallet != null) balanceText.text = "БАЛАНС: " + wallet.Format(wallet.Balance);
+        if (balanceText != null && wallet != null) balanceText.text = Loc.Get("terminal.balance", wallet.Format(wallet.Balance));
     }
 
     private void Refresh()
@@ -240,7 +245,7 @@ public class TerminalWindow : MonoBehaviour
             string oldPrice = price < box.price ? wallet.Format(box.price) : "";
             float time = supply.GetDeliveryTime(box);
             var availability = supply.Check(box);
-            cards[i].Bind(box, wallet.Format(price), oldPrice, "ДОСТАВКА: " + FormatTime(time),
+            cards[i].Bind(box, wallet.Format(price), oldPrice, Loc.Get("terminal.delivery_time", FormatTime(time)),
                 availability == SupplyService.Availability.Available, SupplyReason(box, availability), textColor, warnColor);
         }
 
@@ -258,7 +263,7 @@ public class TerminalWindow : MonoBehaviour
         {
             var order = shipping.Inbox[i];
             var block = shipping.CheckAccept(order);
-            orderRows[i].Bind(order, DescribeLines(order, false), "НАГРАДА: " + wallet.Format(shipping.GetReward(order)) + "  +" + order.xpReward + " XP",
+            orderRows[i].Bind(order, DescribeLines(order, false), Loc.Get("terminal.order.reward", wallet.Format(shipping.GetReward(order)), order.xpReward),
                 block == ShippingService.AcceptBlock.None, OrderReason(block), textColor, warnColor);
         }
         if (inboxEmpty != null) inboxEmpty.gameObject.SetActive(shipping.Inbox.Count == 0);
@@ -268,23 +273,23 @@ public class TerminalWindow : MonoBehaviour
 
         if (active != null)
         {
-            SetText(activeTitle, "ТЕКУЩИЙ ЗАКАЗ: " + active.customer.ToUpperInvariant());
-            SetText(activeBody, active.message + "\n\n" + DescribeLines(active, true));
+            SetText(activeTitle, Loc.Get("terminal.active.title", active.DisplayCustomer.ToUpperInvariant()));
+            SetText(activeBody, active.DisplayMessage + "\n\n" + DescribeLines(active, true));
             bool packed = shipping.IsPacked;
-            SetText(activeStatus, packed ? "КОРОБКА ЗАПЕЧАТАНА — ОТНЕСИТЕ НА КРЫШУ В ЗОНУ ОТПРАВКИ" : "УЛОЖИТЕ ТОВАР В КОРОБКУ У ТЕРМИНАЛА");
+            SetText(activeStatus, packed ? Loc.Get("terminal.active.packed") : Loc.Get("terminal.active.pack_items"));
             if (activeStatus != null) activeStatus.color = packed ? textColor : warnColor;
         }
         else if (shipping.BoxCancelled)
         {
-            SetText(activeTitle, "ЗАКАЗ ОТМЕНЁН");
-            SetText(activeBody, "В коробке остался товар: " + shipping.BoxContents.Count + " шт.");
-            SetText(activeStatus, "РАЗБЕРИТЕ КОРОБКУ И ВЕРНИТЕ ТОВАР НА ПОЛКИ");
+            SetText(activeTitle, Loc.Get("terminal.cancelled.title"));
+            SetText(activeBody, Loc.Get("terminal.cancelled.body", shipping.BoxContents.Count));
+            SetText(activeStatus, Loc.Get("terminal.cancelled.status"));
             if (activeStatus != null) activeStatus.color = warnColor;
         }
         else
         {
-            SetText(activeTitle, "НЕТ АКТИВНОГО ЗАКАЗА");
-            SetText(activeBody, "Примите заказ из входящих — у терминала появится коробка для упаковки.");
+            SetText(activeTitle, Loc.Get("terminal.none.title"));
+            SetText(activeBody, Loc.Get("terminal.none.body"));
             SetText(activeStatus, "");
         }
     }
@@ -294,7 +299,7 @@ public class TerminalWindow : MonoBehaviour
         if (supply != null && supply.TryOrder(card.Box))
         {
             card.Punch();
-            card.Flash("ЗАКАЗАНО — ЖДИТЕ ДОСТАВКУ", textColor);
+            card.Flash(Loc.Get("terminal.supply.ordered"), textColor);
         }
         else card.Flash(SupplyReason(card.Box, supply != null ? supply.Check(card.Box) : SupplyService.Availability.NoMoney), warnColor);
     }
@@ -311,9 +316,9 @@ public class TerminalWindow : MonoBehaviour
     {
         switch (availability)
         {
-            case SupplyService.Availability.NoLicense: return "НУЖНА ЛИЦЕНЗИЯ: " + box.requiredLicense.title.ToUpperInvariant();
-            case SupplyService.Availability.LowLevel: return "НУЖЕН УРОВЕНЬ " + box.requiredLevel;
-            case SupplyService.Availability.NoMoney: return "НЕ ХВАТАЕТ ДЕНЕГ";
+            case SupplyService.Availability.NoLicense: return Loc.Get("terminal.block.license", box.requiredLicense.DisplayTitle.ToUpperInvariant());
+            case SupplyService.Availability.LowLevel: return Loc.Get("terminal.block.level", box.requiredLevel);
+            case SupplyService.Availability.NoMoney: return Loc.Get("terminal.block.money");
             default: return "";
         }
     }
@@ -323,9 +328,9 @@ public class TerminalWindow : MonoBehaviour
         switch (block)
         {
             case ShippingService.AcceptBlock.BoxInUse:
-                return shipping.BoxCancelled ? "СНАЧАЛА РАЗБЕРИТЕ КОРОБКУ ОТМЕНЁННОГО ЗАКАЗА" : "СНАЧАЛА ЗАВЕРШИТЕ ТЕКУЩИЙ ЗАКАЗ";
-            case ShippingService.AcceptBlock.NoLicense: return "НУЖНА ЛИЦЕНЗИЯ";
-            case ShippingService.AcceptBlock.LowLevel: return "НУЖЕН БОЛЕЕ ВЫСОКИЙ УРОВЕНЬ";
+                return shipping.BoxCancelled ? Loc.Get("terminal.block.unpack_cancelled") : Loc.Get("terminal.block.finish_current");
+            case ShippingService.AcceptBlock.NoLicense: return Loc.Get("terminal.block.license_generic");
+            case ShippingService.AcceptBlock.LowLevel: return Loc.Get("terminal.block.higher_level");
             default: return "";
         }
     }
@@ -337,7 +342,7 @@ public class TerminalWindow : MonoBehaviour
         {
             if (line == null || line.item == null) continue;
             if (sb.Length > 0) sb.Append(withProgress ? "\n" : ",  ");
-            sb.Append(line.item.itemName).Append(" ×").Append(line.count);
+            sb.Append(line.item.DisplayName).Append(" ×").Append(line.count);
             if (withProgress) sb.Append("   [").Append(shipping.PackedCount(line.item)).Append('/').Append(line.count).Append(']');
         }
         return sb.ToString();

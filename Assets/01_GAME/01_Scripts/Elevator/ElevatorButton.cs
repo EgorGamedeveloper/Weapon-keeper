@@ -19,20 +19,20 @@ public class ElevatorButton : MonoBehaviour, IInteractable
     [Tooltip("Что «нажимается» визуально (необязательно).")]
     public Transform pressVisual;
 
-    public string InteractTitle => "Лифт";
+    public string InteractTitle => Loc.Get("interact.elevator.title");
 
     public string InteractHint
     {
         get
         {
             if (elevator == null) return "";
-            if (!elevator.IsWorking) return "Лифт не работает — нужен ремонт";
-            if (elevator.IsMoving) return "Лифт едет…";
+            if (!elevator.IsWorking) return Loc.Get("interact.elevator.broken");
+            if (elevator.IsMoving) return Loc.Get("interact.elevator.moving");
             switch (kind)
             {
-                case Kind.Panel: return elevator.AtTop ? "ЛКМ — вниз" : "ЛКМ — на крышу";
-                case Kind.CallBottom: return elevator.AtTop ? "ЛКМ — вызвать лифт" : "Лифт здесь";
-                default: return elevator.AtTop ? "Лифт здесь" : "ЛКМ — вызвать лифт";
+                case Kind.Panel: return elevator.AtTop ? Loc.Get("interact.elevator.go_down") : Loc.Get("interact.elevator.go_roof");
+                case Kind.CallBottom: return elevator.AtTop ? Loc.Get("interact.elevator.call") : Loc.Get("interact.elevator.here");
+                default: return elevator.AtTop ? Loc.Get("interact.elevator.here") : Loc.Get("interact.elevator.call");
             }
         }
     }

@@ -24,7 +24,7 @@ public class QuestRowUI : MonoBehaviour
     {
         if (progress == null || progress.data == null) return;
 
-        if (title != null) title.text = progress.data.title;
+        if (title != null) title.text = progress.data.DisplayTitle;
         if (progressText != null) progressText.text = $"{progress.currentCount}/{progress.data.targetCount}";
 
         if (progressFill != null)

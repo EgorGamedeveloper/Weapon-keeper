@@ -47,7 +47,7 @@ public class TidyUpInventoryRowUI : MonoBehaviour
     {
         if (item == null) return;
         if (icon != null) { icon.enabled = item.icon != null; icon.sprite = item.icon; }
-        if (itemName != null) itemName.text = item.itemName;
+        if (itemName != null) itemName.text = item.DisplayName;
         if (quantity != null) quantity.text = quantityText;
 
         // Мгновенно при первой привязке/переиспользовании строки — плавно только при реальной смене выделения.

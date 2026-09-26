@@ -38,6 +38,12 @@ public class LootBoxData : ScriptableObject
     [Tooltip("Описание в терминале.")]
     public string description = "Описание ящика";
 
+    /// <summary>Название на языке игры (strings.csv, ключ lootbox.&lt;lootBoxId&gt;.title; нет строки — title).</summary>
+    public string DisplayTitle => Loc.GetOr(Loc.DataKey("lootbox", lootBoxId, "title"), title);
+
+    /// <summary>Описание на языке игры (ключ lootbox.&lt;lootBoxId&gt;.desc; нет строки — description).</summary>
+    public string DisplayDescription => Loc.GetOr(Loc.DataKey("lootbox", lootBoxId, "desc"), description);
+
     [Tooltip("Иконка карточки в терминале.")]
     public Sprite icon;
 

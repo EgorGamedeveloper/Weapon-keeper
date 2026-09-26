@@ -31,6 +31,12 @@ public class ShippingOrderData : ScriptableObject
     [Tooltip("Текст письма заказчика.")]
     public string message = "Нужен товар";
 
+    /// <summary>Заказчик на языке игры (strings.csv, ключ order.&lt;orderId&gt;.customer; нет строки — customer).</summary>
+    public string DisplayCustomer => Loc.GetOr(Loc.DataKey("order", orderId, "customer"), customer);
+
+    /// <summary>Текст заказа на языке игры (ключ order.&lt;orderId&gt;.message; нет строки — message).</summary>
+    public string DisplayMessage => Loc.GetOr(Loc.DataKey("order", orderId, "message"), message);
+
     [Header("Состав")]
     [Tooltip("Что нужно уложить в коробку.")]
     public OrderLine[] lines = System.Array.Empty<OrderLine>();

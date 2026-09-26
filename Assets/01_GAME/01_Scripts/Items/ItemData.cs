@@ -21,6 +21,12 @@ public class ItemData : ScriptableObject
     [Tooltip("Описание для панели информации о предмете.")]
     public string description = "Описание предмета";
 
+    /// <summary>Название на языке игры (strings.csv, ключ item.&lt;itemId&gt;.name; нет строки — itemName).</summary>
+    public string DisplayName => Loc.GetOr(Loc.DataKey("item", itemId, "name"), itemName);
+
+    /// <summary>Описание на языке игры (ключ item.&lt;itemId&gt;.desc; нет строки — description).</summary>
+    public string DisplayDescription => Loc.GetOr(Loc.DataKey("item", itemId, "desc"), description);
+
     [Tooltip("Иконка для инвентаря.")]
     public Sprite icon;
 
