@@ -41,6 +41,13 @@ public class PlacementVision : MonoBehaviour
     [Tooltip("Перезарядка после окончания, секунды. 0 — можно включить сразу снова.")]
     [Min(0f)] public float cooldown;
 
+    [Header("Звуки")]
+    [Tooltip("Видение включилось.")]
+    public SoundCue activateSound;
+
+    [Tooltip("Видение закончилось (досмотрено до конца, а не прервано).")]
+    public SoundCue expireSound;
+
     /// <summary>Видение сейчас действует.</summary>
     public bool IsActive { get; private set; }
 
@@ -100,6 +107,7 @@ public class PlacementVision : MonoBehaviour
         Remaining -= Time.deltaTime;
         if (Remaining <= 0f)
         {
+            SoundPlayer.Play2D(expireSound);
             Expire();
             return;
         }
@@ -124,6 +132,7 @@ public class PlacementVision : MonoBehaviour
             if (behaviour is IPlaceableSlot slot) sceneSlots.Add(slot);
 
         matchingFor = null;
+        SoundPlayer.Play2D(activateSound);
         OnActivated?.Invoke();
         return true;
     }

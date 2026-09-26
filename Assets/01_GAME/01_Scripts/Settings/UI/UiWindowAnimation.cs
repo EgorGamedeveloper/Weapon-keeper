@@ -4,8 +4,9 @@ using UnityEngine;
 
 /// <summary>
 /// Появление и скрытие модальных окон (настройки, пауза, достижения, диалоги) — в одном стиле с окном
-/// навыков: затемнение проявляется, панель «выпрыгивает». Все твины идут в реальном времени
-/// (SetUpdate(true)): на паузе Time.timeScale = 0, и обычные твины замерли бы.
+/// навыков: затемнение проявляется, панель «выпрыгивает», звучит открытие/закрытие (UISoundFeedback).
+/// Все твины идут в реальном времени (SetUpdate(true)): на паузе Time.timeScale = 0, и обычные твины
+/// замерли бы.
 /// </summary>
 public static class UiWindowAnimation
 {
@@ -14,6 +15,7 @@ public static class UiWindowAnimation
         if (group == null) return;
 
         group.gameObject.SetActive(true);
+        UISoundFeedback.PlayWindowOpen();
         group.DOKill();
         group.alpha = 0f;
         group.interactable = true;
@@ -34,6 +36,7 @@ public static class UiWindowAnimation
             return;
         }
 
+        UISoundFeedback.PlayWindowClose();
         group.DOKill();
         group.interactable = false;
         group.blocksRaycasts = false;

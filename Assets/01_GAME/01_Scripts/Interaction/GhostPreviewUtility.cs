@@ -1,5 +1,8 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
+using Object = UnityEngine.Object;
 
 /// <summary>Как показывать призрак предмета в точке установки.</summary>
 public enum GhostMode
@@ -20,8 +23,8 @@ public enum GhostMode
 /// френель-рим по краям силуэта). Текстура предмета не используется: раньше голограмма умножалась
 /// на неё и на тёмных моделях оружия получалась почти чёрной.
 ///
-/// Призрак — это ТОЛЬКО визуал: из копии префаба снимаются WorldItem, AdvancedOutline, PersistentId,
-/// физика и коллайдеры. Раньше это был полноценный WorldItem в состоянии InWorld, и сейв
+/// Призрак — это ТОЛЬКО визуал: из копии префаба снимаются все скрипты (WorldItem, AdvancedOutline,
+/// PersistentId, ShippingBox...), физика и коллайдеры. Раньше это был полноценный WorldItem в состоянии InWorld, и сейв
 /// (SaveLoadService.CaptureWorld) записывал спрятанные призраки как лежащие предметы — после загрузки
 /// они превращались в настоящие дубликаты.
 /// </summary>
@@ -107,14 +110,63 @@ public static class GhostPreviewUtility
         }
     }
 
-    /// <summary>Снимает с копии префаба всё, кроме Transform и рендеринга.</summary>
+    /// <summary>
+    /// Снимает с копии префаба всё, кроме Transform и рендеринга: скрипты, физику, коллайдеры.
+    /// Компонент нельзя снять, пока его требует ([RequireComponent]) другой компонент того же объекта
+    /// (ShippingBox требует WorldItem, WorldItem — AdvancedOutline), поэтому снимаем проходами: каждый
+    /// раз то, что уже никому не нужно. Раньше порядок был зашит (сначала WorldItem), и на коробке
+    /// отправки снятие WorldItem падало — призрак оставался полноценным предметом.
+    /// </summary>
     private static void StripToVisual(GameObject ghost)
     {
-        // WorldItem первым: он требует AdvancedOutline ([RequireComponent]), пока он жив, обводку не снять.
-        foreach (var item in ghost.GetComponentsInChildren<WorldItem>(true)) Object.DestroyImmediate(item);
-        foreach (var behaviour in ghost.GetComponentsInChildren<MonoBehaviour>(true)) Object.DestroyImmediate(behaviour);
-        foreach (var body in ghost.GetComponentsInChildren<Rigidbody>(true)) Object.DestroyImmediate(body);
-        foreach (var col in ghost.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(col);
+        var pending = new List<Component>();
+        foreach (var component in ghost.GetComponentsInChildren<Component>(true))
+            if (component is MonoBehaviour || component is Rigidbody || component is Collider)
+                pending.Add(component);
+
+        bool removedAny = true;
+        while (pending.Count > 0 && removedAny)
+        {
+            removedAny = false;
+            for (int i = pending.Count - 1; i >= 0; i--)
+            {
+                Component component = pending[i];
+                if (component != null && IsRequiredByOthers(component)) continue;
+
+                if (component != null) Object.DestroyImmediate(component);
+                pending.RemoveAt(i);
+                removedAny = true;
+            }
+        }
+
+        if (pending.Count > 0)
+            Debug.LogWarning($"GhostPreviewUtility: у призрака '{ghost.name}' не удалось снять {pending.Count} компонент(ов) — циклический RequireComponent?", ghost);
+    }
+
+    /// <summary>Требует ли этот компонент кто-то ещё на том же объекте, и нет ли ему замены того же типа.</summary>
+    private static bool IsRequiredByOthers(Component component)
+    {
+        Type type = component.GetType();
+        foreach (var other in component.GetComponents<Component>())
+        {
+            if (other == null || other == component) continue;
+            foreach (RequireComponent require in Attribute.GetCustomAttributes(other.GetType(), typeof(RequireComponent), true))
+            {
+                if (IsBlocking(require.m_Type0, type, component) || IsBlocking(require.m_Type1, type, component)
+                    || IsBlocking(require.m_Type2, type, component))
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    private static bool IsBlocking(Type required, Type type, Component component)
+    {
+        if (required == null || !required.IsAssignableFrom(type)) return false;
+        // Второй компонент того же требуемого типа (например, ещё один коллайдер) требование закрывает.
+        foreach (var candidate in component.GetComponents(required))
+            if (candidate != component) return false;
+        return true;
     }
 
     /// <summary>Два общих материала на все призраки (яркий и подсказка): цвет у них одинаковый, а

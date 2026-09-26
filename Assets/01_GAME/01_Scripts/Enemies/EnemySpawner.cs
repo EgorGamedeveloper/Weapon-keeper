@@ -13,15 +13,19 @@ public class EnemySpawner : MonoBehaviour
     [Tooltip("В каком радиусе (м) от запрошенной точки искать NavMesh, чтобы поставить на него врага.")]
     [Min(0.1f)] public float navMeshSnapRadius = 2f;
 
+    [Header("Цель")]
+    [Tooltip("Здоровье игрока — цель, которую замечают и атакуют созданные враги. Пусто — враг ищет игрока сам.")]
+    public PlayerHealth player;
+
     /// <summary>Враг создан — хук для систем, которым нужно узнать о новом враге (трекеры, HUD и т.п.).</summary>
     public event Action<Enemy> OnEnemySpawned;
 
     /// <summary>
     /// Создаёт врага заданного типа в указанной точке, «примагниченной» к NavMesh. Точка становится
     /// домом врага (вокруг неё он блуждает). Возвращает null, если не задан enemyPrefab или под точкой
-    /// нет NavMesh (не запечён NavMeshSurface).
+    /// нет NavMesh (не запечён NavMeshSurface). idle — враг стоит на месте, пока не заметит игрока.
     /// </summary>
-    public Enemy Spawn(EnemyData data, Vector3 position, Quaternion rotation)
+    public Enemy Spawn(EnemyData data, Vector3 position, Quaternion rotation, bool idle = false)
     {
         if (data == null || data.enemyPrefab == null)
         {
@@ -44,7 +48,7 @@ public class EnemySpawner : MonoBehaviour
             return null;
         }
 
-        enemy.Initialize(data, hit.position);
+        enemy.Initialize(data, hit.position, player, idle);
         OnEnemySpawned?.Invoke(enemy);
         return enemy;
     }

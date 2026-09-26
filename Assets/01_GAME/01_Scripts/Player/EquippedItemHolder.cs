@@ -3,7 +3,8 @@ using UnityEngine;
 /// <summary>
 /// Точка в руке игрока, куда устанавливается модель активного предмета из инвентаря.
 /// При смене активного слота обновляет 3D-модель, при ходьбе добавляет лёгкое покачивание
-/// по инерции (sway) и покачивание от шагов (bobbing).
+/// по инерции (sway) и покачивание от шагов (bobbing), а когда в руку прилетает подобранный
+/// предмет — короткую «просадку» (PlayCatchDip), будто рука его поймала.
 /// </summary>
 public class EquippedItemHolder : MonoBehaviour
 {
@@ -44,6 +45,19 @@ public class EquippedItemHolder : MonoBehaviour
     [Tooltip("Минимальная скорость игрока, при которой начинается покачивание.")]
     public float moveThreshold = 0.1f;
 
+    [Header("Ловля предмета")]
+    [Tooltip("Насколько рука проседает, поймав подобранный предмет, м.")]
+    [Min(0f)] public float catchDip = 0.025f;
+
+    [Tooltip("Насколько рука при этом наклоняется вперёд, градусы.")]
+    [Min(0f)] public float catchTilt = 4f;
+
+    [Tooltip("Жёсткость пружины возврата после просадки.")]
+    [Min(1f)] public float catchSpring = 180f;
+
+    [Tooltip("Затухание пружины возврата.")]
+    [Min(0f)] public float catchDamping = 16f;
+
     private float bobTimer;
     private Vector3 targetLocalPos;
     private Quaternion targetLocalRot;
@@ -51,6 +65,10 @@ public class EquippedItemHolder : MonoBehaviour
     private Vector3 visualRootBaseLocalPosition;
     private Quaternion visualRootBaseLocalRotation;
     private bool visualRootBasePoseInitialized;
+    private float catchOffset;
+    private float catchVelocity;
+    private float lastCatchOffset;
+    private float lastCatchTilt;
 
     /// <summary>Точка, под которой находятся видимые предметы в руках.</summary>
     public Transform HeldItemTransform
@@ -160,8 +178,29 @@ public class EquippedItemHolder : MonoBehaviour
     private void LateUpdate()
     {
         if (!EnsureHeldItemVisualRoot()) return;
+        UpdateCatchSpring();
         ApplySway();
         ApplyBob();
+    }
+
+    /// <summary>Рука «ловит» прилетевший предмет: короткая просадка вниз с наклоном и возврат пружиной.</summary>
+    public void PlayCatchDip()
+    {
+        catchVelocity -= catchDip * catchSpring * 0.12f;
+    }
+
+    private void UpdateCatchSpring()
+    {
+        float deltaTime = Time.deltaTime;
+        catchVelocity -= catchOffset * catchSpring * deltaTime;
+        catchVelocity -= catchVelocity * Mathf.Min(1f, catchDamping * deltaTime);
+        catchOffset += catchVelocity * deltaTime;
+
+        if (Mathf.Abs(catchOffset) < 0.0002f && Mathf.Abs(catchVelocity) < 0.0002f)
+        {
+            catchOffset = 0f;
+            catchVelocity = 0f;
+        }
     }
 
     /// <summary>Покачивание руки в сторону движения мыши, создающее ощущение инерции.</summary>
@@ -175,10 +214,13 @@ public class EquippedItemHolder : MonoBehaviour
 
         Quaternion swayRotation = Quaternion.Euler(-mouseY, mouseX, mouseX * 0.5f);
         targetLocalRot = visualRootBaseLocalRotation * swayRotation;
-        heldItemVisualRoot.localRotation = Quaternion.Slerp(
-            heldItemVisualRoot.localRotation,
-            targetLocalRot,
-            Time.deltaTime * swaySmooth);
+        // Наклон от «ловли» — поверх покачивания, без сглаживания (пружина сама плавная); прошлый
+        // наклон снимаем, чтобы он не копился в сглаживании.
+        Quaternion current = heldItemVisualRoot.localRotation * Quaternion.Euler(-lastCatchTilt, 0f, 0f);
+        Quaternion swayed = Quaternion.Slerp(current, targetLocalRot, Time.deltaTime * swaySmooth);
+        float tilt = catchDip > 0f ? -catchOffset / catchDip * catchTilt : 0f;
+        heldItemVisualRoot.localRotation = swayed * Quaternion.Euler(tilt, 0f, 0f);
+        lastCatchTilt = tilt;
     }
 
     /// <summary>Лёгкое покачивание позиции предмета в такт шагам игрока.</summary>
@@ -200,9 +242,8 @@ public class EquippedItemHolder : MonoBehaviour
         }
 
         Vector3 desiredPosition = visualRootBaseLocalPosition + targetLocalPos;
-        heldItemVisualRoot.localPosition = Vector3.Lerp(
-            heldItemVisualRoot.localPosition,
-            desiredPosition,
-            Time.deltaTime * bobSmooth);
+        Vector3 bobbed = Vector3.Lerp(heldItemVisualRoot.localPosition - Vector3.up * lastCatchOffset, desiredPosition, Time.deltaTime * bobSmooth);
+        heldItemVisualRoot.localPosition = bobbed + Vector3.up * catchOffset;
+        lastCatchOffset = catchOffset;
     }
 }

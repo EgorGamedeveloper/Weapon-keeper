@@ -152,6 +152,7 @@ public class SkillTreeWindow : MonoBehaviour
         if (inputBlocker != null) inputBlocker.Acquire(this);
 
         windowGroup.gameObject.SetActive(true);
+        UISoundFeedback.PlayWindowOpen();
         windowGroup.DOKill();
         windowGroup.alpha = 0f;
         windowGroup.DOFade(1f, 0.2f);
@@ -172,6 +173,7 @@ public class SkillTreeWindow : MonoBehaviour
     {
         if (!IsOpen) return;
         IsOpen = false;
+        UISoundFeedback.PlayWindowClose();
 
         windowGroup.DOKill();
         windowGroup.DOFade(0f, 0.15f).OnComplete(() => windowGroup.gameObject.SetActive(false));

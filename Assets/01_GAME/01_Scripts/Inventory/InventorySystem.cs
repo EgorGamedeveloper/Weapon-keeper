@@ -32,6 +32,10 @@ public class InventorySystem : MonoBehaviour
     [Tooltip("Инвертировать направление прокрутки колеса мыши.")]
     public bool invertScroll = false;
 
+    [Header("Звук")]
+    [Tooltip("Смена предмета в руке колесом мыши.")]
+    public SoundCue switchSound;
+
     /// <summary>Вызывается при смене активного слота (индекс нового активного слота).</summary>
     public event Action<int> OnActiveSlotChanged;
 
@@ -124,6 +128,7 @@ public class InventorySystem : MonoBehaviour
     public void CycleActiveEntry(int direction)
     {
         if (entries.Count == 0) return;
+        if (entries.Count > 1) SoundPlayer.Play2D(switchSound);
         activeSlotIndex = (activeSlotIndex + direction + entries.Count) % entries.Count;
         NotifyChanged();
     }

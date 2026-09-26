@@ -7,8 +7,9 @@ using UnityEngine;
 /// то есть ряд над ним откроется, когда будет заполнен весь ряд ниже (решает RepairPoint).
 ///
 /// Принесённый предмет расходуется, а место показывает свой «уложенный» визуал (filledVisual): он
-/// появляется в позе предмета из руки и долетает на место, по приземлению включает свой коллайдер и
-/// проигрывает ту же светящуюся полосу, что и установка на полку. Так состояние места — один bool,
+/// появляется в позе предмета из руки и долетает на место по небольшой дуге, по приземлению включает
+/// свой коллайдер и проигрывает тот же фидбек, что и установка на полку: звук ItemData.placeSound,
+/// «пружинку», пыль и светящуюся полосу (настройки — с WorldItem префаба предмета). Так состояние места — один bool,
 /// и сейв хранит только его (RepairPointSave.filledSlots), без восстановления предметов.
 ///
 /// Триггер-коллайдер на этом объекте — зона прицеливания; RepairPoint включает его только у пустых
@@ -32,6 +33,9 @@ public class RepairSlot : MonoBehaviour, IPlaceableSlot
     [Tooltip("Кривая анимации полёта.")]
     public Ease placementEase = Ease.OutCubic;
 
+    [Tooltip("Высота дуги полёта, м (на коротком пути — ниже). 0 — по прямой.")]
+    [Min(0f)] public float placementArcHeight = 0.12f;
+
     /// <summary>Место заполнено.</summary>
     public bool IsFilled { get; private set; }
 
@@ -46,6 +50,7 @@ public class RepairSlot : MonoBehaviour, IPlaceableSlot
     private ItemData ghostItem;
     private Tween flightTween;
     private Tween scanTween;
+    private Tween punchTween;
 
     private void Reset()
     {
@@ -63,6 +68,13 @@ public class RepairSlot : MonoBehaviour, IPlaceableSlot
     {
         flightTween?.Kill();
         scanTween?.Kill();
+        CompletePunch();
+    }
+
+    private void CompletePunch()
+    {
+        if (punchTween != null && punchTween.IsActive()) punchTween.Complete();
+        punchTween = null;
     }
 
     /// <summary>Ленивая инициализация: SaveLoadService восстанавливает места из своего Awake, раньше
@@ -155,29 +167,48 @@ public class RepairSlot : MonoBehaviour, IPlaceableSlot
             else
             {
                 visual.SetPositionAndRotation(startPosition, startRotation);
+                Vector3 fromPosition = visual.localPosition;
+                Quaternion fromRotation = visual.localRotation;
+                float arc = placementArcHeight * Mathf.Clamp01(Vector3.Distance(startPosition, visual.parent.TransformPoint(restLocalPosition)));
+
                 flightTween?.Kill();
-                flightTween = DOTween.Sequence()
-                    .Join(visual.DOLocalMove(restLocalPosition, placementDuration).SetEase(placementEase))
-                    .Join(visual.DOLocalRotateQuaternion(restLocalRotation, placementDuration).SetEase(placementEase))
-                    .OnComplete(() => Land(item));
+                // Та же дуга, что у полки (WorldItem.PlaceOnShelfAnimated): вершина — на середине пути.
+                flightTween = DOVirtual.Float(0f, 1f, placementDuration, t =>
+                    {
+                        float eased = DOVirtual.EasedValue(0f, 1f, t, placementEase);
+                        visual.localPosition = Vector3.LerpUnclamped(fromPosition, restLocalPosition, eased)
+                                               + Vector3.up * (arc * Mathf.Sin(Mathf.Clamp01(eased) * Mathf.PI));
+                        visual.localRotation = Quaternion.SlerpUnclamped(fromRotation, restLocalRotation, eased);
+                    })
+                    .SetEase(Ease.Linear)
+                    .OnComplete(() =>
+                    {
+                        visual.localPosition = restLocalPosition;
+                        visual.localRotation = restLocalRotation;
+                        Land(item);
+                    });
             }
         }
 
         if (owner != null) owner.NotifySlotFilled(this);
     }
 
-    /// <summary>Предмет лёг на место: коллайдер, звук и светящаяся полоса — с настройками самого
-    /// предмета (WorldItem на его префабе), чтобы укладка выглядела как установка на полку.</summary>
+    /// <summary>Предмет лёг на место: коллайдер, звук, «пружинка», пыль и светящаяся полоса — с
+    /// настройками самого предмета (WorldItem на его префабе), чтобы укладка выглядела как установка
+    /// на полку.</summary>
     private void Land(ItemData item)
     {
         SetFilledCollidersEnabled(true);
-
-        if (item.placementSound != null)
-            AudioSource.PlayClipAtPoint(item.placementSound, filledVisual.transform.position);
+        SoundPlayer.Play(item.placeSound, filledVisual.transform.position);
 
         WorldItem settings = item.worldPrefab != null ? item.worldPrefab.GetComponent<WorldItem>() : null;
         Color color = settings != null ? settings.placementScanColor : new Color(2.4f, 1.8f, 0.45f, 1f);
         float duration = settings != null ? settings.placementScanDuration : 0.6f;
+
+        CompletePunch();
+        punchTween = LandingFeedback.Punch(filledVisual.transform, settings != null ? settings.landingPunch : 0f);
+        if (settings != null)
+            LandingFeedback.SpawnDust(settings.landingDust, filledVisual.GetComponentsInChildren<Renderer>());
 
         scanTween?.Kill();
         scanTween = PlacementScanEffect.Play(filledVisual, color, duration);
@@ -189,6 +220,7 @@ public class RepairSlot : MonoBehaviour, IPlaceableSlot
     {
         EnsureInitialized();
         flightTween?.Kill();
+        CompletePunch();
         IsFilled = filled;
 
         if (filledVisual == null) return;

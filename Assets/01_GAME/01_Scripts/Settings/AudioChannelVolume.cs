@@ -56,6 +56,20 @@ public class AudioChannelVolume : MonoBehaviour
         if (service != null) Apply(service.Current);
     }
 
+    /// <summary>Сменить базовую громкость из кода — для источника, который играет разные звуки с разной
+    /// громкостью (голоса пула SoundPlayer). Громкость канала применяется сразу.</summary>
+    public void SetBaseVolume(float volume)
+    {
+        if (sources == null) return;
+        for (int i = 0; i < baseVolumes.Length; i++) baseVolumes[i] = volume;
+
+        SettingsService current = service != null ? service : SettingsService.Instance;
+        if (current != null && current.Current != null) Apply(current.Current);
+        else
+            foreach (AudioSource source in sources)
+                if (source != null) source.volume = volume;
+    }
+
     private void Apply(GameSettingsData settings)
     {
         if (settings == null || sources == null) return;

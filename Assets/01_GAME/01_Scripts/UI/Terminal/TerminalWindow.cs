@@ -124,6 +124,7 @@ public class TerminalWindow : MonoBehaviour
         if (inputBlocker != null) inputBlocker.Acquire(this);
 
         windowGroup.gameObject.SetActive(true);
+        UISoundFeedback.PlayWindowOpen();
         windowGroup.DOKill();
         windowGroup.alpha = 0f;
         windowGroup.DOFade(1f, 0.15f);
@@ -153,6 +154,7 @@ public class TerminalWindow : MonoBehaviour
     {
         if (!IsOpen) return;
         IsOpen = false;
+        UISoundFeedback.PlayWindowClose();
         flicker?.Kill();
         typing?.Kill();
 

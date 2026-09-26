@@ -23,6 +23,9 @@ public class EnemySpawnPoint : MonoBehaviour
     [Tooltip("Через сколько секунд повторить попытку, если заспавнить не удалось (например, под точкой нет NavMesh).")]
     [Min(0.5f)] public float retryDelay = 3f;
 
+    [Tooltip("Враг стоит на месте («спит» в комнате), пока не заметит игрока, вместо блуждания.")]
+    public bool startIdle;
+
     private Enemy currentEnemy;
 
     /// <summary>Игрок убил врага этой точки (до респавна). Для сюжетных триггеров: конкретную точку
@@ -43,7 +46,7 @@ public class EnemySpawnPoint : MonoBehaviour
     {
         if (spawner == null || enemyData == null) return;
 
-        currentEnemy = spawner.Spawn(enemyData, transform.position, transform.rotation);
+        currentEnemy = spawner.Spawn(enemyData, transform.position, transform.rotation, startIdle);
         if (currentEnemy != null)
             currentEnemy.OnDied += HandleEnemyDied;
         else

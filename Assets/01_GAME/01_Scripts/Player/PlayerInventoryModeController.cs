@@ -27,6 +27,13 @@ public class PlayerInventoryModeController : MonoBehaviour
     public KeyCode equipmentKey = KeyCode.Alpha2;
     [Tooltip("Экипировать активный предмет tidy-up / снять экипированное оружие.")]
     public KeyCode equipKey = KeyCode.Q;
+
+    [Header("Звуки")]
+    [Tooltip("Переключение вкладки (1/2) и прокрутка экипировки колесом.")]
+    public SoundCue switchSound;
+
+    [Tooltip("Предмет экипирован или снят (Q).")]
+    public SoundCue equipSound;
     public InventoryMode CurrentMode { get; private set; } = InventoryMode.TidyUp;
 
     /// <summary>Вызывается при смене режима — например, чтобы спрятать/показать оружие (EquipmentWeaponBridge).</summary>
@@ -51,8 +58,16 @@ public class PlayerInventoryModeController : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetKeyDown(tidyUpKey)) SetMode(InventoryMode.TidyUp);
-        if (Input.GetKeyDown(equipmentKey)) SetMode(InventoryMode.Equipment);
+        if (Input.GetKeyDown(tidyUpKey) && CurrentMode != InventoryMode.TidyUp)
+        {
+            SoundPlayer.Play2D(switchSound);
+            SetMode(InventoryMode.TidyUp);
+        }
+        if (Input.GetKeyDown(equipmentKey) && CurrentMode != InventoryMode.Equipment)
+        {
+            SoundPlayer.Play2D(switchSound);
+            SetMode(InventoryMode.Equipment);
+        }
 
         if (Input.GetKeyDown(equipKey))
         {
@@ -63,8 +78,11 @@ public class PlayerInventoryModeController : MonoBehaviour
         if (CurrentMode == InventoryMode.Equipment)
         {
             float scroll = Input.GetAxis("Mouse ScrollWheel");
-            if (Mathf.Abs(scroll) > 0.01f)
-                equipmentInventory?.Cycle(scroll > 0 ? 1 : -1);
+            if (Mathf.Abs(scroll) > 0.01f && equipmentInventory != null && equipmentInventory.items.Count > 1)
+            {
+                equipmentInventory.Cycle(scroll > 0 ? 1 : -1);
+                SoundPlayer.Play2D(switchSound);
+            }
         }
     }
 
@@ -86,15 +104,16 @@ public class PlayerInventoryModeController : MonoBehaviour
             && equipmentInventory.ActiveItem.itemData.IsWeapon;
     }
 
-    /// <summary>Активен ли сейчас инструмент разбора (лом и т.п.) — тот же слот, что и оружие,
-    /// просто активная запись сейчас не оружие, а Breakable-инструмент.</summary>
-    public bool IsBreakToolEquipped()
+    /// <summary>Какой инструмент сейчас в руках (лом, кувалда) — тот же слот, что и оружие, просто
+    /// активная запись экипировки не оружие, а инструмент. None — не инструмент или режим уборки.</summary>
+    public ToolKind ActiveToolKind
     {
-        return CurrentMode == InventoryMode.Equipment
-            && equipmentInventory != null
-            && equipmentInventory.ActiveItem != null
-            && equipmentInventory.ActiveItem.itemData != null
-            && equipmentInventory.ActiveItem.itemData.canBreakObjects;
+        get
+        {
+            if (CurrentMode != InventoryMode.Equipment || equipmentInventory == null) return ToolKind.None;
+            WorldItem active = equipmentInventory.ActiveItem;
+            return active != null && active.itemData != null ? active.itemData.toolKind : ToolKind.None;
+        }
     }
 
     /// <summary>Экипирует активный предмет tidy-up. Оружие может быть экипировано только одно —
@@ -136,6 +155,7 @@ public class PlayerInventoryModeController : MonoBehaviour
 
         item.SetCarriedHidden(equipmentStorage);
         equipmentInventory.Add(item);
+        SoundPlayer.Play2D(equipSound);
 
         if (isWeapon) SetMode(InventoryMode.Equipment);
     }
@@ -151,6 +171,7 @@ public class PlayerInventoryModeController : MonoBehaviour
         equipmentInventory.Remove(active);
         // Предмет уже CarriedHidden — RefreshCurrent на OnInventoryChanged перепривяжет и покажет его.
         tidyUpInventory.AddWorldItem(active);
+        SoundPlayer.Play2D(equipSound);
         SetMode(InventoryMode.TidyUp);
     }
 }

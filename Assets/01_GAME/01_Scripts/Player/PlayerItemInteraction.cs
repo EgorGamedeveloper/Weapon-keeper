@@ -39,6 +39,9 @@ public class PlayerItemInteraction : MonoBehaviour
              "мест сцены, а не только рядом. Пусто — без видения.")]
     public PlacementVision vision;
 
+    [Tooltip("Режим работы с объектом (тряпка по пятну, лом-рычаг): его запускает ЛКМ по пятну или доске.")]
+    public PlayerToolActions toolActions;
+
     [Header("Конфиг")]
     [Tooltip("Если задан — значения ниже перекрываются из GameConfig при старте. Пусто — работаем на значениях инспектора.")]
     public GameConfig config;
@@ -66,8 +69,11 @@ public class PlayerItemInteraction : MonoBehaviour
     [Min(0f)] public float placementHintRadius = 4f;
 
     [Header("Подбор и бросок")]
-    [Tooltip("Скорость полёта подобранного предмета в руку.")]
+    [Tooltip("Скорость полёта подобранного предмета в руку, м/с (время полёта ограничено 0.18–0.4 с).")]
     public float pickupAnimationSpeed = 12f;
+
+    [Tooltip("Высота дуги полёта предмета в руку, м (на коротком пути — ниже). 0 — по прямой.")]
+    [Min(0f)] public float pickupArcHeight = 0.1f;
 
     [Tooltip("На каком расстоянии перед камерой появляется брошенный предмет (ближе, если мешает стена).")]
     public float dropDistance = 1.25f;
@@ -79,11 +85,17 @@ public class PlayerItemInteraction : MonoBehaviour
              "лежащие предметы не включать.")]
     public LayerMask dropObstacleLayers = ~((1 << 8) | (1 << 9) | (1 << 24) | (1 << 30));
 
+    [Header("Звуки")]
+    [Tooltip("Клик по объекту использования (терминал, кнопка лифта, коробка отменённого заказа).")]
+    public SoundCue interactSound;
+
     private static readonly Collider[] HintHits = new Collider[64];
     private readonly HashSet<IPlaceableSlot> hintedSlots = new HashSet<IPlaceableSlot>();
     private readonly HashSet<IPlaceableSlot> nextHints = new HashSet<IPlaceableSlot>();
     private readonly HashSet<IPlaceableSlot> nearHints = new HashSet<IPlaceableSlot>();
 
+    private const float MinPickupDuration = 0.18f;
+    private const float MaxPickupDuration = 0.4f;
     private const float DropProbeRadius = 0.15f;
     private const float DropWallPadding = 0.1f;
     private static readonly RaycastHit[] RayHits = new RaycastHit[16];
@@ -94,8 +106,14 @@ public class PlayerItemInteraction : MonoBehaviour
     private CleanableStain currentHoveredStain;
     private Breakable currentHoveredBreakable;
     private IInteractable currentInteractable; // терминал, кнопка лифта, коробка отменённого заказа — ЛКМ использует
+    private Vector3 currentHoverPoint;      // точка под прицелом для пятна/доски/объекта использования
+    private Ray currentAimRay;
     private WorldItem itemBeingPickedUp;
-    private Vector3 pickupVelocity;
+    private Vector3 pickupStartPosition;
+    private Quaternion pickupStartRotation;
+    private float pickupElapsed;
+    private float pickupDuration;
+    private float pickupArc;
     private bool aimingAtInteractableThisFrame;
 
     /// <summary>Прицел был наведён на предмет, точку установки (полка/ремонт) или пятно в момент
@@ -152,6 +170,7 @@ public class PlayerItemInteraction : MonoBehaviour
         takeKey = config.input.takeFromShelfKey;
         placementHintRadius = s.placementHintRadius;
         pickupAnimationSpeed = s.pickupAnimationSpeed;
+        pickupArcHeight = s.pickupArcHeight;
         dropDistance = s.dropDistance;
         dropSpeed = s.dropSpeed;
     }
@@ -166,8 +185,10 @@ public class PlayerItemInteraction : MonoBehaviour
         UpdatePickupAnimation();
 
         // Клик, которым игрок возвращает захват курсора (CursorLockController, он выполняется позже
-        // в кадре), не должен тут же подбирать или бросать предмет.
-        bool cursorLocked = Cursor.lockState == CursorLockMode.Locked;
+        // в кадре), не должен тут же подбирать или бросать предмет. ПКМ, которой игрок только что вышел
+        // из режима работы с объектом, — тоже.
+        bool cursorLocked = Cursor.lockState == CursorLockMode.Locked
+                            && (toolActions == null || (!toolActions.IsActive && toolActions.LastEndFrame != Time.frameCount));
         if (cursorLocked && itemBeingPickedUp == null && Input.GetMouseButtonDown(0))
             HandleClick();
         if (cursorLocked && itemBeingPickedUp == null && Input.GetMouseButtonDown(1))
@@ -190,7 +211,6 @@ public class PlayerItemInteraction : MonoBehaviour
     {
         WorldItem previousItem = HighlightedItem;
         IPlaceableSlot previousSlot = currentHoveredSlot;
-        CleanableStain previousStain = currentHoveredStain;
         Breakable previousBreakable = currentHoveredBreakable;
 
         currentHighlighted = null;
@@ -207,7 +227,6 @@ public class PlayerItemInteraction : MonoBehaviour
         if (previousItem != null && previousItem != highlighted) previousItem.SetHighlight(false);
         if (highlighted != null) highlighted.SetHighlight(true);
         if (previousSlot != null && previousSlot != currentHoveredSlot && !hintedSlots.Contains(previousSlot)) previousSlot.HideGhost();
-        if (previousStain != null && previousStain != currentHoveredStain) previousStain.SetHighlight(false);
         if (previousBreakable != null && previousBreakable != currentHoveredBreakable) previousBreakable.SetHighlight(false);
     }
 
@@ -215,7 +234,6 @@ public class PlayerItemInteraction : MonoBehaviour
     {
         if (HighlightedItem != null) HighlightedItem.SetHighlight(false);
         if (currentHoveredSlot != null) currentHoveredSlot.HideGhost();
-        if (currentHoveredStain != null) currentHoveredStain.SetHighlight(false);
         if (currentHoveredBreakable != null) currentHoveredBreakable.SetHighlight(false);
         foreach (var slot in hintedSlots)
             if (slot as Object != null) slot.HideGhost();
@@ -235,28 +253,28 @@ public class PlayerItemInteraction : MonoBehaviour
     {
         if (playerCamera == null) return;
 
-        // ── Экипировано оружие: только бой, никакого взаимодействия с миром — иначе прицел на
-        // предмете/полке блокировал бы выстрел (см. IsAimingAtInteractable). С оружием в руках
-        // игрок либо стреляет, либо ничего не делает; подбор/установка — только без оружия (TidyUp)
-        // или с ломом (см. ниже).
-        if (modeController != null && modeController.IsWeaponEquipped())
+        // ── Экипировано оружие или кувалда: только бой, никакого взаимодействия с миром — иначе прицел
+        // на предмете/полке блокировал бы выстрел (см. IsAimingAtInteractable), а ЛКМ кувалды и
+        // подбирала бы, и била. Подбор/установка — только без оружия (TidyUp) или с ломом (см. ниже).
+        if (IsCombatEquipped())
         {
             if (infoUI != null) infoUI.Hide();
             return;
         }
 
         Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+        currentAimRay = ray;
 
-        // ── Лом в руках: ищем, что можно разобрать, но НЕ прерываем обычную логику ниже — лом не
+        // ── Лом в руках: ищем, что можно поддеть, но НЕ прерываем обычную логику ниже — лом не
         // мешает подбирать предметы и расставлять их по полкам, это просто дополнительный инструмент.
-        if (modeController != null && modeController.IsBreakToolEquipped())
+        if (modeController != null && modeController.ActiveToolKind == ToolKind.Crowbar)
             HandleToolRaycast(ray);
 
         float maxDist = Mathf.Max(pickupRange, shelfInteractRange);
 
         if (!TryRaycastInteractable(ray, maxDist, out RaycastHit hit))
         {
-            if (infoUI != null) infoUI.Hide();
+            ShowIdlePrompt();
             return;
         }
 
@@ -303,6 +321,7 @@ public class PlayerItemInteraction : MonoBehaviour
         if (interactable != null && inShelfRange && (interactable.CanInteract || hitItem == null))
         {
             if (interactable.CanInteract) currentInteractable = interactable;
+            currentHoverPoint = hit.point;
             if (infoUI != null) infoUI.ShowHint(interactable.InteractTitle, interactable.InteractHint);
             return;
         }
@@ -312,22 +331,39 @@ public class PlayerItemInteraction : MonoBehaviour
         if (hitItem != null && hitItem.State == WorldItem.ItemState.InWorld && hit.distance <= pickupRange)
         {
             currentHighlighted = hitItem;
-            if (infoUI != null) infoUI.Show(hitItem.itemData);
+            if (infoUI != null) infoUI.ShowActions(hitItem.itemData, Loc.Get("hud.action.pickup"));
             return;
         }
 
-        // ── Шаг 3.5. ПЯТНО: оттирается кликом, предмет в руках не нужен ──
+        // ── Шаг 3.5. ПЯТНО: ЛКМ — режим тряпки (PlayerToolActions), предмет в руках не нужен ──
         CleanableStain stain = hit.collider.GetComponentInParent<CleanableStain>();
         if (stain != null && !stain.IsClean && hit.distance <= pickupRange)
         {
             currentHoveredStain = stain;
-            stain.SetHighlight(true);
-            if (infoUI != null) infoUI.Hide();
+            if (infoUI != null) infoUI.ShowHint(Loc.Get("hud.stain.title"), Loc.Get("hud.action.scrub"));
             return;
         }
 
-        // ── Шаг 4. Ничего интересного под лучом ──
-        if (infoUI != null) infoUI.Hide();
+        // ── Шаг 4. Ничего интересного под лучом (кроме, может быть, доски для лома) ──
+        ShowIdlePrompt();
+    }
+
+    /// <summary>Под лучом нет ни предмета, ни места, ни пятна: подсказка лома, если он смотрит на доску,
+    /// иначе подсказка гаснет.</summary>
+    private void ShowIdlePrompt()
+    {
+        if (infoUI == null) return;
+        if (currentHoveredBreakable != null)
+            infoUI.ShowHint(Loc.Get(currentHoveredBreakable.titleKey), Loc.Get("hud.action.pry"));
+        else
+            infoUI.Hide();
+    }
+
+    /// <summary>В руках оружие или кувалда: ЛКМ стреляет/бьёт, мир не трогаем.</summary>
+    private bool IsCombatEquipped()
+    {
+        return modeController != null
+               && (modeController.IsWeaponEquipped() || modeController.ActiveToolKind == ToolKind.Sledgehammer);
     }
 
     /// <summary>Подпись у прицела для полки: «ЛКМ — поставить», «E — взять» или обе сразу.</summary>
@@ -357,8 +393,7 @@ public class PlayerItemInteraction : MonoBehaviour
         nearHints.Clear();
 
         ItemData active = inventory != null ? inventory.GetActiveItem() : null;
-        bool canHint = active != null && playerCamera != null && placementHintRadius > 0f
-                       && (modeController == null || !modeController.IsWeaponEquipped());
+        bool canHint = active != null && playerCamera != null && placementHintRadius > 0f && !IsCombatEquipped();
         if (canHint)
         {
             int count = Physics.OverlapSphereNonAlloc(playerCamera.transform.position, placementHintRadius,
@@ -387,17 +422,18 @@ public class PlayerItemInteraction : MonoBehaviour
         hintedSlots.UnionWith(nextHints);
     }
 
-    /// <summary>Дополнительный луч, пока в руках лом: ищет Breakable. Вызывается перед обычной
-    /// логикой подбора/установки (не вместо неё) — см. HandleRaycast.</summary>
+    /// <summary>Дополнительный луч, пока в руках лом: ищет Breakable, который можно поддеть. Вызывается
+    /// перед обычной логикой подбора/установки (не вместо неё) — см. HandleRaycast.</summary>
     private void HandleToolRaycast(Ray ray)
     {
         if (!TryRaycastInteractable(ray, toolInteractRange, out RaycastHit hit))
             return;
 
         Breakable breakable = hit.collider.GetComponentInParent<Breakable>();
-        if (breakable == null || breakable.IsBroken) return;
+        if (breakable == null || breakable.IsBroken || !breakable.canPry) return;
 
         currentHoveredBreakable = breakable;
+        currentHoverPoint = hit.point;
         breakable.SetHighlight(true);
     }
 
@@ -444,6 +480,7 @@ public class PlayerItemInteraction : MonoBehaviour
     {
         if (currentInteractable != null)
         {
+            SoundPlayer.Play(interactSound, currentHoverPoint);
             currentInteractable.Interact();
             currentInteractable = null;
             return;
@@ -463,16 +500,12 @@ public class PlayerItemInteraction : MonoBehaviour
 
         if (currentHoveredStain != null)
         {
-            currentHoveredStain.Clean();
-            currentHoveredStain = null;
+            if (toolActions != null) toolActions.TryBeginScrub(currentHoveredStain, currentAimRay);
             return;
         }
 
-        if (currentHoveredBreakable != null)
-        {
-            currentHoveredBreakable.Break();
-            currentHoveredBreakable = null;
-        }
+        if (currentHoveredBreakable != null && toolActions != null)
+            toolActions.TryBeginPry(currentHoveredBreakable, currentHoverPoint);
     }
 
     private void PickUpWorldItem(WorldItem worldItem)
@@ -489,7 +522,13 @@ public class PlayerItemInteraction : MonoBehaviour
         // и не отстаёт от движущейся камеры.
         worldItem.transform.SetParent(itemHolder.HeldItemTransform, true);
         itemBeingPickedUp = worldItem;
-        pickupVelocity = Vector3.zero;
+        pickupStartPosition = worldItem.transform.localPosition;
+        pickupStartRotation = worldItem.transform.localRotation;
+        pickupElapsed = 0f;
+
+        float distance = Vector3.Distance(pickupStartPosition, GetPickupTargetLocalPosition(worldItem));
+        pickupDuration = Mathf.Clamp(distance / Mathf.Max(0.01f, pickupAnimationSpeed), MinPickupDuration, MaxPickupDuration);
+        pickupArc = pickupArcHeight * Mathf.Clamp01(distance);
 
         currentHighlighted = null;
         currentTakeTarget = null;
@@ -511,35 +550,41 @@ public class PlayerItemInteraction : MonoBehaviour
         if (infoUI != null) infoUI.Hide();
     }
 
+    /// <summary>
+    /// Полёт подобранного предмета в руку: по небольшой дуге (в осях руки — вверх), с замедлением в
+    /// конце; цель — СРАЗУ финальная позиция (для стакающихся предметов — свой «этаж» стопки), она
+    /// пересчитывается каждый кадр.
+    /// </summary>
     private void UpdatePickupAnimation()
     {
         if (itemBeingPickedUp == null) return;
 
-        // Цель полёта — СРАЗУ финальная позиция: для стакающихся предметов — свой «этаж» стопки
+        pickupElapsed += Time.deltaTime;
+        float t = Mathf.Clamp01(pickupElapsed / pickupDuration);
+        float eased = 1f - (1f - t) * (1f - t) * (1f - t);
+
         Vector3 targetLocalPosition = GetPickupTargetLocalPosition(itemBeingPickedUp);
         Quaternion targetLocalRotation = Quaternion.Euler(itemBeingPickedUp.itemData.handRotationOffset);
 
-        itemBeingPickedUp.transform.localPosition = Vector3.SmoothDamp(
-            itemBeingPickedUp.transform.localPosition,
-            targetLocalPosition,
-            ref pickupVelocity,
-            1f / Mathf.Max(0.01f, pickupAnimationSpeed),
-            Mathf.Infinity,
-            Time.deltaTime);
-        itemBeingPickedUp.transform.localRotation = Quaternion.Slerp(
-            itemBeingPickedUp.transform.localRotation,
-            targetLocalRotation,
-            1f - Mathf.Exp(-pickupAnimationSpeed * Time.deltaTime));
-        if (Vector3.Distance(itemBeingPickedUp.transform.localPosition, targetLocalPosition) > 0.01f) return;
+        itemBeingPickedUp.transform.localPosition = Vector3.LerpUnclamped(pickupStartPosition, targetLocalPosition, eased)
+                                                    + Vector3.up * (pickupArc * Mathf.Sin(eased * Mathf.PI));
+        itemBeingPickedUp.transform.localRotation = Quaternion.SlerpUnclamped(pickupStartRotation, targetLocalRotation, eased);
+        if (t < 1f) return;
 
+        itemBeingPickedUp.transform.localPosition = targetLocalPosition;
         CompletePickup();
     }
 
-    /// <summary>Предмет долетел до руки: в инвентарь, а если места уже нет — на пол перед игроком.</summary>
+    /// <summary>Предмет долетел до руки: звук, рука чуть «ловит» его, предмет — в инвентарь, а если места
+    /// уже нет — на пол перед игроком.</summary>
     private void CompletePickup()
     {
         WorldItem item = itemBeingPickedUp;
         itemBeingPickedUp = null;
+
+        if (item.itemData != null) SoundPlayer.Play(item.itemData.pickupSound, item.transform.position);
+        if (itemHolder != null) itemHolder.PlayCatchDip();
+
         if (!inventory.AddWorldItem(item))
             DropInFront(item);
     }

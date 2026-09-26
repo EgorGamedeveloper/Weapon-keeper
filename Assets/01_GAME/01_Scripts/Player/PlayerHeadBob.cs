@@ -1,7 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// Покачивание камеры при ходьбе и просадка при приземлении.
+/// Покачивание камеры при ходьбе и просадка при приземлении. Звуки шагов, прыжка и приземления —
+/// в PlayerFootsteps.
 ///
 /// Замена стороннего FirstPersonHeadBob (Easy Weapons): тот читал позицию через
 /// <c>GetComponent&lt;Rigidbody&gt;()</c> и тип FirstPersonCharacter, поэтому после перехода
@@ -49,39 +50,29 @@ public class PlayerHeadBob : MonoBehaviour
     [Tooltip("Затухание пружины приземления.")]
     public float landDamping = 12f;
 
-    [Header("Звуки")]
-    [Tooltip("Звук прыжка. Пусто — без звука.")]
-    public AudioClip jumpSound;
-    [Tooltip("Звук приземления. Пусто — без звука.")]
-    public AudioClip landSound;
-
     private Vector3 baseLocalPosition;
     private Vector3 previousPosition;
     private float travelled;
     private float springOffset;
     private float springVelocity;
-    private AudioSource audioSource;
 
     private void Awake()
     {
         if (head == null) return;
         baseLocalPosition = head.localPosition;
         previousPosition = transform.position;
-        audioSource = GetComponent<AudioSource>();
     }
 
     private void OnEnable()
     {
         if (controller == null) return;
         controller.Landed += HandleLanded;
-        controller.Jumped += HandleJumped;
     }
 
     private void OnDisable()
     {
         if (controller == null) return;
         controller.Landed -= HandleLanded;
-        controller.Jumped -= HandleJumped;
 
         if (head != null) head.localPosition = baseLocalPosition;
     }
@@ -129,14 +120,5 @@ public class PlayerHeadBob : MonoBehaviour
     private void HandleLanded(float impactVelocity)
     {
         springOffset -= Mathf.Min(maxLandDip, Mathf.Abs(impactVelocity) * landDip);
-        PlayClip(landSound);
-    }
-
-    private void HandleJumped() => PlayClip(jumpSound);
-
-    private void PlayClip(AudioClip clip)
-    {
-        if (clip == null || audioSource == null) return;
-        audioSource.PlayOneShot(clip);
     }
 }

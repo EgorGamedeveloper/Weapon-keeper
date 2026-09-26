@@ -28,6 +28,9 @@ public class EnemyHealth : MonoBehaviour
     /// <summary>Враг умер — хук для Enemy и будущей интеграции с квестами/трекерами.</summary>
     public event Action<EnemyHealth> OnDied;
 
+    /// <summary>Враг получил урон: (величина урона). По нему Enemy агрится на игрока.</summary>
+    public event Action<float> OnDamaged;
+
     private void Awake()
     {
         if (data != null) maxHealth = data.maxHealth;
@@ -54,6 +57,7 @@ public class EnemyHealth : MonoBehaviour
         if (IsDead) return;
 
         CurrentHealth = Mathf.Clamp(CurrentHealth + amount, 0f, maxHealth);
+        if (amount < 0f) OnDamaged?.Invoke(-amount);
         if (CurrentHealth <= 0f) Die();
     }
 

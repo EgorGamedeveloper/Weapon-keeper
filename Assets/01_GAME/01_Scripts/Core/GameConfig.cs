@@ -16,8 +16,11 @@ public class InteractionSettings
     [Tooltip("Радиус, в котором свободные места под предмет в руке подсвечиваются голограммой. 0 — без подсказок.")]
     [Min(0f)] public float placementHintRadius = 4f;
 
-    [Tooltip("Скорость перелёта предмета в руку при подборе.")]
+    [Tooltip("Скорость перелёта предмета в руку при подборе, м/с (время полёта ограничено 0.18–0.4 с).")]
     public float pickupAnimationSpeed = 12f;
+
+    [Tooltip("Высота дуги полёта предмета в руку, м (на коротком пути — ниже). 0 — по прямой.")]
+    [Min(0f)] public float pickupArcHeight = 0.1f;
 
     [Tooltip("На каком расстоянии от камеры появляется выброшенный предмет.")]
     public float dropDistance = 1.25f;
@@ -138,6 +141,20 @@ public class PlayerMovementSettings
     public float maxSlideSpeed = 10f;
 }
 
+/// <summary>Здоровье игрока с восстановлением, без полоски (как в Call of Duty). См. PlayerHealth.</summary>
+[System.Serializable]
+public class PlayerHealthSettings
+{
+    [Tooltip("Максимальное здоровье.")]
+    [Min(1f)] public float maxHealth = 100f;
+
+    [Tooltip("Через сколько секунд после последнего урона начинается восстановление.")]
+    [Min(0f)] public float regenDelay = 4f;
+
+    [Tooltip("Скорость восстановления, единиц здоровья в секунду.")]
+    [Min(0f)] public float regenRate = 25f;
+}
+
 /// <summary>Пороги восстановления здания, на которых открываются новые возможности.</summary>
 [System.Serializable]
 public class RestorationProgressSettings
@@ -171,8 +188,38 @@ public class ShelfSettings
     [Tooltip("Кривая анимации полёта.")]
     public DG.Tweening.Ease placementEase = DG.Tweening.Ease.OutCubic;
 
+    [Tooltip("Высота дуги полёта на полку, м (на коротком пути — ниже). 0 — по прямой.")]
+    [Min(0f)] public float placementArcHeight = 0.12f;
+
     [Tooltip("За сколько секунд стопка оседает, когда из неё забрали предмет.")]
     [Min(0f)] public float settleDuration = 0.25f;
+}
+
+/// <summary>Работа руками и инструментами: тряпка по пятну и лом-рычаг (PlayerToolActions), удар кувалдой
+/// (SledgehammerSwing). Прочность конкретного объекта (hitPoints) — на самом Breakable.</summary>
+[System.Serializable]
+public class ToolSettings
+{
+    [Header("Тряпка")]
+    [Tooltip("Насколько тряпка сдвигается по пятну на единицу движения мыши (Input «Mouse X/Y»), м.")]
+    [Min(0.0001f)] public float ragSensitivity = 0.012f;
+
+    [Header("Лом")]
+    [Tooltip("Насколько рычаг сдвигается на единицу движения мыши по вертикали (весь ход — от −1 до 1).")]
+    [Min(0.001f)] public float leverSensitivity = 0.08f;
+
+    [Tooltip("Угол качания лома вокруг лапки на краю хода рычага, градусы.")]
+    [Range(1f, 45f)] public float leverAngle = 14f;
+
+    [Tooltip("Суммарный ход рычага, чтобы снять доску. Полный качок вверх-вниз — 4, упор в край ход не даёт.")]
+    [Min(0.5f)] public float pryTravelToBreak = 14f;
+
+    [Header("Кувалда")]
+    [Tooltip("Урон по врагу за один удар (здоровье зомби — в EnemyData).")]
+    [Min(0f)] public float sledgehammerDamage = 40f;
+
+    [Tooltip("Дальность удара от камеры, м.")]
+    [Min(0.5f)] public float sledgehammerRange = 2.2f;
 }
 
 /// <summary>Валюта и терминал. См. PlayerWallet.</summary>
@@ -222,6 +269,10 @@ public class GameConfig : ScriptableObject
     [Tooltip("Скорости, прыжок и гравитация (PlayerCharacterController).")]
     public PlayerMovementSettings movement = new PlayerMovementSettings();
 
+    [Header("Здоровье игрока")]
+    [Tooltip("Здоровье и восстановление (PlayerHealth).")]
+    public PlayerHealthSettings playerHealth = new PlayerHealthSettings();
+
     [Header("Прогресс восстановления")]
     [Tooltip("Пороги прогресса восстановления здания (BuildingRestorationTracker).")]
     public RestorationProgressSettings restoration = new RestorationProgressSettings();
@@ -237,6 +288,10 @@ public class GameConfig : ScriptableObject
     [Header("Видение")]
     [Tooltip("Длительность, затухание и перезарядка «видения» (PlacementVision).")]
     public VisionSettings vision = new VisionSettings();
+
+    [Header("Инструменты")]
+    [Tooltip("Тряпка, лом-рычаг и кувалда (PlayerToolActions, SledgehammerSwing).")]
+    public ToolSettings tools = new ToolSettings();
 
     [Header("Экономика")]
     [Tooltip("Стартовый баланс и символ валюты (PlayerWallet).")]

@@ -29,6 +29,23 @@ public class WorldItem : MonoBehaviour
     [Tooltip("Цвет полосы. HDR: значения больше 1 дают свечение через Bloom.")]
     [ColorUsage(false, true)] public Color placementScanColor = new Color(2.4f, 1.8f, 0.45f, 1f);
 
+    [Tooltip("«Пружинка» по приземлении на место: насколько предмет вздувается, доля размера. 0 — без неё.")]
+    [Range(0f, 0.3f)] public float landingPunch = 0.08f;
+
+    [Tooltip("Облачко пыли по приземлении на место (префаб с ParticleSystem, сам себя уничтожает). Пусто — без пыли.")]
+    public GameObject landingDust;
+
+    [Header("Удар о поверхность")]
+    [Tooltip("Удары медленнее этого молчат (скатывание, оседание), м/с. Звук — ItemData.impactSound.")]
+    [Min(0f)] public float impactMinSpeed = 1.2f;
+
+    [Tooltip("Скорость удара, при которой звук играет на полной громкости, м/с.")]
+    [Min(0.1f)] public float impactFullSpeed = 6f;
+
+    // Первые мгновения после загрузки сцены предметы оседают на полу — это не «падение», звук не нужен.
+    private const float ImpactSilenceAfterLoad = 0.5f;
+    private const float ImpactCooldown = 0.1f;
+
     private ShelfSlot sourceSlot;
     private Renderer[] renderers;
     private MeshFilter[] meshFilters;
@@ -41,6 +58,8 @@ public class WorldItem : MonoBehaviour
     private Tween placementTween;
     private Tween settleTween;
     private Tween scanTween;
+    private Tween punchTween;
+    private float lastImpactTime = -1f;
 
     public ItemState State { get; private set; } = ItemState.InWorld;
 
@@ -142,14 +161,15 @@ public class WorldItem : MonoBehaviour
 
     /// <summary>
     /// То же самое, что PlaceOnShelf, но предмет не телепортируется на место, а долетает туда
-    /// плавной анимацией из своей текущей позы (обычно — из руки игрока). Состояние (State,
+    /// плавной анимацией из своей текущей позы (обычно — из руки игрока) по небольшой дуге высотой
+    /// arcHeight (на коротком пути — ниже). По приземлении — звук, «пружинка», пыль и полоса. Состояние (State,
     /// sourceSlot) меняется сразу, синхронно: сейв это не ломает — ShelfSlot уже добавил предмет
     /// в placedItems до вызова этого метода, а точная поза для предметов на полке вообще не
     /// хранится (SaveLoadService.CaptureWorld), только id и порядок в стопке. Коллайдер
     /// включается только по прилёту, чтобы летящий предмет не мешал лучу игрока и не сталкивался
     /// с соседями.
     /// </summary>
-    public void PlaceOnShelfAnimated(Transform slotTransform, ShelfSlot slot, Vector3 localPosition, Quaternion localRotation, float duration, Ease ease)
+    public void PlaceOnShelfAnimated(Transform slotTransform, ShelfSlot slot, Vector3 localPosition, Quaternion localRotation, float duration, Ease ease, float arcHeight = 0f)
     {
         KillTweens();
 
@@ -174,16 +194,30 @@ public class WorldItem : MonoBehaviour
             return;
         }
 
-        var sequence = DOTween.Sequence();
-        sequence.Join(transform.DOLocalMove(localPosition, duration).SetEase(ease));
-        sequence.Join(transform.DOLocalRotateQuaternion(localRotation, duration).SetEase(ease));
-        sequence.Join(transform.DOScale(shelfScale, duration).SetEase(ease));
-        sequence.OnComplete(() =>
-        {
-            EnablePlacedColliders();
-            PlayPlacementFeedback();
-        });
-        placementTween = sequence;
+        Vector3 startPosition = transform.localPosition;
+        Quaternion startRotation = transform.localRotation;
+        Vector3 startScale = transform.localScale;
+        // Дуга в пространстве ячейки, по кривой пути (а не по времени): предмет приподнимается и
+        // опускается на место, вершина — на середине пути. Короткий путь — дуга ниже.
+        float arc = arcHeight * Mathf.Clamp01(Vector3.Distance(transform.position, slotTransform.TransformPoint(localPosition)));
+
+        placementTween = DOVirtual.Float(0f, 1f, duration, t =>
+            {
+                float eased = DOVirtual.EasedValue(0f, 1f, t, ease);
+                transform.localPosition = Vector3.LerpUnclamped(startPosition, localPosition, eased)
+                                          + Vector3.up * (arc * Mathf.Sin(Mathf.Clamp01(eased) * Mathf.PI));
+                transform.localRotation = Quaternion.SlerpUnclamped(startRotation, localRotation, eased);
+                transform.localScale = Vector3.LerpUnclamped(startScale, shelfScale, eased);
+            })
+            .SetEase(Ease.Linear)
+            .OnComplete(() =>
+            {
+                transform.localPosition = localPosition;
+                transform.localRotation = localRotation;
+                transform.localScale = shelfScale;
+                EnablePlacedColliders();
+                PlayPlacementFeedback();
+            });
     }
 
     /// <summary>
@@ -198,15 +232,42 @@ public class WorldItem : MonoBehaviour
             : transform.localScale;
     }
 
-    /// <summary>Фидбек установки предмета на место (по приземлению): звук (ItemData.placementSound,
-    /// если задан) и светящаяся полоса снизу вверх (PlacementScanEffect).</summary>
+    /// <summary>Фидбек установки предмета на место (по приземлению): звук (ItemData.placeSound),
+    /// «пружинка», облачко пыли и светящаяся полоса снизу вверх (PlacementScanEffect).</summary>
     private void PlayPlacementFeedback()
     {
-        if (itemData != null && itemData.placementSound != null)
-            AudioSource.PlayClipAtPoint(itemData.placementSound, transform.position);
+        if (itemData != null) SoundPlayer.Play(itemData.placeSound, transform.position);
+
+        CompletePunch();
+        punchTween = LandingFeedback.Punch(transform, landingPunch);
+        LandingFeedback.SpawnDust(landingDust, renderers);
 
         scanTween?.Kill();
         scanTween = PlacementScanEffect.Play(renderers, meshFilters, originalMeshes, gameObject.layer, placementScanColor, placementScanDuration);
+    }
+
+    /// <summary>Досрочно закончить «пружинку»: Complete возвращает масштаб точно к исходному, Kill
+    /// оставил бы предмет раздутым.</summary>
+    private void CompletePunch()
+    {
+        if (punchTween != null && punchTween.IsActive()) punchTween.Complete();
+        punchTween = null;
+    }
+
+    /// <summary>Звук удара о поверхность: только у лежащего в мире предмета (упал, брошен, выпал
+    /// из ящика), громкость — от скорости удара.</summary>
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (State != ItemState.InWorld || itemData == null || itemData.impactSound == null) return;
+        if (Time.timeSinceLevelLoad < ImpactSilenceAfterLoad || Time.time - lastImpactTime < ImpactCooldown) return;
+
+        float speed = collision.relativeVelocity.magnitude;
+        if (speed < impactMinSpeed) return;
+        lastImpactTime = Time.time;
+
+        float volume = Mathf.Lerp(0.3f, 1f, Mathf.InverseLerp(impactMinSpeed, impactFullSpeed, speed));
+        Vector3 point = collision.contactCount > 0 ? collision.GetContact(0).point : transform.position;
+        SoundPlayer.Play(itemData.impactSound, point, volume);
     }
 
     /// <summary>Нарисовать поверх предмета дополнительный проход (например, подсветку «видения» сквозь
@@ -242,6 +303,7 @@ public class WorldItem : MonoBehaviour
         settleTween = null;
         scanTween?.Kill();
         scanTween = null;
+        CompletePunch();
     }
 
     public void Drop(Vector3 position, Quaternion rotation, Vector3 velocity)

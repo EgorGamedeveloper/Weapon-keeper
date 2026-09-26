@@ -35,6 +35,10 @@ public class RepairPoint : MonoBehaviour, IPlaceableSlot
     [Tooltip("Починенный вид (включается после починки).")]
     public GameObject fixedVisual;
 
+    [Header("Звук")]
+    [Tooltip("Точка полностью починена. Не задан — тихо.")]
+    public SoundCue repairedSound;
+
     /// <summary>Починена ли точка.</summary>
     public bool IsRepaired { get; private set; }
 
@@ -165,8 +169,9 @@ public class RepairPoint : MonoBehaviour, IPlaceableSlot
     {
         FilledCount = CountFilledSlots();
         RefreshLayers();
+        // Звук завершения — когда последний кирпич долетит до места, а не в момент клика.
         if (FilledCount >= RequiredCount && !IsRepaired)
-            CompleteRepair();
+            CompleteRepair(slot != null ? slot.placementDuration : 0f);
     }
 
     /// <summary>Какие места кладки заполнены — для сейва, по порядку Slots.</summary>
@@ -225,10 +230,12 @@ public class RepairPoint : MonoBehaviour, IPlaceableSlot
         RefreshLayers();
     }
 
-    private void CompleteRepair()
+    private void CompleteRepair(float soundDelay = 0f)
     {
         IsRepaired = true;
         RefreshLayers();
+        if (soundDelay > 0f) DOVirtual.DelayedCall(soundDelay, () => SoundPlayer.Play(repairedSound, transform.position)).SetLink(gameObject);
+        else SoundPlayer.Play(repairedSound, transform.position);
 
         if (brokenVisual != null) brokenVisual.SetActive(false);
         if (fixedVisual != null)

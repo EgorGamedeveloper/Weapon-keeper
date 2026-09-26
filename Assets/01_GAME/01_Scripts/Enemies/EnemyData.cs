@@ -19,6 +19,9 @@ public class EnemyData : ScriptableObject
     [Tooltip("Префаб, который создаёт EnemySpawner для этого типа врага (должен содержать Enemy/EnemyHealth).")]
     public GameObject enemyPrefab;
 
+    [Tooltip("Временный цвет капсулы, чтобы различать типы врагов, пока нет моделей. Белый — без перекраски.")]
+    public Color tint = Color.white;
+
     [Header("Передвижение (NavMeshAgent)")]
     [Tooltip("Базовая скорость перемещения, м/с.")]
     [Min(0f)] public float moveSpeed = 1.4f;
@@ -68,6 +71,39 @@ public class EnemyData : ScriptableObject
 
     [Tooltip("Как часто (сек) враг на паузе поворачивается в новую сторону.")]
     public Vector2 lookAroundInterval = new Vector2(0.8f, 2f);
+
+    [Header("Восприятие")]
+    [Tooltip("Дальность зрения, м.")]
+    [Min(0f)] public float sightRadius = 15f;
+
+    [Tooltip("Угол обзора (полный конус), градусов.")]
+    [Range(1f, 360f)] public float sightAngle = 120f;
+
+    [Tooltip("Высота глаз над основанием врага, м — отсюда проверяется прямая видимость.")]
+    [Min(0f)] public float eyeHeight = 1.6f;
+
+    [Tooltip("В этом радиусе (м) враг чует игрока с любой стороны, даже спиной и сквозь препятствия.")]
+    [Min(0f)] public float proximityRadius = 2.5f;
+
+    [Tooltip("Сколько секунд враг продолжает преследовать игрока, не видя его, прежде чем вернуться домой.")]
+    [Min(0f)] public float loseTargetTime = 5f;
+
+    [Header("Преследование")]
+    [Tooltip("Скорость погони за игроком, м/с (игрок ходит ~3.5, бегает ~5.5).")]
+    [Min(0f)] public float chaseSpeed = 3f;
+
+    [Header("Атака")]
+    [Tooltip("Дистанция удара, м (от центра врага до центра игрока по горизонтали).")]
+    [Min(0.1f)] public float attackRange = 1.6f;
+
+    [Tooltip("Урон одного удара. Здоровье игрока по умолчанию 100 — 30 урона убивают за 4 удара.")]
+    [Min(0f)] public float attackDamage = 30f;
+
+    [Tooltip("Замах: пауза между началом удара и нанесением урона, с. Игрок успевает отскочить.")]
+    [Min(0f)] public float attackWindup = 0.4f;
+
+    [Tooltip("Пауза между ударами, с.")]
+    [Min(0f)] public float attackCooldown = 1.2f;
 
 #if UNITY_EDITOR
     private void OnValidate()

@@ -34,6 +34,9 @@ public class ShelfSlot : MonoBehaviour, IPlaceableSlot
     [Tooltip("Кривая анимации полёта.")]
     public Ease placementEase = Ease.OutCubic;
 
+    [Tooltip("Высота дуги полёта, м (на коротком пути — ниже). 0 — по прямой.")]
+    [Min(0f)] public float placementArcHeight = 0.12f;
+
     [Tooltip("За сколько секунд стопка оседает, когда из неё забрали предмет.")]
     [Min(0f)] public float settleDuration = 0.25f;
 
@@ -100,6 +103,7 @@ public class ShelfSlot : MonoBehaviour, IPlaceableSlot
         if (settings == null) return;
         placementDuration = settings.placementDuration;
         placementEase = settings.placementEase;
+        placementArcHeight = settings.placementArcHeight;
         settleDuration = settings.settleDuration;
     }
 
@@ -168,7 +172,7 @@ public class ShelfSlot : MonoBehaviour, IPlaceableSlot
         placedItems.Add(worldItem);              // ← стопка теперь реально растёт
         currentItem = worldItem.itemData;
 
-        worldItem.PlaceOnShelfAnimated(transform, this, localPos, Quaternion.identity, placementDuration, placementEase);
+        worldItem.PlaceOnShelfAnimated(transform, this, localPos, Quaternion.identity, placementDuration, placementEase, placementArcHeight);
         RefreshPlacementTrigger();
 
         OnItemPlaced?.Invoke(this);

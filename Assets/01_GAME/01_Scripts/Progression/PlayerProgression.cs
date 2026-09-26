@@ -42,6 +42,10 @@ public class PlayerProgression : MonoBehaviour
     /// <summary>Изменился накопленный опыт: (текущий опыт, опыт до следующего уровня).</summary>
     public event Action<int, int> OnXPChanged;
 
+    /// <summary>Начислен опыт (сколько) — до левелапа, если он случится. Для всплывающего «+N XP»
+    /// (XPGainPopupUI). RestoreState его не поднимает.</summary>
+    public event Action<int> OnXPGained;
+
     /// <summary>Левелап: (новый уровень, сколько очков способностей начислено).</summary>
     public event Action<int, int> OnLevelUp;
 
@@ -117,6 +121,7 @@ public class PlayerProgression : MonoBehaviour
     {
         if (amount <= 0) return;
 
+        OnXPGained?.Invoke(amount);
         CurrentXP += amount;
 
         while (CurrentXP >= XPToNextLevel)

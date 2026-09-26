@@ -1,5 +1,16 @@
 using UnityEngine;
 
+/// <summary>Чем предмет работает в слоте экипировки (см. ItemData.toolKind).</summary>
+public enum ToolKind
+{
+    /// <summary>Не инструмент.</summary>
+    None,
+    /// <summary>Лом: поддевает доски и снимает их (режим рычага, PlayerToolActions).</summary>
+    Crowbar,
+    /// <summary>Кувалда: бьёт замахом — ломает Breakable и наносит урон врагам (SledgehammerSwing).</summary>
+    Sledgehammer,
+}
+
 /// <summary>
 /// ScriptableObject с описанием предмета.
 /// Создаётся через Assets > Create > Inventory > Item Data.
@@ -61,13 +72,20 @@ public class ItemData : ScriptableObject
     /// <summary>Признак того, что предмет — оружие (можно экипировать и оно стреляет через Easy Weapons).</summary>
     public bool IsWeapon => weaponPrefab != null;
 
-    [Header("Инструмент (разбор Breakable)")]
-    [Tooltip("Инструмент для разбора Breakable-объектов (например, лом). Не оружие — weaponPrefab не участвует.")]
-    public bool canBreakObjects = false;
+    [Header("Инструмент")]
+    [Tooltip("Чем предмет работает в слоте экипировки: лом поддевает и снимает доски, кувалда бьёт замахом " +
+             "(ломает Breakable, наносит урон врагам). None — не инструмент. Не оружие — weaponPrefab не участвует.")]
+    public ToolKind toolKind = ToolKind.None;
 
-    [Header("Эффекты установки")]
-    [Tooltip("Звук при установке предмета на место (полка и т.п.). Не задан — тихо, без ошибки.")]
-    public AudioClip placementSound;
+    [Header("Звуки")]
+    [Tooltip("Предмет долетел до руки (подбор с пола или с полки). Не задан — тихо.")]
+    public SoundCue pickupSound;
+
+    [Tooltip("Предмет встал на место: полка, место в кладке. Не задан — тихо.")]
+    public SoundCue placeSound;
+
+    [Tooltip("Удар о поверхность, когда предмет падает или брошен; громкость — от скорости удара. Не задан — тихо.")]
+    public SoundCue impactSound;
 
 #if UNITY_EDITOR
     private void OnValidate()
