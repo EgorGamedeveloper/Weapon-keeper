@@ -15,6 +15,7 @@ using UnityEngine.UI;
 ///
 /// Пауза: Time.timeScale = 0, AudioListener.pause, игровой ввод выключен тем же GameplayInputBlocker,
 /// что у окна навыков и терминала (они же не откроются поверх паузы). Все анимации — в реальном времени.
+/// Открытие оверлея Steam тоже ставит игру на паузу (SteamManager.OnOverlayActivated).
 /// </summary>
 [DefaultExecutionOrder(-100)]
 public class PauseMenu : MonoBehaviour
@@ -73,6 +74,7 @@ public class PauseMenu : MonoBehaviour
     private bool audioPausedBeforePause;
     private bool cursorLockedLastFrame;
     private int escapeFrame = -1;
+    private SteamManager steam;
 
     private void Awake()
     {
@@ -89,8 +91,17 @@ public class PauseMenu : MonoBehaviour
         }
     }
 
+    private void OnEnable()
+    {
+        steam = SteamManager.Instance;
+        if (steam != null) steam.OnOverlayActivated += HandleOverlayActivated;
+    }
+
     private void OnDisable()
     {
+        if (steam != null) steam.OnOverlayActivated -= HandleOverlayActivated;
+        steam = null;
+
         // Сцену выгружают прямо на паузе (выход в меню) — время и звук не должны остаться остановленными.
         if (!IsOpen) return;
         IsOpen = false;
@@ -121,6 +132,14 @@ public class PauseMenu : MonoBehaviour
     private void LateUpdate() => cursorLockedLastFrame = Cursor.lockState == CursorLockMode.Locked;
 
     private bool CanOpenFromKeyboard() => cursorLockedLastFrame && (inputBlocker == null || !inputBlocker.IsBlocked);
+
+    /// <summary>Оверлей Steam (Shift+Tab) открылся поверх игры — пауза. Поверх другого модального окна
+    /// (навыки, терминал) пауза не открывается, как и по Esc. Закрытие оверлея паузу не снимает — игрок
+    /// вернётся кнопкой «Продолжить» или Esc.</summary>
+    private void HandleOverlayActivated(bool active)
+    {
+        if (active && !IsOpen && (inputBlocker == null || !inputBlocker.IsBlocked)) Open();
+    }
 
     // ───────────────────────── Открытие / закрытие ─────────────────────────
 

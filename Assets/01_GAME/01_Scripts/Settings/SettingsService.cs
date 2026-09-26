@@ -92,6 +92,13 @@ public class SettingsService : MonoBehaviour
         if (firstRun) Save();
     }
 
+    private void Start()
+    {
+        // Страховка порядка: язык применяется и в Awake, но если LocalizationService проснулся позже
+        // (порядок сервисов на объекте задаёт DefaultExecutionOrder), он выставил бы язык по умолчанию.
+        if (LocalizationService.Instance != null) LocalizationService.Instance.SetLanguage(Current.language);
+    }
+
     private void OnEnable() => SceneManager.sceneLoaded += HandleSceneLoaded;
 
     private void OnDisable() => SceneManager.sceneLoaded -= HandleSceneLoaded;

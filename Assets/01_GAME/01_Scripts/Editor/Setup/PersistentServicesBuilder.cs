@@ -26,6 +26,7 @@ public static class PersistentServicesBuilder
 
         var steam = root.AddComponent<SteamManager>();
         steam.config = steamConfig;
+        root.AddComponent<SteamRichPresence>();
 
         var localization = root.AddComponent<LocalizationService>();
         localization.stringsTable = strings;
@@ -42,5 +43,20 @@ public static class PersistentServicesBuilder
         AchievementsUIBuilder.BuildToastCanvas(root.transform);
 
         return UIBuilderKit.SavePrefab(root, PrefabPath);
+    }
+
+    /// <summary>Есть ли префаб и все ли сервисы в нём (префаб, собранный старой версией меню, пересобирается).</summary>
+    public static bool IsUpToDate()
+    {
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+        return prefab != null
+               && prefab.GetComponent<PersistentServicesRoot>() != null
+               && prefab.GetComponent<SteamManager>() != null
+               && prefab.GetComponent<SteamRichPresence>() != null
+               && prefab.GetComponent<LocalizationService>() != null
+               && prefab.GetComponent<SettingsService>() != null
+               && prefab.GetComponent<StatsService>() != null
+               && prefab.GetComponent<AchievementDebugOverlay>() != null
+               && prefab.GetComponentInChildren<AchievementToastUI>(true) != null;
     }
 }
