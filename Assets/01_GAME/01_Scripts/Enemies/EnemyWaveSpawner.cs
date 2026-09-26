@@ -46,10 +46,14 @@ public class EnemyWaveSpawner : MonoBehaviour
     }
 
     /// <summary>Создать волну вокруг игрока. Возвращает число появившихся врагов.</summary>
-    public int SpawnWave()
+    public int SpawnWave() => SpawnWave(enemyData, count);
+
+    /// <summary>Волна заданного типа и размера (сюжетное событие «Спаун врагов → вокруг игрока»).
+    /// spawnedEnemies — если задан, сюда добавляются появившиеся враги.</summary>
+    public int SpawnWave(EnemyData enemyData, int count, System.Collections.Generic.List<Enemy> spawnedEnemies = null)
     {
         PlayerHealth player = spawner != null ? spawner.player : null;
-        if (player == null || player.IsDead || enemyData == null) return 0;
+        if (player == null || player.IsDead || enemyData == null || count <= 0) return 0;
         if (!NavMesh.SamplePosition(player.transform.position, out NavMeshHit playerHit, 5f, NavMesh.AllAreas)) return 0;
 
         Vector3 center = playerHit.position;
@@ -76,6 +80,7 @@ public class EnemyWaveSpawner : MonoBehaviour
                 if (enemy == null) continue;
 
                 enemy.Aggro(persistent: true);
+                spawnedEnemies?.Add(enemy);
                 spawned++;
                 break;
             }

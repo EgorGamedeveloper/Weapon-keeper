@@ -76,6 +76,7 @@
   "decor":  [ { "id": "d_…", "storyline": "main", "kind": "shape|icon|image", "shape": "rect|round|ellipse|arrow|line|text",
                 "icon": "radio", "image": "img_…", "text": "…", "x": 0, "y": 0, "w": 200, "h": 60,
                 "color": "--ink", "opacity": 1, "rot": 0, "fill": true } ],
+  "annotations": [ { "id": "a_…", "from": { "kind": "node|decor", "id": "…" }, "to": "<id ноды>" } ],  // пунктирные связи
   "images": { "img_…": "data:image/webp;base64,…" }
 }
 ```
@@ -93,7 +94,7 @@
 | `trigger` | `trigger` (вид, см. §6.4), цели `target`/`category`/`item`/`zone`/`orderId`/`lootBoxId`/`enemyType`/`questId`/`skillId`, `count`, `value` | `StoryTrigger.Create(kind)`; завершается при срабатывании |
 | `wait` | `seconds` | корутина, игровое время |
 | `and` | — | включается, когда завершены **все** входящие |
-| `action` | `action` (`giveMoney`/`giveXp`/`enableObject`/`disableObject`), `value`, `target` (storyId объекта) | выполняется и завершается сразу |
+| `action` | `action` (`giveMoney`/`giveXp`/`enableObject`/`disableObject`/`spawnEnemies`), `value`, `target` (storyId объекта; у `spawnEnemies` — PersistentId точки спавна). Для `spawnEnemies`: `where` (`point`/`player`), `spawns: [{enemyType, count}]` (пустой тип — тип точки), `aggro`, `radius` | выполняется и завершается сразу |
 | `cutscene` | `target` (storyId `StoryCutscene`), `skippable` (bool, по умолчанию true), `hideHud` (bool, true) | очередь `StoryCutscenePlayer`; завершается по окончании/пропуску |
 | `note` | `text` | в игре не участвует |
 
@@ -143,10 +144,11 @@
 | Отрисовка | `applyView` (transform `#world`), `nodeSummary` (тело ноды на холсте по типу), `buildNodeEl`/`placeNodeEl`, `renderNodes`/`renderNodesLight`, `portPos`/`wirePath`/`renderWires`, `renderAll`, `renderBanner`. |
 | Инспектор | `catalogList`/`catalogName` (у `quests` подмешаны квесты самого графа), генераторы полей `fieldWrap`, `textInput`, `selectInput`, `catalogInput` (input + datalist из каталога), `locInput` (языки, переводы свёрнуты), `checkField`; `renderInspector` и `renderQuest`/`renderRadio`/`renderTrigger`/`renderAction`, ветка `cutscene`. |
 | Проверка графа | `validate()` → `state.issues [{sev: err/warn/info, node, text}]`; достижимость от корней, обязательные поля по справочникам, каталог (`checkCatalog`), переводы. `renderIssues`, `issueWhere` (с линией). |
+| Холст: вставка в нитку, пунктир | `canSplice`/`wireAt` (`isPointInStroke` по `path.hit[data-link]`)/`spliceIntoLink`, подсветка `splitHover` (класс `split`); пунктирные связи `annotations`: `appendAnnoPorts` (точки `.aport` у заметок и оформления, занятые + одна свободная), `annoSource` (с учётом поворота), `renderAnnos` (в `renderWires`, класс `anno`, выделение `state.sel.anno`), `addAnnotation`. Точки `.aport` лежат под слоем ниток — `pointerdown` ищет их через `elementsFromPoint`. |
 | Рамки и оформление | `SWATCHES`, `SHAPES`, `ICONS` (свои SVG 24×24), `iconSvg`, `shapeSvg`, `renderBoard`, `buildGroupEl`/`buildDecorEl`, `selectItem`, `boardPointerDown`/`boardPointerMove` (перенос, размер, рамка тащит содержимое), `addGroup`/`addDecor`, инспекторы рамки/оформления, картинки (`readImageFile` → 512 px WebP, `importImages`, drop файлов на холст, `removeUnusedImages`). |
 | Поиск | `nodeSearchTexts`, `searchAll`, `renderSearch`, `applySearchHighlight` (`.hit`/`.dim`), `goToResult` (переключает линию), клавиши в `#searchInput`. |
 | Сюжетные линии | `renderTabs`, `switchLine` (запоминает `state.views`), `addLine`, `renameLine`, `deleteLine` (только пустую), `toast`. |
-| Мышь, касания, клавиатура | `pointerdown/move/up` на холсте: порт → нитка, нода → перенос, `.bi` → рамка/оформление, иначе панорама; колесо — масштаб; щипок; `fitAll`, `focusNode`, `selectNode`, `connect`, `deleteSelection`, `duplicateSelection`, `addNode(type, at)`; перетаскивание из палитры (`palPointerDown(e, payload)` → призрак → drop); глобальные клавиши (Del, Ctrl+D/Z/Y/F, Esc). |
+| Мышь, касания, клавиатура | `pointerdown/move/up` на холсте: средняя кнопка → всегда панорама, не левая → ничего; `.aport` → пунктирная связь, пунктир → выделение, порт → нитка, полоса прокрутки `.n-body` → ничего, нода → перенос (свободную можно бросить на нитку), `.bi` → рамка/оформление (`.rz` — размер, `.rt` — поворот), иначе панорама; колесо над прокручиваемым `.n-body` листает ноду; колесо — масштаб; щипок; `fitAll`, `focusNode`, `selectNode`, `connect`, `deleteSelection`, `duplicateSelection`, `addNode(type, at, splitIdx)`; перетаскивание из палитры (`palPointerDown(e, payload)` → призрак → drop, на нитку — в разрыв); двойной щелчок по карточке — `addAtCenter(payload)`; глобальные клавиши (Del, Ctrl+D/Z/Y/F, Esc). |
 | Панели | `closeSheets`/`openSheet` (окна с `data-sticky` закрываются только своими кнопками), языки, каталог (`applyCatalogText`), импорт/экспорт JSON. |
 | Оформление: тема и цвета | `prefs` (`wk-story-prefs-v1` + db `graph/appearance`), `COLOR_VARS` (меню «Цвета»), `applyPrefs`. |
 | Формат файла | `toFileFormat`, `MIGRATIONS`, `migrateGraph`, `KNOWN_TOP`, `fromFileFormat`. |
@@ -154,17 +156,18 @@
 | Приложение для Mac | объект `file`, `syncFile`, `flushFile`, `initFile`, черновик (`writeDraft`, `offerDraft`), конфликт (`onFileChanged`, `openConflict`), битый файл (`enterBroken`), история версий (`renderBackupList`, `restoreBackup`), `onMenu`. |
 | Пример | `exampleGraph()` — показывается, пока граф пуст; первая правка делает его «своим» (`adoptExample`). |
 | Размеры панелей | `layout` (`wk-story-layout-v1` в localStorage), `makeSplitter`. |
+| Инспектор «Спаун врагов» | `ensureSpawnFields`, `renderSpawnEnemies` (где, точка, разброс, «сразу нападают», строки тип × сколько), `spawnSummary` (тело ноды). |
 | Запуск | `buildPalette` (вкладки «Ноды/Формы/Иконки/Картинки»), `init()` — выбор режима хранения и загрузка. |
 
 ### 3.3 Модель данных в памяти
 ```js
 state = {
-  graph: { languages, nodes: Map<id, node>, links: [], storylines: [], groups: [], decor: [], images: {}, extra },
+  graph: { languages, nodes: Map<id, node>, links: [], storylines: [], groups: [], decor: [], annotations: [], images: {}, extra },
   line,        // id открытой линии
   views,       // {lineId: {x,y,k}}
   catalog,     // {repairPoints:[{id,name}], …, skills, cutscenes} — из scene_catalog.json
   view,        // {x, y, k} — сдвиг и масштаб холста
-  sel,         // {node, link, group, decor} — выделено одно
+  sel,         // {node, link, group, decor, anno} — выделено одно
   isExample, issues, storage,  // storage: 'db' | 'local' | 'file' | 'none'
 }
 ```
@@ -189,7 +192,7 @@ changed(true);              // true — перерисовать всё; false �
 | Режим | Когда | Как хранит |
 |---|---|---|
 | `file` | есть `window.storyHost` (приложение для Mac) | файл проекта через мост; черновик, копии, конфликты — §4 |
-| `db` | страница claude.ai и `window.claude.use('db')` доступен | документы: `nodes/<id>` (по ноде), `graph/links`, `graph/meta` (языки, линии), `graph/groups`, `graph/decor`, `images/<id>`, `graph/catalog`, `graph/appearance`; сравнение с `saved` — пишется только изменённое |
+| `db` | страница claude.ai и `window.claude.use('db')` доступен | документы: `nodes/<id>` (по ноде), `graph/links`, `graph/meta` (языки, линии), `graph/groups`, `graph/decor`, `graph/annotations`, `images/<id>`, `graph/catalog`, `graph/appearance`; сравнение с `saved` — пишется только изменённое |
 | `local` | всё остальное | `localStorage['wk-story-graph-v1']` (+ `-catalog`); баннер «только в этом браузере» |
 
 Артефакт на claude.ai — отдельная опубликованная копия HTML. Сам с git он **не обновляется**: чтобы страница получила новую версию, её нужно переопубликовать тем же файлом. Приложение для Mac берёт редактор из проекта и обновляется через `git pull`.
@@ -333,7 +336,7 @@ changed(true);              // true — перерисовать всё; false �
 | `levelReached` | Достигнут уровень | `PlayerProgression` | value |
 | `restorationPercent` | Восстановление здания ≥ % | `BuildingRestorationTracker` | value |
 | `moneyReached` | На счету денег ≥ | `PlayerWallet.OnBalanceChanged` | value |
-| `enemyKilled` | Убит враг | `EnemySpawnPoint.OnEnemyKilled` | target(spawn)?, enemyType?, count |
+| `enemyKilled` | Убит враг | `EnemySpawnPoint.OnEnemyKilled` (и дополнительные враги точки из `SpawnExtra`); без точки — ещё `StoryDirector.OnWaveEnemyKilled` (сюжетные волны вокруг игрока) | target(spawn)?, enemyType?, count |
 | `orderPacked` / `orderShipped` | Собран / отправлен заказ | `ShippingService` | orderId? |
 | `crateArrived` / `crateOpened` | Приехал / открыт ящик | `SupplyService.OnCrateArrived/OnCrateOpened` | lootBoxId? |
 | `crateOrdered` | Куплен ящик поставки | `SupplyService.OnCrateOrdered` | lootBoxId?, count |
@@ -343,6 +346,12 @@ changed(true);              // true — перерисовать всё; false �
 | `questCompleted` | Выполнен квест (любой линии или вне графа) | `QuestManager.OnQuestCompleted` | questId |
 
 Счётчики `count` считаются с момента, когда триггер начал слушать, и после загрузки сейва начинаются заново.
+
+### 6.4.1 Событие «Спаун врагов» (`StoryDirector.SpawnEnemies`)
+- `where = "point"`: `EnemySpawnPoint.SpawnExtra(data, count, radius, aggro)` — враги вокруг точки, без респавна; их смерть поднимает `OnEnemyKilled` точки.
+- `where = "player"`: `EnemyWaveSpawner.SpawnWave(data, count, list)` (первый в сцене) — кольцом вокруг игрока с постоянным агром; director подписывается на их `OnDied` → `OnWaveEnemyKilled`.
+- Тип по `enemyId`: `StoryDirector.enemyTypes` (заполняет импорт: все `EnemyData`), иначе типы точек спавна сцены.
+- Враги в сейв не пишутся; событие не повторяется после загрузки (оно в `done`).
 
 ### 6.5 Рация — `RadioCallUI`
 Состояния `Idle` → `Ringing` → `Talking`, очередь разговоров.
@@ -373,7 +382,8 @@ changed(true);              // true — перерисовать всё; false �
   - `QuestManager`: `RegisterStoryQuests`, `IsCompleted`, `IsStarted`, повторный старт квеста запрещён; квесты графа не запускаются автоматикой условий;
   - `SaveGameData.storyDoneNodes`;
   - `SaveLoadService.storyDirector`;
-  - события `ShippingService.OnShipmentCompleted`, `SupplyService.OnCrateArrived/Opened/Ordered/OnItemReceived/OnItemPurchased`, `EnemySpawnPoint.OnEnemyKilled`.
+  - события `ShippingService.OnShipmentCompleted`, `SupplyService.OnCrateArrived/Opened/Ordered/OnItemReceived/OnItemPurchased`, `EnemySpawnPoint.OnEnemyKilled`;
+  - `EnemySpawnPoint.SpawnExtra`, перегрузка `EnemyWaveSpawner.SpawnWave(data, count, list)`, `StoryScene.Director`.
 
 ---
 
@@ -439,7 +449,7 @@ changed(true);              // true — перерисовать всё; false �
 
 | Что | Как | Покрытие |
 |---|---|---|
-| Редактор | `Tools/StoryEditor/tests/run.sh` (нужен `playwright`; свой Chromium — `PW_CHROMIUM=/путь/chrome`; в облачной среде: `NODE_PATH=/opt/node22/lib/node_modules`) | ~92 проверки: ноды, нитки, перетаскивание, Ctrl+Z, экспорт/импорт, каталог, тема/цвета, db-синхронизация, кат-сцена, триггеры, линии, рамки, формы/иконки, картинка файлом, поиск, панели, телефонная ширина |
+| Редактор | `Tools/StoryEditor/tests/run.sh` (нужен `playwright`; свой Chromium — `PW_CHROMIUM=/путь/chrome`; в облачной среде: `NODE_PATH=/opt/node22/lib/node_modules`) | ~116 проверок (в т.ч. вставка в нитку, двойной щелчок, средняя кнопка, прокрутка нод, поворот, пунктирные связи, спаун врагов): ноды, нитки, перетаскивание, Ctrl+Z, экспорт/импорт, каталог, тема/цвета, db-синхронизация, кат-сцена, триггеры, линии, рамки, формы/иконки, картинка файлом, поиск, панели, телефонная ширина |
 | Приложение | `tests/run.sh app` (Linux: сам вызовет `xvfb-run`; нужно `npm ci` в `app/`) | ~42 проверки: выбор проекта, запись, закрытие, «сбой» (kill) и черновик, изменение снаружи, конфликт, история, битый файл, файл новее, незнакомые поля, редактор новее оболочки, Cmd+F |
 | Хранение | `cd Tools/StoryEditor/app && npm test` | 10 тестов `storage.js` на настоящем диске |
 | C# | В облаке Unity нет. Прежние сессии собирали скрипты стендом `csc` с заглушками Unity/URP/Timeline — в репозитории его нет. Минимум: внимательное чтение + пользователь открывает проект в Unity. | — |

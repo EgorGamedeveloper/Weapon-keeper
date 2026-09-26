@@ -61,6 +61,35 @@ public class EnemySpawnPoint : MonoBehaviour
         TrySpawn();
     }
 
+    /// <summary>
+    /// Дополнительные враги у этой точки — для сюжетных событий («после поставки здесь появились пять зомби»).
+    /// Они не возрождаются, а их смерть поднимает OnEnemyKilled точки, как смерть обычного врага. data пусто —
+    /// тип точки; radius — разброс вокруг точки, м; aggro — сразу идут на игрока. Возвращает, сколько появилось.
+    /// </summary>
+    public int SpawnExtra(EnemyData data, int count, float radius, bool aggro)
+    {
+        if (spawner == null) return 0;
+        if (data == null) data = enemyData;
+        int spawned = 0;
+        for (int i = 0; i < count; i++)
+        {
+            Vector2 offset = UnityEngine.Random.insideUnitCircle * Mathf.Max(0f, radius);
+            Quaternion rotation = Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f);
+            Enemy enemy = spawner.Spawn(data, transform.position + new Vector3(offset.x, 0f, offset.y), rotation);
+            if (enemy == null) continue;
+            if (aggro) enemy.Aggro(persistent: true);
+            enemy.OnDied += HandleExtraDied;
+            spawned++;
+        }
+        return spawned;
+    }
+
+    private void HandleExtraDied(Enemy enemy)
+    {
+        enemy.OnDied -= HandleExtraDied;
+        OnEnemyKilled?.Invoke(this, enemy);
+    }
+
     private void OnDrawGizmos()
     {
         bool onNavMesh = NavMesh.SamplePosition(transform.position, out _, spawner != null ? spawner.navMeshSnapRadius : 2f, NavMesh.AllAreas);

@@ -45,12 +45,19 @@ public class StoryDirector : MonoBehaviour
     [Tooltip("Каталог предметов — для триггеров по конкретному предмету. Пусто — возьмётся у GameBootstrap.")]
     public ItemCatalog itemCatalog;
 
+    [Tooltip("Типы врагов для события «Спаун врагов» (заполняет Import Story Graph). Типы точек спавна сцены находятся и без него.")]
+    public EnemyData[] enemyTypes = Array.Empty<EnemyData>();
+
     [Header("Отладка")]
     [Tooltip("Писать в консоль, какие ноды включаются и завершаются.")]
     public bool logFlow;
 
     /// <summary>Нода завершилась (id ноды).</summary>
     public event Action<string> OnNodeCompleted;
+
+    /// <summary>Убит враг из сюжетной волны вокруг игрока (у врагов, появившихся у точки, смерть сообщает сама точка).
+    /// Для триггера «Убит враг» без конкретной точки.</summary>
+    public event Action<Enemy> OnWaveEnemyKilled;
 
     /// <summary>Разобранный граф (null — графа нет или он битый).</summary>
     public StoryGraphData Graph { get; private set; }
@@ -333,6 +340,58 @@ public class StoryDirector : MonoBehaviour
         if (active.Contains(node.id)) Complete(node);
     }
 
+    // ───────────────────────── Спаун врагов ─────────────────────────
+
+    private void SpawnEnemies(StoryNodeData node)
+    {
+        if (node.spawns == null || node.spawns.Length == 0) { scene.Warn(node.id, $"Событие {node.id}: не указано, каких врагов спавнить."); return; }
+
+        if (node.where == "player")
+        {
+            EnemyWaveSpawner wave = null;
+            foreach (EnemyWaveSpawner candidate in scene.All<EnemyWaveSpawner>())
+                if (candidate != null && candidate.spawner != null) { wave = candidate; break; }
+            if (wave == null) { scene.Warn(node.id, $"Событие {node.id}: в сцене нет EnemyWaveSpawner — волна вокруг игрока не создана."); return; }
+            var spawned = new List<Enemy>();
+            foreach (StoryEnemySpawn row in node.spawns)
+            {
+                EnemyData data = FindEnemyType(row.enemyType);
+                if (data == null) { scene.Warn(node.id + row.enemyType, $"Событие {node.id}: нет типа врага «{row.enemyType}»."); continue; }
+                wave.SpawnWave(data, Mathf.Max(1, row.count), spawned);
+            }
+            foreach (Enemy enemy in spawned) enemy.OnDied += HandleWaveEnemyDied;
+            if (logFlow) Debug.Log($"[Story] Волна вокруг игрока: {spawned.Count} врагов ({node.id}).", this);
+            return;
+        }
+
+        EnemySpawnPoint point = scene.FindByPersistentId<EnemySpawnPoint>(node.target);
+        if (point == null) { scene.Warn(node.id, $"Событие {node.id}: нет точки спавна «{node.target}»."); return; }
+        int total = 0;
+        foreach (StoryEnemySpawn row in node.spawns)
+        {
+            EnemyData data = string.IsNullOrEmpty(row.enemyType) ? point.enemyData : FindEnemyType(row.enemyType);
+            if (data == null) { scene.Warn(node.id + row.enemyType, $"Событие {node.id}: нет типа врага «{row.enemyType}»."); continue; }
+            total += point.SpawnExtra(data, Mathf.Max(1, row.count), node.radius, node.aggro);
+        }
+        if (logFlow) Debug.Log($"[Story] У точки {node.target}: {total} врагов ({node.id}).", this);
+    }
+
+    private void HandleWaveEnemyDied(Enemy enemy)
+    {
+        enemy.OnDied -= HandleWaveEnemyDied;
+        OnWaveEnemyKilled?.Invoke(enemy);
+    }
+
+    /// <summary>Тип врага по enemyId: из enemyTypes, иначе — среди типов точек спавна сцены.</summary>
+    private EnemyData FindEnemyType(string enemyId)
+    {
+        if (string.IsNullOrEmpty(enemyId)) return null;
+        foreach (EnemyData data in enemyTypes) if (data != null && data.enemyId == enemyId) return data;
+        foreach (EnemySpawnPoint point in scene.All<EnemySpawnPoint>())
+            if (point != null && point.enemyData != null && point.enemyData.enemyId == enemyId) return point.enemyData;
+        return null;
+    }
+
     private static bool IsObjectAction(string action) => action == "enableObject" || action == "disableObject";
 
     private void ExecuteAction(StoryNodeData node)
@@ -354,6 +413,10 @@ public class StoryDirector : MonoBehaviour
                 StoryObject target = scene.FindStoryObject(node.target);
                 if (target != null) target.SetStoryActive(node.action == "enableObject");
                 else scene.Warn(node.id, $"Событие {node.id}: в сцене нет StoryObject «{node.target}».");
+                break;
+
+            case "spawnEnemies":
+                SpawnEnemies(node);
                 break;
 
             default:

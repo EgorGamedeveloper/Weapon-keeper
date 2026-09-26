@@ -671,6 +671,8 @@ const ACTIONS = [
   { id: 'giveXp',        label: 'Дать опыт',          fields: { value: 'Опыт' },   req: ['value'] },
   { id: 'enableObject',  label: 'Включить объект',    fields: { target: 'storyObject' }, req: ['target'] },
   { id: 'disableObject', label: 'Выключить объект',   fields: { target: 'storyObject' }, req: ['target'] },
+  // Свой инспектор (renderSpawnEnemies): где (у точки спавна / волной вокруг игрока), строки «тип × количество».
+  { id: 'spawnEnemies',  label: 'Спаун врагов',       fields: {}, req: [] },
 ];
 
 const CATALOG_LISTS = {
@@ -895,6 +897,12 @@ function nodeSummary(n) {
     case 'action': {
       const a = ACTIONS.find((x) => x.id === n.action);
       add('t', a ? a.label : n.action);
+      if (n.action === 'spawnEnemies') {
+        const sum = spawnSummary(n);
+        for (const r of sum.rows) add('q', r);
+        add('m', sum.where);
+        break;
+      }
       if (a && a.fields.value) add('m', String(n.value || 0));
       if (a && a.fields.target) add('m', catalogName(TARGETS.storyObject.catalog, n.target) || '—');
       break;
@@ -1340,6 +1348,48 @@ function renderRadio(n) {
   insp.append(el('div', { class: 'help', text: 'В игре: «Входящий вызов» → игрок жмёт E → HUD гаснет, в руках рация, реплики идут строкой внизу. E допечатывает и листает.' }));
 }
 
+function ensureSpawnFields(n) {
+  if (n.where !== 'player') n.where = 'point';
+  if (!Array.isArray(n.spawns)) n.spawns = [{ enemyType: '', count: 5 }];
+  if (typeof n.aggro !== 'boolean') n.aggro = true;
+  if (!(Number(n.radius) >= 0)) n.radius = 3;
+  if (typeof n.target !== 'string') n.target = '';
+}
+function renderSpawnEnemies(n) {
+  ensureSpawnFields(n);
+  const where = el('select', { 'aria-label': 'Где' },
+    el('option', { value: 'point', text: 'У точки спавна' }), el('option', { value: 'player', text: 'Волной вокруг игрока (массовая атака)' }));
+  where.value = n.where;
+  where.addEventListener('change', () => { beginEdit(false); n.where = where.value; changed(false); renderInspector(); });
+  insp.append(fieldWrap('Где', where));
+  if (n.where === 'point') {
+    insp.append(catalogInput(n, 'target', 'enemySpawns', TARGETS.spawn.label, true));
+    insp.append(fieldWrap('Разброс вокруг точки, м', textInput(n, 'radius', { number: true, min: 0, step: 0.5 })));
+    insp.append(checkField(n, 'aggro', 'Сразу нападают на игрока'));
+  }
+  const box = el('div', { class: 'lines' });
+  n.spawns.forEach((row, i) => {
+    const card = el('div', { class: 'line-card' });
+    const count = el('input', { type: 'number', min: 1, step: 1, 'aria-label': `Сколько врагов, строка ${i + 1}` });
+    count.value = row.count ?? 1;
+    count.addEventListener('input', () => { beginEdit(true); row.count = Math.max(1, Math.round(Number(count.value) || 1)); changed(false); });
+    const del = el('button', { class: 'mini danger-btn', type: 'button', text: '✕', 'aria-label': 'Удалить строку', disabled: n.spawns.length < 2 ? true : null,
+      onclick: () => { beginEdit(false); n.spawns.splice(i, 1); changed(false); renderInspector(); } });
+    card.append(el('div', { class: 'line-top' }, el('span', { text: 'Сколько' }), count, el('span', { class: 'sp' }, del)));
+    card.append(catalogInput(row, 'enemyType', 'enemyTypes', n.where === 'player' ? 'Тип врага' : 'Тип врага (пусто — тип точки)', n.where === 'player'));
+    box.append(card);
+  });
+  insp.append(el('div', { class: 'field' }, el('div', { class: 'lbl', text: 'Кого спавнить' }), box,
+    el('button', { class: 'btn', type: 'button', text: '+ Тип врага', onclick: () => { beginEdit(false); n.spawns.push({ enemyType: '', count: 3 }); changed(false); renderInspector(); } })));
+  insp.append(el('div', { class: 'help', text: n.where === 'player'
+    ? 'Враги появляются кольцом вокруг игрока там, откуда до него есть путь, и сразу нападают (EnemyWaveSpawner в сцене). Дождаться, пока их перебьют: триггер «Убит враг» без точки спавна, «Сколько раз» = общее число.'
+    : 'Враги появляются у выбранной точки и не возрождаются. Дождаться, пока их перебьют: триггер «Убит враг» с этой же точкой, «Сколько раз» = общее число.' }));
+}
+function spawnSummary(n) {
+  const rows = (n.spawns || []).map((r) => `${r.count || 1} × ${r.enemyType ? catalogName('enemyTypes', r.enemyType) : 'тип точки'}`);
+  return { rows, where: n.where === 'player' ? 'волной вокруг игрока' : 'у ' + (n.target ? catalogName('enemySpawns', n.target) : '—') };
+}
+
 function checkField(n, key, label) {
   const box = el('input', { type: 'checkbox' });
   box.checked = n[key] !== false;
@@ -1368,6 +1418,7 @@ function renderTrigger(n) {
 function renderAction(n) {
   insp.append(fieldWrap('Что сделать', selectInput(n, 'action', ACTIONS)));
   const a = ACTIONS.find((x) => x.id === n.action) || ACTIONS[0];
+  if (a.id === 'spawnEnemies') { renderSpawnEnemies(n); return; }
   if (a.fields.value) insp.append(fieldWrap(a.fields.value + ' *', textInput(n, 'value', { number: true, min: 0 })));
   if (a.fields.target) insp.append(catalogInput(n, 'target', TARGETS.storyObject.catalog, TARGETS.storyObject.label, true));
 }
@@ -1456,7 +1507,15 @@ function validate() {
     if (n.type === 'action') {
       const a = ACTIONS.find((x) => x.id === n.action);
       if (!a) add('err', n.id, `Неизвестное событие «${n.action}».`);
-      else {
+      else if (a.id === 'spawnEnemies') {
+        const rows = Array.isArray(n.spawns) ? n.spawns : [];
+        if (!rows.length) add('err', n.id, 'Не указано, каких врагов спавнить.');
+        if (n.where !== 'player') {
+          if (!n.target) add('err', n.id, 'Не выбрана точка спавна.');
+          else checkCatalog(add, n, 'target', 'enemySpawns', true);
+        } else if (rows.some((r) => !r.enemyType)) add('err', n.id, 'Для волны вокруг игрока укажите тип каждого врага.');
+        for (const r of rows) if (r.enemyType) checkCatalog(add, r === n ? n : { ...r, id: n.id }, 'enemyType', 'enemyTypes', true);
+      } else {
         if (a.fields.value && !(n.value > 0)) add('err', n.id, `«${a.fields.value}» должно быть больше 0.`);
         if (a.fields.target && !n.target) add('err', n.id, 'Не выбран объект сюжета.');
         if (a.fields.target) checkCatalog(add, n, 'target', 'storyObjects', true);
@@ -1898,7 +1957,7 @@ function nodeSearchTexts(n) {
   if (Array.isArray(n.lines)) for (const l of n.lines) out.push(...Object.values(l.text || {}));
   if (n.text) out.push(n.text);
   if (n.type === 'trigger') { const t = TRIGGERS.find((x) => x.id === n.trigger); out.push(t && t.label, t && triggerDetail(n, t)); }
-  if (n.type === 'action') { const a = ACTIONS.find((x) => x.id === n.action); out.push(a && a.label); }
+  if (n.type === 'action') { const a = ACTIONS.find((x) => x.id === n.action); out.push(a && a.label); for (const r of n.spawns || []) out.push(r.enemyType); }
   if (n.type === 'cutscene') out.push(catalogName('cutscenes', n.target));
   for (const k of ['target', 'category', 'item', 'zone', 'orderId', 'lootBoxId', 'enemyType', 'skillId', 'portrait']) if (n[k]) out.push(n[k]);
   return out.filter(Boolean).map(String);

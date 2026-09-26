@@ -183,6 +183,30 @@ async function dragPal(page, label, dx = 420, dy = 240) {
   await page.locator('.node', { hasText: 'Строка 1' }).locator('.n-head').click();
   await page.keyboard.press('Delete');
   }
+  // Событие «Спаун врагов»
+  {
+    await dragPal(page, 'Событие', 520, 360);
+    await page.locator('.inspector select').first().selectOption('spawnEnemies');
+    ok(await page.locator('.inspector .lbl:text("Кого спавнить")').count() === 1, 'у «Спаун врагов» свой инспектор');
+    await page.click('#btnIssues');
+    ok((await page.locator('#issueList').textContent()).includes('Не выбрана точка спавна'), 'проверка: без точки спавна — ошибка');
+    await page.click('#sheetIssues [data-close]');
+    await page.locator('.inspector select').nth(1).selectOption('player');
+    ok((await page.locator('.node.sel .n-body').textContent()).includes('волной вокруг игрока'), 'на ноде видно: волна вокруг игрока');
+    await page.locator('.inspector .line-card input[type="number"]').first().fill('7');
+    await page.locator('.inspector .line-card input.mono').first().fill('zombie_basic');
+    await page.getByRole('button', { name: '+ Тип врага' }).click();
+    await page.locator('.inspector .line-card input.mono').nth(1).fill('zombie_runner');
+    await page.click('#btnExport');
+    const ej2 = JSON.parse(await page.locator('#exportText').inputValue());
+    await page.click('#sheetExport [data-close]');
+    const sp = ej2.nodes.find((n) => n.action === 'spawnEnemies');
+    ok(sp && sp.where === 'player' && sp.spawns.length === 2 && sp.spawns[0].count === 7 && sp.spawns[0].enemyType === 'zombie_basic' && sp.spawns[1].enemyType === 'zombie_runner', 'спаун в JSON: где, типы, количества');
+    ok((await page.locator('.node.sel .n-body').textContent()).includes('7 × zombie_basic'), 'на ноде список врагов');
+    await page.keyboard.press('Escape');
+    await page.locator('.node', { hasText: '7 × zombie_basic' }).locator('.n-head').click();
+    await page.keyboard.press('Delete');
+  }
   // Нода «Кат-сцена» и новые триггеры
   await dragPal(page, 'Кат-сцена', 500, 300);
   ok((await page.locator('.node.sel .n-head').textContent()).includes('Кат-сцена'), 'нода «Кат-сцена» добавлена');
