@@ -29,6 +29,7 @@
   --t-and: #7d69b6;
   --t-action: #6c8f35;
   --t-note: #b49b2c;
+  --t-cutscene: #a4466f;
   --note-bg: #fbf5d7;
   --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-head: "Barlow Condensed", "Arial Narrow", "IBM Plex Sans", sans-serif;
@@ -42,7 +43,7 @@
     --node: #20262c; --node-shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 6px 18px rgba(0, 0, 0, .35);
     --wire: #6d7985; --wire-sel: #eda63a; --note-bg: #34301c;
     --t-start: #8b97a3; --t-quest: #e0a33a; --t-radio: #3fb0a8; --t-trigger: #e0674f; --t-wait: #7f92b0;
-    --t-and: #9884d0; --t-action: #8fb152; --t-note: #d2bb4f;
+    --t-and: #9884d0; --t-action: #8fb152; --t-note: #d2bb4f; --t-cutscene: #d06a95;
   }
 }
 :root[data-theme="dark"] {
@@ -52,7 +53,7 @@
   --node: #20262c; --node-shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 6px 18px rgba(0, 0, 0, .35);
   --wire: #6d7985; --wire-sel: #eda63a; --note-bg: #34301c;
   --t-start: #8b97a3; --t-quest: #e0a33a; --t-radio: #3fb0a8; --t-trigger: #e0674f; --t-wait: #7f92b0;
-  --t-and: #9884d0; --t-action: #8fb152; --t-note: #d2bb4f;
+  --t-and: #9884d0; --t-action: #8fb152; --t-note: #d2bb4f; --t-cutscene: #d06a95;
 }
 
 html, body { height: 100%; }
@@ -78,6 +79,30 @@ button { cursor: pointer; }
   margin: 0; font: 600 20px/1 var(--font-head); letter-spacing: .04em; text-transform: uppercase; white-space: nowrap;
 }
 .brand .sub { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search { position: relative; }
+.search input {
+  width: 170px; box-sizing: border-box; border: 1px solid var(--line); background: var(--node); border-radius: 6px; padding: 5px 8px 5px 26px;
+  font-size: 13px; transition: width .15s;
+}
+.search input:focus { width: 260px; outline: 2px solid var(--accent); outline-offset: -1px; }
+.search::before { content: "⌕"; position: absolute; left: 8px; top: 50%; transform: translateY(-52%); color: var(--muted); font-size: 15px; pointer-events: none; }
+.search-results {
+  position: absolute; right: 0; top: calc(100% + 4px); width: 380px; max-height: 60vh; overflow-y: auto; z-index: 20; list-style: none; margin: 0;
+  padding: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--node-shadow);
+}
+.search-results li { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.search-results li.on, .search-results li:hover { background: var(--panel-2); }
+.search-results .chip { grid-row: span 2; align-self: start; font: 600 10.5px var(--font-head); letter-spacing: .05em; text-transform: uppercase;
+  color: #fff; border-radius: 4px; padding: 2px 6px; }
+.search-results .ttl { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-results .snip { font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-results .snip mark { background: color-mix(in srgb, var(--accent) 35%, transparent); color: inherit; border-radius: 2px; }
+.search-results .empty { color: var(--muted); font-size: 12.5px; cursor: default; }
+.node.dim, .bi.dim { opacity: .28; }
+.node.hit { box-shadow: 0 0 0 2px var(--accent), var(--node-shadow); }
+@keyframes flash { 0%, 100% { box-shadow: 0 0 0 2px var(--accent), var(--node-shadow); } 50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent) 45%, transparent), var(--node-shadow); } }
+.node.flash, .bi.flash { animation: flash .45s ease-in-out 3; }
+@media (prefers-reduced-motion: reduce) { .node.flash, .bi.flash { animation: none; } }
 .status { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
 .status[data-state="saved"]::before { background: var(--ok); }
@@ -123,18 +148,38 @@ body.resizing-h, body.resizing-h * { cursor: row-resize !important; }
 .palette.tall #palItems { flex-wrap: wrap; overflow-x: hidden; overflow-y: auto; align-self: stretch; align-content: flex-start; }
 .palette.tall .pal-item { width: 150px; }
 .palette.tall .pal-item small { display: block; }
-.palette h2 { margin: 0; flex: none; }
+.palette h2 { display: none; }
 .palette h2, .inspector h2 {
   margin: 0 0 4px; font: 600 13px/1.2 var(--font-head); letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
 }
-#palItems { display: flex; gap: 6px; overflow-x: auto; min-width: 0; flex: 1 1 auto; padding: 2px 0; }
+#palItems { display: flex; gap: 5px; overflow-x: auto; min-width: 0; flex: 1 1 auto; padding: 2px 0; }
 .pal-item {
   display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--node);
-  border-radius: 6px; padding: 7px 12px; text-align: left; flex: none; cursor: grab; touch-action: none; user-select: none;
+  border-radius: 6px; padding: 7px 9px; text-align: left; flex: none; gap: 7px; cursor: grab; touch-action: none; user-select: none;
 }
 .pal-item:hover { border-color: var(--muted); }
 .pal-item:active { cursor: grabbing; }
 .palette .pal-item small { display: none; } /* в низкой полосе описание — во всплывающей подсказке */
+.pal-tabs { display: flex; flex-direction: column; gap: 2px; flex: none; }
+.pal-tabs button {
+  border: 1px solid transparent; background: transparent; border-radius: 4px; padding: 1px 8px; text-align: left;
+  font: 600 11px var(--font-head); letter-spacing: .06em; text-transform: uppercase; color: var(--muted);
+}
+.pal-tabs button.on { color: var(--ink); border-color: var(--line); background: var(--node); }
+.palette:not(.tall) .pal-tabs { display: grid; grid-template-columns: auto auto; gap: 2px; }
+.palette:not(.tall) .pal-tabs button { padding: 1px 6px; }
+.pal-item.icon-item { width: auto; padding: 5px 8px; }
+.pal-item.icon-item svg { width: 22px; height: 22px; color: var(--ink); flex: none; }
+.pal-item.img-item { padding: 3px; width: auto; }
+.pal-item.img-item img { height: 34px; max-width: 90px; object-fit: contain; display: block; pointer-events: none; }
+.palette.tall .pal-item.img-item img { height: 70px; max-width: 150px; }
+.pal-item.shape-item svg { width: 22px; height: 16px; color: var(--ink); flex: none; }
+.pal-btn { flex: none; border: 1px dashed var(--line); background: transparent; border-radius: 6px; padding: 6px 10px; color: var(--muted); font-size: 12.5px; }
+.pal-btn:hover { color: var(--ink); border-color: var(--muted); }
+.swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+.swatches button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--line); }
+.swatches button.on { box-shadow: 0 0 0 2px var(--accent); }
+.canvas.file-over { box-shadow: inset 0 0 0 3px var(--accent); }
 .pal-help {
   flex: none; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line); color: var(--muted);
   display: grid; place-items: center; font: 600 12px var(--font-ui); cursor: help;
@@ -161,6 +206,29 @@ body.resizing-h, body.resizing-h * { cursor: row-resize !important; }
 }
 .canvas.panning { cursor: grabbing; }
 .world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+/* Рамки и оформление — слой под нитками и нодами. У рамки ловят мышь только заголовок и уголок: внутри рамки можно
+   двигать холст и выделять ноды как обычно. */
+#board { position: absolute; left: 0; top: 0; }
+.bi { position: absolute; box-sizing: border-box; }
+.bi .rz {
+  position: absolute; right: -6px; bottom: -6px; width: 14px; height: 14px; border-radius: 3px; background: var(--accent);
+  border: 2px solid var(--panel); cursor: nwse-resize; opacity: 0; pointer-events: auto;
+}
+.bi.sel .rz, .bi:hover .rz { opacity: 1; }
+.bi.group { border: 2px solid var(--gc); border-radius: 10px; background: color-mix(in srgb, var(--gc) 9%, transparent); pointer-events: none; }
+.bi.group .g-head {
+  position: absolute; left: -2px; right: -2px; top: -2px; height: 38px; border-radius: 10px 10px 0 0; pointer-events: auto; cursor: grab;
+  background: color-mix(in srgb, var(--gc) 22%, transparent); display: flex; align-items: center; padding: 0 14px;
+  font: 600 20px var(--font-head); letter-spacing: .05em; color: var(--ink); white-space: nowrap; overflow: hidden;
+}
+.bi.group .g-head input { font: inherit; letter-spacing: inherit; border: 0; background: transparent; color: var(--ink); width: 100%; outline: none; }
+.bi.group.sel { box-shadow: 0 0 0 2px var(--accent); }
+.bi.decor { cursor: grab; color: var(--dc); }
+.bi.decor svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.bi.decor img { width: 100%; height: 100%; display: block; object-fit: contain; pointer-events: none; user-select: none; }
+.bi.decor .txt { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; text-align: center;
+  font: 600 1em/1.05 var(--font-head); letter-spacing: .02em; white-space: pre; color: var(--dc); }
+.bi.decor.sel { outline: 2px dashed var(--accent); outline-offset: 3px; }
 .wires { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
 .wires path { fill: none; stroke: var(--wire); stroke-width: 2.2; pointer-events: stroke; cursor: pointer; }
 .wires path.hit { stroke: transparent; stroke-width: 14; }
@@ -210,8 +278,29 @@ body.resizing-h, body.resizing-h * { cursor: row-resize !important; }
 .zoom button { border: 0; background: transparent; border-radius: 5px; padding: 3px 8px; }
 .zoom button:hover { background: var(--panel-2); }
 .zoom span { font: 12px var(--font-mono); color: var(--muted); align-self: center; min-width: 44px; text-align: center; }
+.line-tabs {
+  position: absolute; left: 12px; top: 10px; right: 12px; z-index: 3; display: flex; align-items: center; gap: 4px;
+  overflow-x: auto; pointer-events: none; padding-bottom: 2px;
+}
+.line-tabs > * { pointer-events: auto; }
+.line-tab {
+  display: inline-flex; align-items: center; gap: 6px; flex: none; border: 1px solid var(--line); background: var(--panel);
+  border-radius: 6px; padding: 4px 10px; font: 600 13px var(--font-head); letter-spacing: .04em; color: var(--muted); max-width: 240px;
+}
+.line-tab .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.line-tab .c { font: 500 10.5px var(--font-mono); color: var(--muted); }
+.line-tab.on { color: var(--ink); border-color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
+.line-tab .x { border: 0; background: transparent; color: var(--muted); padding: 0 2px; font-size: 13px; line-height: 1; }
+.line-tab .x:hover { color: var(--danger); }
+.line-tab input { font: 600 13px var(--font-head); width: 160px; border: 0; background: transparent; color: var(--ink); outline: none; }
+.line-add { flex: none; border: 1px dashed var(--line); background: var(--panel); border-radius: 6px; padding: 4px 10px; color: var(--muted); }
+.line-add:hover { color: var(--ink); border-color: var(--muted); }
+.toast {
+  position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%); z-index: 8; background: var(--ink); color: var(--panel);
+  border-radius: 6px; padding: 8px 14px; font-size: 13px; box-shadow: var(--node-shadow); pointer-events: none; transition: opacity .3s;
+}
 .banner {
-  position: absolute; left: 12px; top: 12px; right: 12px; max-width: 560px; background: var(--panel); border: 1px solid var(--line);
+  position: absolute; left: 12px; top: 52px; right: 12px; max-width: 560px; background: var(--panel); border: 1px solid var(--line);
   border-left: 3px solid var(--accent); border-radius: 6px; padding: 8px 12px; font-size: 12.5px; color: var(--ink);
 }
 
@@ -229,6 +318,8 @@ body.resizing-h, body.resizing-h * { cursor: row-resize !important; }
 .field textarea { resize: vertical; min-height: 54px; }
 .field .mono, input.mono { font-family: var(--font-mono); font-size: 12.5px; }
 .field .help { font-size: 11.5px; color: var(--muted); line-height: 1.4; }
+.check-field { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+.check-field input { width: 16px; height: 16px; accent-color: var(--accent); }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .loc { display: grid; grid-template-columns: 28px 1fr; gap: 4px 6px; align-items: start; }
 .loc-head { display: flex; align-items: center; gap: 6px; }
@@ -312,6 +403,10 @@ body.resizing-h, body.resizing-h * { cursor: row-resize !important; }
       <span class="sub" id="brandSub">Weapon Keeper · квесты, рация, триггеры</span>
     </div>
     <span class="status" id="status" data-state="idle">Загрузка…</span>
+    <div class="search" role="search">
+      <input type="search" id="searchInput" placeholder="Поиск по нодам" autocomplete="off" aria-label="Поиск по нодам (Ctrl+F)" title="Поиск по нодам всех линий (Ctrl+F)">
+      <ul class="search-results" id="searchResults" hidden role="listbox"></ul>
+    </div>
     <button class="btn" id="btnIssues" type="button" title="Проверка графа">Проверка <span class="count" id="issueCount">0</span></button>
     <button class="btn theme-btn" id="btnTheme" type="button" title="Светлая / тёмная тема" aria-label="Переключить тему">☾</button>
     <button class="btn" id="btnColors" type="button" title="Цвета редактора">Цвета</button>
@@ -324,16 +419,25 @@ body.resizing-h, body.resizing-h * { cursor: row-resize !important; }
   <div class="work">
     <aside class="palette" id="palette" aria-label="Типы нод">
       <h2>Добавить</h2>
+      <div class="pal-tabs" id="palTabs" role="tablist" aria-label="Что добавить">
+        <button type="button" role="tab" data-tab="nodes" class="on">Ноды</button>
+        <button type="button" role="tab" data-tab="shapes">Формы</button>
+        <button type="button" role="tab" data-tab="icons">Иконки</button>
+        <button type="button" role="tab" data-tab="images">Картинки</button>
+      </div>
       <div id="palItems"></div>
+      <input class="hidden-file" type="file" id="fileImages" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" multiple>
       <span class="pal-help" tabindex="0" role="note" aria-label="Подсказка"
         title="Перетащите ноду из полосы на холст.&#10;Нитка — от правого кружка ноды к левому кружку другой: следующая нода включится, когда эта завершится.&#10;Del — удалить · Ctrl+D — копия · Ctrl+Z — отмена · колесо — масштаб, фон — сдвиг.">?</span>
     </aside>
 
     <main class="canvas" id="canvas" aria-label="Граф сюжета">
       <div class="world" id="world">
+        <div id="board"></div>
         <svg class="wires" id="wires" aria-hidden="true"></svg>
         <div id="nodes"></div>
       </div>
+      <nav class="line-tabs" id="lineTabs" aria-label="Сюжетные линии"></nav>
       <div class="banner" id="banner" hidden></div>
       <div class="zoom">
         <button type="button" id="zoomOut" aria-label="Уменьшить">−</button>
@@ -480,6 +584,7 @@ const TYPES = {
   start:   { label: 'Старт',    color: '--t-start',   inPort: false, outPort: true,  desc: 'Начало новой игры' },
   quest:   { label: 'Квест',    color: '--t-quest',   inPort: true,  outPort: true,  desc: 'Задание в списке квестов' },
   radio:   { label: 'Рация',    color: '--t-radio',   inPort: true,  outPort: true,  desc: 'Вызов и переговоры' },
+  cutscene:{ label: 'Кат-сцена', color: '--t-cutscene', inPort: true, outPort: true,  desc: 'Timeline-сцена из Unity' },
   trigger: { label: 'Триггер',  color: '--t-trigger', inPort: true,  outPort: true,  desc: 'Действие игрока' },
   wait:    { label: 'Ожидание', color: '--t-wait',    inPort: true,  outPort: true,  desc: 'Пауза в секундах' },
   and:     { label: 'И',        color: '--t-and',     inPort: true,  outPort: true,  desc: 'Ждёт все входы' },
@@ -502,6 +607,7 @@ const TARGETS = {
   shelf:      { catalog: 'shelves',      label: 'Полка' },
   spawn:      { catalog: 'enemySpawns',  label: 'Точка спавна врага' },
   storyObject:{ catalog: 'storyObjects', label: 'Объект сюжета (StoryObject)' },
+  cutscene:   { catalog: 'cutscenes',    label: 'Кат-сцена (StoryCutscene)' },
 };
 
 // Что спрашивает квест каждого типа: target — вид цели, required — обязательна ли.
@@ -512,7 +618,7 @@ const QUEST_FIELDS = {
   DeliverItem:  { target: null,     targetRequired: false, category: false, zone: true,  item: true },
 };
 
-// Виды триггеров. Поля: target (вид цели), category, item, zone, count, value, orderId, lootBoxId, enemyType, questId.
+// Виды триггеров. Поля: target (вид цели), category, item, zone, count, value, orderId, lootBoxId, enemyType, questId, skillId.
 // req — обязательные поля. Добавить вид: строка здесь + класс-триггер в Unity (Story/Triggers).
 const TRIGGERS = [
   { id: 'repairPointRepaired', label: 'Починена точка ремонта', fields: { target: 'repair' }, req: ['target'] },
@@ -529,7 +635,11 @@ const TRIGGERS = [
   { id: 'orderShipped',        label: 'Отправлен заказ',        fields: { orderId: 1 }, req: [] },
   { id: 'crateArrived',        label: 'Приехал ящик поставки',  fields: { lootBoxId: 1 }, req: [] },
   { id: 'crateOpened',         label: 'Открыт ящик поставки',   fields: { lootBoxId: 1 }, req: [] },
-  { id: 'questCompleted',      label: 'Выполнен квест вне графа', fields: { questId: 1 }, req: ['questId'] },
+  { id: 'crateOrdered',        label: 'Куплен ящик поставки',   fields: { lootBoxId: 1, count: 1 }, req: [] },
+  { id: 'itemReceived',        label: 'Выпал предмет из ящика', fields: { item: 1, count: 1 }, req: ['item'] },
+  { id: 'itemPurchased',       label: 'Куплен предмет/инструмент в терминале', fields: { item: 1, count: 1 }, req: [] },
+  { id: 'skillUnlocked',       label: 'Открыт навык',           fields: { skillId: 1 }, req: ['skillId'] },
+  { id: 'questCompleted',      label: 'Выполнен квест (любой линии или вне графа)', fields: { questId: 1 }, req: ['questId'] },
 ];
 
 const ACTIONS = [
@@ -543,6 +653,7 @@ const CATALOG_LISTS = {
   repairPoints: 'Точки ремонта', breakables: 'Разрушаемые', stains: 'Пятна', shelves: 'Полки', categories: 'Категории полок',
   zones: 'Зоны доставки', items: 'Предметы', enemySpawns: 'Точки спавна', enemyTypes: 'Типы врагов', orders: 'Заказы',
   lootBoxes: 'Ящики поставки', storyObjects: 'Объекты сюжета', quests: 'Квесты вне графа', speakers: 'Говорящие',
+  skills: 'Навыки', cutscenes: 'Кат-сцены',
 };
 
 const FILE_VERSION = 1;
@@ -551,10 +662,12 @@ const LOCAL_KEY = 'wk-story-graph-v1';
 // ───────────────────────── Состояние ─────────────────────────
 
 const state = {
-  graph: { languages: ['ru', 'en'], nodes: new Map(), links: [] },
+  graph: { languages: ['ru', 'en'], nodes: new Map(), links: [], storylines: [{ id: 'main', title: 'Основная линия' }], groups: [], decor: [], images: {} },
+  line: 'main',   // открытая сюжетная линия
+  views: {},      // положение и масштаб холста у каждой линии
   catalog: {},
   view: { x: 60, y: 60, k: 1 },
-  sel: { node: null, link: null },
+  sel: { node: null, link: null, group: null, decor: null },
   isExample: false,
   issues: [],
   storage: 'none', // db | local | file (приложение для Mac) | none
@@ -579,8 +692,39 @@ const langs = () => state.graph.languages;
 const firstLang = () => langs()[0] || 'ru';
 const locText = (obj) => (obj && (obj[firstLang()] || Object.values(obj).find(Boolean))) || '';
 
+// ── Сюжетные линии, рамки, оформление ──
+// storylines — вкладки над холстом: у ноды, рамки и элемента оформления поле storyline. В игре линии идут
+// параллельно (Unity эти поля не читает). groups — рамки-группы, decor — формы/иконки/картинки, images — библиотека
+// картинок (dataURL) для decor. Всё это — только редактор: в «Проверке» и импорте в Unity не участвует.
+const DEFAULT_LINE = () => ({ id: 'main', title: 'Основная линия' });
+function normalizeGraph(g) {
+  let lines = Array.isArray(g.storylines) ? g.storylines.filter((l) => l && l.id).map((l) => ({ id: String(l.id), title: String(l.title || l.id) })) : [];
+  if (!lines.length) lines = [DEFAULT_LINE()];
+  g.storylines = lines;
+  const ids = new Set(lines.map((l) => l.id));
+  const first = lines[0].id;
+  for (const n of g.nodes.values()) if (!ids.has(n.storyline)) n.storyline = first;
+  const keep = (list) => (Array.isArray(list) ? list : []).filter((x) => x && x.id).map((x) => {
+    const o = { ...x };
+    if (!ids.has(o.storyline)) o.storyline = first;
+    for (const k of ['x', 'y', 'w', 'h']) o[k] = Number(o[k]) || 0;
+    return o;
+  });
+  g.groups = keep(g.groups);
+  g.decor = keep(g.decor);
+  g.images = g.images && typeof g.images === 'object' && !Array.isArray(g.images) ? { ...g.images } : {};
+  return g;
+}
+function setGraph(g) {
+  state.graph = normalizeGraph(g);
+  if (!state.graph.storylines.some((l) => l.id === state.line)) state.line = state.graph.storylines[0].id;
+}
+const curLine = () => state.line;
+const inLine = (o) => o.storyline === state.line;
+const lineTitle = (id) => { const l = state.graph.storylines.find((x) => x.id === id); return l ? l.title : id; };
+
 function newNode(type, x, y) {
-  const n = { id: uid(type === 'quest' ? 'q' : 'n'), type, x: Math.round(x), y: Math.round(y) };
+  const n = { id: uid(type === 'quest' ? 'q' : 'n'), type, x: Math.round(x), y: Math.round(y), storyline: curLine() };
   switch (type) {
     case 'quest':
       Object.assign(n, { questId: '', title: {}, description: {}, questType: 'RepairPoints', targetCount: 1,
@@ -591,11 +735,12 @@ function newNode(type, x, y) {
       break;
     case 'trigger':
       Object.assign(n, { trigger: 'repairPointRepaired', target: '', category: '', item: '', zone: '', count: 1, value: 0,
-        orderId: '', lootBoxId: '', enemyType: '', questId: '' });
+        orderId: '', lootBoxId: '', enemyType: '', questId: '', skillId: '' });
       break;
     case 'wait': n.seconds = 3; break;
     case 'action': Object.assign(n, { action: 'giveMoney', value: 100, target: '' }); break;
     case 'note': n.text = ''; break;
+    case 'cutscene': Object.assign(n, { target: '', skippable: true, hideHud: true }); break;
   }
   return n;
 }
@@ -605,14 +750,22 @@ function newNode(type, x, y) {
 const history = { undo: [], redo: [], pendingTimer: 0, pending: false };
 
 function snapshot() {
-  return JSON.stringify({ languages: langs(), nodes: [...state.graph.nodes.values()], links: state.graph.links });
+  const g = state.graph;
+  return JSON.stringify({ languages: langs(), nodes: [...g.nodes.values()], links: g.links, storylines: g.storylines, groups: g.groups, decor: g.decor });
 }
+// Картинки (images) в историю не входят: это библиотека, из неё ничего не удаляется само.
 function restore(json) {
   const s = JSON.parse(json);
   state.graph.languages = s.languages;
   state.graph.nodes = new Map(s.nodes.map((n) => [n.id, n]));
   state.graph.links = s.links;
+  state.graph.storylines = s.storylines;
+  state.graph.groups = s.groups;
+  state.graph.decor = s.decor;
+  setGraph(state.graph);
   if (state.sel.node && !state.graph.nodes.has(state.sel.node)) state.sel.node = null;
+  if (state.sel.group && !state.graph.groups.some((x) => x.id === state.sel.group)) state.sel.group = null;
+  if (state.sel.decor && !state.graph.decor.some((x) => x.id === state.sel.decor)) state.sel.decor = null;
   state.sel.link = null;
 }
 // Запомнить состояние ДО правки. coalesce — набор текста: одна запись на серию правок.
@@ -629,10 +782,17 @@ function beginEdit(coalesce) {
   if (coalesce) history.pendingTimer = setTimeout(() => { history.pending = false; }, 900);
   if (state.isExample) adoptExample();
 }
-// В приложении для Mac Cmd+Z приходит и как нажатие, и как команда меню — второй вызов в пределах 150 мс пропускается.
-let lastUndoAt = 0;
-function undoOnce() { if (performance.now() - lastUndoAt < 150) return; lastUndoAt = performance.now(); undo(); }
-function redoOnce() { if (performance.now() - lastUndoAt < 150) return; lastUndoAt = performance.now(); redo(); }
+// В приложении для Mac Cmd+Z может прийти и как нажатие, и как команда меню. Пропускаем только такой двойник —
+// вызов из другого источника в пределах 150 мс; быстрые повторные нажатия отменяют по шагу, как обычно.
+let lastUndo = { source: '', t: 0 };
+function undoGuard(source) {
+  const now = performance.now();
+  const dup = lastUndo.source && lastUndo.source !== source && now - lastUndo.t < 150;
+  lastUndo = { source, t: now };
+  return !dup;
+}
+function undoOnce(source = 'key') { if (undoGuard(source)) undo(); }
+function redoOnce(source = 'key') { if (undoGuard(source)) redo(); }
 function undo() {
   if (!history.undo.length) return;
   history.redo.push(snapshot());
@@ -649,7 +809,8 @@ function redo() {
 
 // После любой правки: перерисовать, проверить, сохранить.
 function changed(structural) {
-  if (structural) renderAll(); else { renderNodesLight(); renderWires(); }
+  if (search.query.trim()) search.results = searchAll(search.query);
+  if (structural) renderAll(); else { renderBoard(); renderNodesLight(); renderWires(); applySearchHighlight(); }
   validate();
   scheduleSync();
 }
@@ -706,6 +867,12 @@ function nodeSummary(n) {
       break;
     }
     case 'note': body.textContent = n.text || 'Пустая заметка'; break;
+    case 'cutscene': {
+      const name = n.target ? catalogName('cutscenes', n.target) : '';
+      add(name ? 't' : 'empty', name || 'Какая сцена?');
+      add('m', [n.skippable !== false ? 'можно пропустить' : 'без пропуска', n.hideHud !== false ? 'без HUD' : 'с HUD'].join(' · '));
+      break;
+    }
   }
   return body;
 }
@@ -721,6 +888,7 @@ function triggerDetail(n, t) {
   if (t.fields.orderId && n.orderId) parts.push(catalogName('orders', n.orderId));
   if (t.fields.lootBoxId && n.lootBoxId) parts.push(catalogName('lootBoxes', n.lootBoxId));
   if (t.fields.questId && n.questId) parts.push(catalogName('quests', n.questId));
+  if (t.fields.skillId && n.skillId) parts.push(catalogName('skills', n.skillId));
   if (t.fields.value) parts.push(String(n.value || 0));
   if (t.fields.count && (n.count || 1) > 1) parts.push('× ' + n.count);
   return parts.filter(Boolean).join(' · ');
@@ -750,6 +918,7 @@ function renderNodes() {
   nodesLayer.textContent = '';
   nodeEls.clear();
   for (const n of state.graph.nodes.values()) {
+    if (!inLine(n)) continue;
     const div = buildNodeEl(n);
     placeNodeEl(div, n);
     nodesLayer.append(div);
@@ -759,6 +928,7 @@ function renderNodes() {
 // Правка полей без изменения структуры: обновить содержимое нод на месте.
 function renderNodesLight() {
   for (const n of state.graph.nodes.values()) {
+    if (!inLine(n)) continue;
     const old = nodeEls.get(n.id);
     if (!old) { renderNodes(); return; }
     const fresh = buildNodeEl(n);
@@ -802,7 +972,10 @@ function renderWires() {
 }
 
 function renderAll() {
+  renderTabs();
+  renderBoard();
   renderNodes();
+  applySearchHighlight();
   renderWires();
   renderInspector();
   renderBanner();
@@ -831,7 +1004,14 @@ function renderBanner() {
 
 const insp = $('inspector');
 
-function catalogList(name) { return Array.isArray(state.catalog[name]) ? state.catalog[name] : []; }
+function catalogList(name) {
+  const list = Array.isArray(state.catalog[name]) ? state.catalog[name] : [];
+  if (name !== 'quests') return list;
+  // Для «Выполнен квест»: квесты самого графа (всех линий) + квесты вне графа из каталога.
+  const own = [...state.graph.nodes.values()].filter((n) => n.type === 'quest' && n.questId)
+    .map((n) => ({ id: n.questId, name: `${locText(n.title) || n.questId} (${n.questId}, граф)` }));
+  return own.concat(list.filter((e) => !own.some((o) => o.id === e.id)));
+}
 function catalogName(name, id) {
   if (!id) return '';
   const hit = catalogList(name).find((e) => e.id === id);
@@ -935,6 +1115,13 @@ function locInput(owner, key, label, multiline, requiredFirst) {
 
 function renderInspector() {
   insp.textContent = '';
+  const selGroup = state.sel.group && findItem('group', state.sel.group);
+  const selDecor = state.sel.decor && findItem('decor', state.sel.decor);
+  if (selGroup || selDecor) {
+    insp.classList.remove('closed');
+    if (selGroup) renderGroupInspector(selGroup); else renderDecorInspector(selDecor);
+    return;
+  }
   const id = state.sel.node;
   const n = id && state.graph.nodes.get(id);
   if (state.sel.link !== null && state.graph.links[state.sel.link]) {
@@ -947,7 +1134,7 @@ function renderInspector() {
   }
   if (!n) {
     insp.append(el('h2', { text: 'Свойства' }),
-      el('div', { class: 'insp-empty', text: 'Выберите ноду, чтобы изменить её. Новую ноду перетащите на холст из полосы внизу.' }));
+      el('div', { class: 'insp-empty', text: 'Выберите ноду, рамку или элемент оформления, чтобы изменить. Новое перетащите на холст из полосы внизу: ноды, формы, иконки, картинки (картинку можно бросить и прямо с компьютера).' }));
     insp.classList.add('closed');
     return;
   }
@@ -970,6 +1157,12 @@ function renderInspector() {
       insp.append(el('div', { class: 'insp-empty', text: 'Нода «И» ждёт, пока сработают ВСЕ ноды, чьи нитки в неё входят. Обычные ноды включаются от любой входящей нитки.' }));
       break;
     case 'action': renderAction(n); break;
+    case 'cutscene':
+      insp.append(catalogInput(n, 'target', 'cutscenes', TARGETS.cutscene.label, true));
+      insp.append(checkField(n, 'skippable', 'Можно пропустить (удерживать E)'));
+      insp.append(checkField(n, 'hideHud', 'Прятать интерфейс на время показа'));
+      insp.append(el('div', { class: 'help', text: 'Сцену собирают в Unity: Tools → Weapon Keeper → Story → Create Cutscene, затем Timeline. Нода завершается, когда кат-сцена досмотрена или пропущена; управление игроком на это время выключено.' }));
+      break;
     case 'note': {
       const ta = el('textarea', { rows: 6 });
       ta.value = n.text || '';
@@ -1040,6 +1233,13 @@ function renderRadio(n) {
   insp.append(el('div', { class: 'help', text: 'В игре: «Входящий вызов» → игрок жмёт E → HUD гаснет, в руках рация, реплики идут строкой внизу. E допечатывает и листает.' }));
 }
 
+function checkField(n, key, label) {
+  const box = el('input', { type: 'checkbox' });
+  box.checked = n[key] !== false;
+  box.addEventListener('change', () => { beginEdit(false); n[key] = box.checked; changed(false); });
+  return el('label', { class: 'check-field' }, box, el('span', { text: label }));
+}
+
 function renderTrigger(n) {
   insp.append(fieldWrap('Когда сработать', selectInput(n, 'trigger', TRIGGERS)));
   const t = TRIGGERS.find((x) => x.id === n.trigger) || TRIGGERS[0];
@@ -1052,6 +1252,7 @@ function renderTrigger(n) {
   if (t.fields.orderId) insp.append(catalogInput(n, 'orderId', 'orders', 'Заказ', req('orderId')));
   if (t.fields.lootBoxId) insp.append(catalogInput(n, 'lootBoxId', 'lootBoxes', 'Ящик поставки', req('lootBoxId')));
   if (t.fields.questId) insp.append(catalogInput(n, 'questId', 'quests', 'Квест', req('questId')));
+  if (t.fields.skillId) insp.append(catalogInput(n, 'skillId', 'skills', 'Навык', req('skillId')));
   if (t.fields.value) insp.append(fieldWrap(t.fields.value + ' *', textInput(n, 'value', { number: true, min: 0 })));
   if (t.fields.count) insp.append(fieldWrap('Сколько раз', textInput(n, 'count', { number: true, min: 1 })));
   insp.append(el('div', { class: 'help', text: 'Триггер начинает слушать, когда в него пришла нитка (без входящих ниток — с начала игры). Если условие уже выполнено, срабатывает сразу.' }));
@@ -1142,6 +1343,7 @@ function validate() {
         checkCatalog(add, n, 'enemyType', 'enemyTypes', !!t.fields.enemyType);
         checkCatalog(add, n, 'orderId', 'orders', !!t.fields.orderId);
         checkCatalog(add, n, 'lootBoxId', 'lootBoxes', !!t.fields.lootBoxId);
+        checkCatalog(add, n, 'skillId', 'skills', !!t.fields.skillId);
       }
     }
     if (n.type === 'action') {
@@ -1155,6 +1357,10 @@ function validate() {
     }
     if (n.type === 'and' && (incoming.get(n.id) || []).length < 2) add('warn', n.id, '«И» с одним входом ничего не ждёт — соедините с ней две ноды или больше.');
     if (n.type === 'wait' && !(n.seconds > 0)) add('warn', n.id, 'Ожидание 0 секунд.');
+    if (n.type === 'cutscene') {
+      if (!n.target) add('err', n.id, 'Не выбрана кат-сцена.');
+      else checkCatalog(add, n, 'target', 'cutscenes', true);
+    }
   }
 
   // Переводы на остальные языки — только справка.
@@ -1177,7 +1383,7 @@ function validate() {
 
 function fieldLabel(t, key) {
   if (key === 'target') return TARGETS[t.fields.target].label;
-  return { category: 'Категория полки', item: 'Предмет', zone: 'Зона', value: t.fields.value, questId: 'Квест', orderId: 'Заказ', lootBoxId: 'Ящик', enemyType: 'Тип врага' }[key] || key;
+  return { category: 'Категория полки', item: 'Предмет', zone: 'Зона', value: t.fields.value, questId: 'Квест', orderId: 'Заказ', lootBoxId: 'Ящик', enemyType: 'Тип врага', skillId: 'Навык' }[key] || key;
 }
 
 function checkCatalog(add, n, key, catalogKey, relevant) {
@@ -1193,6 +1399,12 @@ function locFields(n) {
   return out;
 }
 
+function issueWhere(id) {
+  const n = state.graph.nodes.get(id);
+  const multi = state.graph.storylines.length > 1;
+  return (multi && n ? `[${lineTitle(n.storyline)}] ` : '') + nodeTitle(id);
+}
+
 function renderIssues() {
   const ul = $('issueList');
   ul.textContent = '';
@@ -1201,8 +1413,547 @@ function renderIssues() {
   for (const i of [...state.issues].sort((a, b) => order[a.sev] - order[b.sev])) {
     ul.append(el('li', {}, el('button', { type: 'button', onclick: () => { if (i.node) focusNode(i.node); } },
       el('span', { class: 'sev ' + i.sev, text: sevLabel(i.sev) }),
-      el('span', { text: (i.node ? nodeTitle(i.node) + ': ' : '') + i.text }))));
+      el('span', { text: (i.node ? issueWhere(i.node) + ': ' : '') + i.text }))));
   }
+}
+
+// ───────────────────────── Рамки-группы и оформление ─────────────────────────
+// Рамка (group) — подписанная область: тянешь за заголовок — едут ноды и оформление, чей центр внутри.
+// Оформление (decor) — форма, иконка, надпись или картинка. Всё это только для глаз: в игру не попадает.
+
+const SWATCHES = ['--t-quest', '--t-radio', '--t-trigger', '--t-action', '--t-and', '--t-wait', '--t-cutscene', '--t-note', '--muted', '--ink'];
+const SHAPES = {
+  rect:    { label: 'Прямоугольник', w: 220, h: 140, fill: true },
+  round:   { label: 'Скруглённый',   w: 220, h: 140, fill: true },
+  ellipse: { label: 'Круг',          w: 160, h: 160, fill: true },
+  arrow:   { label: 'Стрелка',       w: 200, h: 60 },
+  line:    { label: 'Линия',         w: 300, h: 20 },
+  text:    { label: 'Надпись',       w: 320, h: 60 },
+};
+// Иконки — свои, простые контурные (viewBox 0 0 24 24), рисуются цветом элемента.
+const ICONS = {
+  radio: ['Рация', '<rect x="6" y="7" width="12" height="14" rx="2"/><path d="M9 7V2"/><rect x="9" y="9.5" width="6" height="3"/><path d="M9 15.5h6M9 18h6"/>'],
+  quest: ['Задание', '<rect x="5" y="4" width="14" height="17" rx="2"/><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M8 11h8M8 15h6"/>'],
+  key: ['Ключ', '<circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v3M21 12v3"/>'],
+  wrench: ['Гаечный ключ', '<path d="M5 19l8.5-8.5"/><circle cx="16" cy="8" r="3.5"/><path d="M16 4.5v3.5h3.5"/>'],
+  hammer: ['Молоток', '<rect x="10" y="3" width="10" height="5" rx="1"/><path d="M14 8L6 20"/>'],
+  crowbar: ['Лом', '<path d="M6 21L17 5q2-3 4-1"/><path d="M6 21l-2.5-1"/>'],
+  money: ['Деньги', '<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 9v.01M18 15v.01"/>'],
+  box: ['Ящик', '<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/>'],
+  pistol: ['Оружие', '<path d="M3 7h17v4h-9l-1.5 3v6H5l1.5-7H3z"/><path d="M10 11v2.5h2"/>'],
+  ammo: ['Патроны', '<path d="M5 20v-9a1.5 1.5 0 0 1 3 0v9zM10.5 20v-9a1.5 1.5 0 0 1 3 0v9zM16 20v-9a1.5 1.5 0 0 1 3 0v9z"/><path d="M4 20h16"/>'],
+  skull: ['Зомби', '<path d="M6 13a6 6 0 1 1 12 0v3h-2v3H8v-3H6z"/><circle cx="9.5" cy="12" r="1.3"/><circle cx="14.5" cy="12" r="1.3"/><path d="M11 19v-2M13 19v-2"/>'],
+  door: ['Дверь', '<rect x="6" y="3" width="12" height="18"/><circle cx="15" cy="12" r=".8" fill="currentColor"/><path d="M3 21h18"/>'],
+  elevator: ['Лифт', '<rect x="5" y="3" width="14" height="18" rx="1"/><path d="M12 3v18M7 10l1.5-2 1.5 2M14 14l1.5 2 1.5-2"/>'],
+  light: ['Свет', '<path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3zM9 19h6M10 21.5h4"/>'],
+  panel: ['Щиток', '<rect x="5" y="3" width="14" height="18" rx="1"/><path d="M13 7l-3 5h4l-3 5"/>'],
+  brick: ['Кладка', '<rect x="3" y="6" width="18" height="12"/><path d="M3 12h18M9 6v6M15 12v6"/>'],
+  truck: ['Доставка', '<rect x="2" y="7" width="12" height="9"/><path d="M14 10h4l3 3v3h-7"/><circle cx="6" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/>'],
+  shop: ['Магазин', '<path d="M4 9l1.5-5h13L20 9zM5 9v11h14V9M10 20v-5h4v5"/>'],
+  star: ['Звезда', '<path d="M12 3l2.6 6 6.4.3-5 4.1 1.7 6.6-5.7-3.6-5.7 3.6 1.7-6.6-5-4.1 6.4-.3z"/>'],
+  flag: ['Флаг', '<path d="M5 21V3M5 4h12l-2 4 2 4H5"/>'],
+  lock: ['Замок', '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'],
+  heart: ['Сердце', '<path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/>'],
+  warning: ['Внимание', '<path d="M12 3l10 18H2z"/><path d="M12 10v4"/><circle cx="12" cy="17.5" r=".6" fill="currentColor"/>'],
+  check: ['Готово', '<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>'],
+  question: ['Вопрос', '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.5v.7"/><circle cx="12" cy="17" r=".6" fill="currentColor"/>'],
+  clock: ['Время', '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'],
+};
+const svgNS = 'http://www.w3.org/2000/svg';
+function iconSvg(name, stroke = 2) {
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', String(stroke));
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  svg.innerHTML = (ICONS[name] || ICONS.question)[1];
+  return svg;
+}
+function shapeSvg(d) {
+  const svg = document.createElementNS(svgNS, 'svg');
+  const w = Math.max(1, d.w), h = Math.max(1, d.h);
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  const fill = d.fill ? 'color-mix(in srgb, currentColor 22%, transparent)' : 'none';
+  const sw = 3, i = sw / 2;
+  let inner = '';
+  switch (d.shape) {
+    case 'rect': inner = `<rect x="${i}" y="${i}" width="${w - sw}" height="${h - sw}" rx="2"/>`; break;
+    case 'round': inner = `<rect x="${i}" y="${i}" width="${w - sw}" height="${h - sw}" rx="${Math.min(24, h / 3)}"/>`; break;
+    case 'ellipse': inner = `<ellipse cx="${w / 2}" cy="${h / 2}" rx="${w / 2 - i}" ry="${h / 2 - i}"/>`; break;
+    case 'line': inner = `<path d="M${i} ${h / 2}H${w - i}"/>`; break;
+    case 'arrow': {
+      const head = Math.min(h * 0.9, w * 0.4);
+      inner = `<path d="M${i} ${h / 2}H${w - i}M${w - head} ${i + 2}L${w - i} ${h / 2}L${w - head} ${h - i - 2}"/>`;
+      break;
+    }
+  }
+  svg.innerHTML = `<g fill="${d.shape === 'line' || d.shape === 'arrow' ? 'none' : fill}" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${inner}</g>`;
+  return svg;
+}
+
+const board = $('board');
+const boardEls = new Map(); // 'group:id' / 'decor:id' → div
+
+function findItem(kind, id) { return (kind === 'group' ? state.graph.groups : state.graph.decor).find((x) => x.id === id); }
+
+function renderBoard() {
+  board.textContent = '';
+  boardEls.clear();
+  for (const g of state.graph.groups) if (inLine(g)) board.append(buildGroupEl(g));
+  for (const d of state.graph.decor) if (inLine(d)) board.append(buildDecorEl(d));
+}
+function placeItem(div, o) {
+  div.style.left = o.x + 'px'; div.style.top = o.y + 'px';
+  div.style.width = o.w + 'px'; div.style.height = o.h + 'px';
+}
+function buildGroupEl(g) {
+  const div = el('div', { class: 'bi group' + (state.sel.group === g.id ? ' sel' : ''), 'data-kind': 'group', 'data-id': g.id,
+    style: `--gc: var(${g.color || '--muted'})` },
+  el('div', { class: 'g-head', title: 'Тяните — рамка едет вместе с нодами. Двойной щелчок — переименовать.' }, el('span', { text: g.title || 'Группа' })),
+  el('div', { class: 'rz', title: 'Размер' }));
+  placeItem(div, g);
+  boardEls.set('group:' + g.id, div);
+  return div;
+}
+function buildDecorEl(d) {
+  const div = el('div', { class: 'bi decor' + (state.sel.decor === d.id ? ' sel' : ''), 'data-kind': 'decor', 'data-id': d.id,
+    style: `--dc: var(${d.color || '--ink'}); opacity: ${d.opacity ?? 1}; transform: rotate(${Number(d.rot) || 0}deg)` });
+  if (d.kind === 'icon') div.append(iconSvg(d.icon, 1.6));
+  else if (d.kind === 'image') {
+    const src = state.graph.images[d.image];
+    div.append(src ? el('img', { src, alt: '' }) : el('div', { class: 'txt', style: 'font-size:14px', text: 'нет картинки' }));
+  } else if (d.shape === 'text') {
+    const lines = String(d.text || 'Надпись').split('\n').length;
+    div.append(el('div', { class: 'txt', style: `font-size:${Math.max(8, (d.h / lines) * 0.78)}px`, text: d.text || 'Надпись' }));
+  } else div.append(shapeSvg(d));
+  div.append(el('div', { class: 'rz', title: 'Размер (Shift — с пропорциями)' }));
+  placeItem(div, d);
+  boardEls.set('decor:' + d.id, div);
+  return div;
+}
+
+function selectItem(kind, id) {
+  state.sel = { node: null, link: null, group: kind === 'group' ? id : null, decor: kind === 'decor' ? id : null };
+  for (const [nid, d] of nodeEls) d.classList.toggle('sel', false);
+  for (const [key, div] of boardEls) div.classList.toggle('sel', key === kind + ':' + id);
+  renderWires();
+  renderInspector();
+}
+
+// Начало перетаскивания рамки/оформления (из pointerdown холста). true — событие наше.
+function boardPointerDown(e) {
+  const bi = e.target.closest('.bi');
+  if (!bi) return false;
+  const kind = bi.dataset.kind, id = bi.dataset.id;
+  const o = findItem(kind, id);
+  if (!o) return false;
+  if (kind === 'group' && !e.target.closest('.g-head, .rz')) return false; // внутри рамки — как по холсту
+  selectItem(kind, id);
+  if (e.target.closest('.rz')) {
+    drag = { kind: 'item-resize', item: o, itemKind: kind, startX: e.clientX, startY: e.clientY, w0: o.w, h0: o.h, moved: false };
+    return true;
+  }
+  const carried = [];
+  if (kind === 'group') {
+    const inside = (x, y) => x >= o.x && x <= o.x + o.w && y >= o.y && y <= o.y + o.h;
+    for (const n of state.graph.nodes.values()) {
+      if (!inLine(n)) continue;
+      const div = nodeEls.get(n.id);
+      if (div && inside(n.x + div.offsetWidth / 2, n.y + div.offsetHeight / 2)) carried.push({ o: n, x: n.x, y: n.y, div });
+    }
+    for (const d of state.graph.decor) {
+      if (inLine(d) && inside(d.x + d.w / 2, d.y + d.h / 2)) carried.push({ o: d, x: d.x, y: d.y, div: boardEls.get('decor:' + d.id) });
+    }
+  }
+  drag = { kind: 'item-move', item: o, itemKind: kind, startX: e.clientX, startY: e.clientY, ox: o.x, oy: o.y, carried, moved: false };
+  return true;
+}
+function boardPointerMove(e) {
+  const dx = (e.clientX - drag.startX) / state.view.k, dy = (e.clientY - drag.startY) / state.view.k;
+  if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 3) return;
+  if (!drag.moved) { beginEdit(false); drag.moved = true; }
+  const o = drag.item;
+  const div = boardEls.get(drag.itemKind + ':' + o.id);
+  if (drag.kind === 'item-move') {
+    o.x = Math.round(drag.ox + dx); o.y = Math.round(drag.oy + dy);
+    for (const c of drag.carried) {
+      c.o.x = Math.round(c.x + dx); c.o.y = Math.round(c.y + dy);
+      if (c.div) { c.div.style.left = c.o.x + 'px'; c.div.style.top = c.o.y + 'px'; }
+    }
+  } else {
+    const min = drag.itemKind === 'group' ? [160, 90] : [16, 12];
+    let w = Math.max(min[0], Math.round(drag.w0 + dx)), h = Math.max(min[1], Math.round(drag.h0 + dy));
+    if ((e.shiftKey || o.kind === 'image' || o.kind === 'icon') && drag.h0 > 0) {
+      const r = drag.w0 / drag.h0;
+      if (w / h > r) h = Math.round(w / r); else w = Math.round(h * r);
+    }
+    o.w = w; o.h = h;
+  }
+  if (div) {
+    const fresh = drag.itemKind === 'group' ? buildGroupEl(o) : buildDecorEl(o);
+    div.replaceWith(fresh);
+  }
+  if (drag.kind === 'item-move' && drag.carried.length) renderWires();
+}
+
+function addGroup(at) {
+  const w = toWorld(at.x, at.y);
+  beginEdit(false);
+  const g = { id: uid('g'), storyline: curLine(), title: 'Группа', x: Math.round(w.x - 60), y: Math.round(w.y - 18), w: 520, h: 320, color: '--t-radio' };
+  state.graph.groups.push(g);
+  state.sel = { node: null, link: null, group: g.id, decor: null };
+  changed(true);
+}
+function addDecor(payload, at) {
+  const w = toWorld(at.x, at.y);
+  beginEdit(false);
+  const d = { id: uid('d'), storyline: curLine(), kind: payload.decor, opacity: 1, rot: 0, color: payload.decor === 'image' ? '' : '--ink' };
+  if (payload.decor === 'shape') {
+    const sh = SHAPES[payload.shape];
+    Object.assign(d, { shape: payload.shape, w: sh.w, h: sh.h, fill: !!sh.fill, color: payload.shape === 'text' ? '--ink' : '--t-quest' });
+    if (payload.shape === 'text') d.text = 'Надпись';
+  } else if (payload.decor === 'icon') Object.assign(d, { icon: payload.icon, w: 72, h: 72 });
+  else Object.assign(d, { image: payload.image, w: payload.w || 200, h: payload.h || 150 });
+  d.x = Math.round(w.x - d.w / 2); d.y = Math.round(w.y - d.h / 2);
+  state.graph.decor.push(d);
+  state.sel = { node: null, link: null, group: null, decor: d.id };
+  changed(true);
+}
+
+function renameGroupInline(g) {
+  const div = boardEls.get('group:' + g.id);
+  const head = div && div.querySelector('.g-head');
+  if (!head) return;
+  const input = el('input', { type: 'text', 'aria-label': 'Название рамки' });
+  input.value = g.title || '';
+  head.textContent = '';
+  head.append(input);
+  input.focus(); input.select();
+  let done = false;
+  const finish = (save) => {
+    if (done) return; done = true;
+    const title = input.value.trim();
+    if (save && title !== (g.title || '')) { beginEdit(false); g.title = title || 'Группа'; changed(true); } else renderBoard();
+  };
+  input.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') finish(true); if (e.key === 'Escape') finish(false); });
+  input.addEventListener('blur', () => finish(true));
+}
+board.addEventListener('dblclick', (e) => {
+  const head = e.target.closest('.g-head');
+  if (!head) return;
+  const g = findItem('group', head.closest('.bi').dataset.id);
+  if (g) renameGroupInline(g);
+});
+
+function swatchField(o, label) {
+  const box = el('div', { class: 'swatches', role: 'radiogroup', 'aria-label': label });
+  for (const v of SWATCHES) {
+    box.append(el('button', { type: 'button', class: o.color === v ? 'on' : '', style: `background: var(${v})`, title: v, 'aria-label': v,
+      onclick: () => { beginEdit(false); o.color = v; changed(true); } }));
+  }
+  return fieldWrap(label, box);
+}
+function renderGroupInspector(g) {
+  insp.append(el('div', { class: 'type-chip' }, el('span', { class: 'sw', style: `background:var(${g.color || '--muted'})` }), 'Рамка'));
+  const title = el('input', { type: 'text' });
+  title.value = g.title || '';
+  title.addEventListener('input', () => { beginEdit(true); g.title = title.value; changed(false); });
+  insp.append(fieldWrap('Название', title, 'Двойной щелчок по заголовку рамки на холсте — тоже переименовать.'));
+  insp.append(swatchField(g, 'Цвет'));
+  insp.append(el('div', { class: 'help', text: 'Тяните рамку за заголовок — вместе с ней поедут ноды и оформление внутри. Уголок справа внизу — размер. В игре рамки не участвуют.' }));
+  insp.append(el('div', { class: 'row2' },
+    el('button', { class: 'btn', type: 'button', text: 'Копия (Ctrl+D)', onclick: duplicateSelection }),
+    el('button', { class: 'btn danger-btn', type: 'button', text: 'Удалить рамку', onclick: deleteSelection })));
+}
+function renderDecorInspector(d) {
+  const kindLabel = d.kind === 'icon' ? 'Иконка · ' + (ICONS[d.icon] || ['?'])[0] : d.kind === 'image' ? 'Картинка' : 'Форма · ' + (SHAPES[d.shape] || { label: '?' }).label;
+  insp.append(el('div', { class: 'type-chip' }, kindLabel));
+  if (d.kind === 'shape' && d.shape === 'text') {
+    const ta = el('textarea', { rows: 3 });
+    ta.value = d.text || '';
+    ta.addEventListener('input', () => { beginEdit(true); d.text = ta.value; changed(false); });
+    insp.append(fieldWrap('Текст', ta, 'Размер букв — от высоты надписи: тяните уголок.'));
+  }
+  if (d.kind !== 'image') insp.append(swatchField(d, 'Цвет'));
+  if (d.kind === 'shape' && ['rect', 'round', 'ellipse'].includes(d.shape)) insp.append(checkField(d, 'fill', 'Заливка'));
+  const op = el('input', { type: 'range', min: 10, max: 100, step: 5 });
+  op.value = Math.round((d.opacity ?? 1) * 100);
+  op.addEventListener('input', () => { beginEdit(true); d.opacity = Number(op.value) / 100; changed(false); });
+  insp.append(fieldWrap('Прозрачность', op));
+  insp.append(fieldWrap('Поворот, °', textInput(d, 'rot', { number: true, min: -360, step: 15 })));
+  const idx = state.graph.decor.indexOf(d);
+  const move = (to) => { beginEdit(false); const arr = state.graph.decor; arr.splice(idx, 1); arr.splice(to, 0, d); changed(true); };
+  insp.append(el('div', { class: 'row2' },
+    el('button', { class: 'btn', type: 'button', text: 'Ниже всех', title: 'На задний план', disabled: idx === 0, onclick: () => move(0) }),
+    el('button', { class: 'btn', type: 'button', text: 'Выше всех', title: 'На передний план', disabled: idx === state.graph.decor.length - 1, onclick: () => move(state.graph.decor.length) })));
+  insp.append(el('div', { class: 'row2' },
+    el('button', { class: 'btn', type: 'button', text: 'Копия (Ctrl+D)', onclick: duplicateSelection }),
+    el('button', { class: 'btn danger-btn', type: 'button', text: 'Удалить', onclick: deleteSelection })));
+}
+
+// ── Картинки: файл с компьютера → уменьшить до 512 px, WebP → в библиотеку графа ──
+const IMAGE_MAX = 512;
+function readImageFile(f) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, IMAGE_MAX / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+      const w = Math.max(1, Math.round((img.naturalWidth || IMAGE_MAX) * k)), h = Math.max(1, Math.round((img.naturalHeight || IMAGE_MAX) * k));
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      let data = c.toDataURL('image/webp', 0.86);
+      if (!data.startsWith('data:image/webp')) data = c.toDataURL('image/png');
+      resolve({ data, w, h });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('не картинка')); };
+    img.src = url;
+  });
+}
+function imagesSize() { return Object.values(state.graph.images).reduce((s, v) => s + v.length, 0); }
+async function importImages(files, at) {
+  const list = [...files].filter((f) => f && /^image\//.test(f.type));
+  if (!list.length) { toast('Это не картинка — подойдут PNG, JPG, WebP, GIF, SVG.'); return; }
+  let i = 0;
+  for (const f of list) {
+    try {
+      const { data, w, h } = await readImageFile(f);
+      const id = uid('img');
+      state.graph.images[id] = data;
+      if (at) {
+        const k = Math.min(1, 240 / Math.max(w, h));
+        addDecor({ decor: 'image', image: id, w: Math.round(w * k), h: Math.round(h * k) }, { x: at.x + i * 30, y: at.y + i * 30 });
+      } else { if (state.isExample) adoptExample(); scheduleSync(); }
+      i++;
+    } catch { toast(`«${f.name}» не открылась как картинка.`); }
+  }
+  if (imagesSize() > 4 * 1024 * 1024) toast('Картинок уже больше 4 МБ — файл графа растёт; неиспользуемые можно удалить во вкладке «Картинки».');
+  if (palTab === 'images') buildPalette();
+}
+canvas.addEventListener('dragover', (e) => {
+  if (!e.dataTransfer || ![...e.dataTransfer.types].includes('Files')) return;
+  e.preventDefault();
+  canvas.classList.add('file-over');
+});
+canvas.addEventListener('dragleave', (e) => { if (!canvas.contains(e.relatedTarget)) canvas.classList.remove('file-over'); });
+canvas.addEventListener('drop', (e) => {
+  canvas.classList.remove('file-over');
+  if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+  e.preventDefault();
+  importImages(e.dataTransfer.files, { x: e.clientX, y: e.clientY });
+});
+$('fileImages').addEventListener('change', (e) => {
+  const files = [...e.target.files];
+  e.target.value = '';
+  if (files.length) importImages(files, null);
+});
+function removeUnusedImages() {
+  const used = new Set(state.graph.decor.filter((d) => d.kind === 'image').map((d) => d.image));
+  let n = 0;
+  for (const id of Object.keys(state.graph.images)) if (!used.has(id)) { delete state.graph.images[id]; n++; }
+  toast(n ? `Удалено неиспользуемых картинок: ${n}.` : 'Все картинки используются на холсте.');
+  if (n) { if (state.isExample) adoptExample(); scheduleSync(); buildPalette(); }
+}
+
+// ───────────────────────── Поиск по нодам ─────────────────────────
+// По всем линиям: id, id квеста, тексты на всех языках, виды триггеров/событий, цели (id и имя из каталога),
+// названия рамок и надписи. Результат — переход к ноде (с переключением линии), совпадения подсвечиваются на холсте.
+
+const norm = (v) => String(v || '').toLowerCase().replace(/ё/g, 'е');
+function nodeSearchTexts(n) {
+  const out = [n.id, n.questId, TYPES[n.type] && TYPES[n.type].label];
+  for (const k of LOC_KEYS) if (n[k]) out.push(...Object.values(n[k]));
+  if (Array.isArray(n.lines)) for (const l of n.lines) out.push(...Object.values(l.text || {}));
+  if (n.text) out.push(n.text);
+  if (n.type === 'trigger') { const t = TRIGGERS.find((x) => x.id === n.trigger); out.push(t && t.label, t && triggerDetail(n, t)); }
+  if (n.type === 'action') { const a = ACTIONS.find((x) => x.id === n.action); out.push(a && a.label); }
+  if (n.type === 'cutscene') out.push(catalogName('cutscenes', n.target));
+  for (const k of ['target', 'category', 'item', 'zone', 'orderId', 'lootBoxId', 'enemyType', 'skillId', 'portrait']) if (n[k]) out.push(n[k]);
+  return out.filter(Boolean).map(String);
+}
+function snippet(text, q) {
+  const i = norm(text).indexOf(q);
+  const from = Math.max(0, i - 24), to = Math.min(text.length, i + q.length + 36);
+  return { pre: (from > 0 ? '…' : '') + text.slice(from, i), hit: text.slice(i, i + q.length), post: text.slice(i + q.length, to) + (to < text.length ? '…' : '') };
+}
+function searchAll(query) {
+  const q = norm(query.trim());
+  if (!q) return [];
+  const res = [];
+  for (const n of state.graph.nodes.values()) {
+    const text = nodeSearchTexts(n).find((t) => norm(t).includes(q));
+    if (text) res.push({ kind: 'node', id: n.id, line: n.storyline, type: n.type, title: nodeTitle(n.id), text });
+  }
+  for (const g of state.graph.groups) if (norm(g.title).includes(q)) res.push({ kind: 'group', id: g.id, line: g.storyline, title: g.title, text: g.title });
+  for (const d of state.graph.decor) if (d.text && norm(d.text).includes(q)) res.push({ kind: 'decor', id: d.id, line: d.storyline, title: 'Надпись', text: d.text });
+  return res.slice(0, 50);
+}
+
+const search = { results: [], active: 0, query: '' };
+function renderSearch() {
+  const ul = $('searchResults');
+  ul.textContent = '';
+  if (!search.query.trim()) { ul.hidden = true; return; }
+  ul.hidden = false;
+  if (!search.results.length) { ul.append(el('li', { class: 'empty', text: 'Ничего не найдено' })); return; }
+  const multi = state.graph.storylines.length > 1;
+  search.results.forEach((r, i) => {
+    const sn = snippet(r.text, norm(search.query.trim()));
+    const chipColor = r.kind === 'node' ? typeColor(r.type) : 'var(--muted)';
+    const chipText = r.kind === 'node' ? TYPES[r.type].label : r.kind === 'group' ? 'Рамка' : 'Надпись';
+    const snip = el('span', { class: 'snip' }, sn.pre, el('mark', { text: sn.hit }), sn.post);
+    ul.append(el('li', { class: i === search.active ? 'on' : '', role: 'option', 'aria-selected': String(i === search.active),
+      onpointerdown: (e) => { e.preventDefault(); goToResult(r); } },
+    el('span', { class: 'chip', style: `background:${chipColor}`, text: chipText }),
+    el('span', { class: 'ttl', text: (multi ? `[${lineTitle(r.line)}] ` : '') + r.title }), snip));
+  });
+}
+function applySearchHighlight() {
+  const q = search.query.trim();
+  const hits = new Set(q ? search.results.map((r) => r.kind + ':' + r.id) : []);
+  for (const [id, div] of nodeEls) { div.classList.toggle('hit', !!q && hits.has('node:' + id)); div.classList.toggle('dim', !!q && !hits.has('node:' + id)); }
+  for (const [key, div] of boardEls) div.classList.toggle('dim', !!q && !hits.has(key));
+}
+function runSearch() {
+  search.query = $('searchInput').value;
+  search.results = searchAll(search.query);
+  search.active = 0;
+  renderSearch();
+  applySearchHighlight();
+}
+function flash(div) {
+  if (!div) return;
+  div.classList.remove('flash');
+  void div.offsetWidth;
+  div.classList.add('flash');
+  setTimeout(() => div.classList.remove('flash'), 1500);
+}
+function goToResult(r) {
+  if (r.kind === 'node') {
+    focusNode(r.id);
+    flash(nodeEls.get(r.id));
+  } else {
+    const o = findItem(r.kind, r.id);
+    if (!o) return;
+    if (o.storyline !== state.line) switchLine(o.storyline, true);
+    const rc = canvas.getBoundingClientRect();
+    state.view.x = rc.width / 2 - (o.x + o.w / 2) * state.view.k;
+    state.view.y = rc.height / 2 - (o.y + Math.min(o.h, 200) / 2) * state.view.k;
+    applyView();
+    selectItem(r.kind, r.id);
+    flash(boardEls.get(r.kind + ':' + r.id));
+  }
+  applySearchHighlight();
+}
+$('searchInput').addEventListener('input', runSearch);
+$('searchInput').addEventListener('focus', () => { if (search.query.trim()) renderSearch(); });
+$('searchInput').addEventListener('blur', () => { $('searchResults').hidden = true; });
+$('searchInput').addEventListener('keydown', (e) => {
+  const n = search.results.length;
+  if (e.key === 'ArrowDown' && n) { e.preventDefault(); search.active = (search.active + 1) % n; renderSearch(); }
+  else if (e.key === 'ArrowUp' && n) { e.preventDefault(); search.active = (search.active - 1 + n) % n; renderSearch(); }
+  else if (e.key === 'Enter' && n) { e.preventDefault(); goToResult(search.results[search.active]); }
+  else if (e.key === 'Escape') {
+    e.preventDefault();
+    e.stopPropagation();
+    $('searchInput').value = '';
+    runSearch();
+    $('searchInput').blur();
+  }
+});
+
+// ───────────────────────── Сюжетные линии (вкладки) ─────────────────────────
+
+function renderTabs() {
+  const bar = $('lineTabs');
+  bar.textContent = '';
+  const counts = new Map();
+  for (const n of state.graph.nodes.values()) counts.set(n.storyline, (counts.get(n.storyline) || 0) + 1);
+  const many = state.graph.storylines.length > 1;
+  for (const line of state.graph.storylines) {
+    const on = line.id === state.line;
+    const tab = el('div', { class: 'line-tab' + (on ? ' on' : ''), 'data-line': line.id, role: 'tab', 'aria-selected': String(on),
+      title: 'Щелчок — открыть, двойной щелчок — переименовать' },
+      el('span', { class: 't', text: line.title }), el('span', { class: 'c', text: String(counts.get(line.id) || 0) }));
+    tab.addEventListener('click', (e) => { if (!e.target.closest('.x, input')) switchLine(line.id); });
+    tab.addEventListener('dblclick', (e) => { if (!e.target.closest('.x')) renameLine(tab, line); });
+    if (on && many) tab.append(el('button', { class: 'x', type: 'button', title: 'Удалить пустую линию', 'aria-label': 'Удалить линию', text: '×', onclick: () => deleteLine(line.id) }));
+    bar.append(tab);
+  }
+  bar.append(el('button', { class: 'line-add', type: 'button', title: 'Новая сюжетная линия', text: '+ Линия', onclick: addLine }));
+}
+
+function switchLine(id, keepView) {
+  if (id === state.line) return;
+  state.views[state.line] = { ...state.view };
+  state.line = id;
+  state.sel = { node: null, link: null, group: null, decor: null };
+  renderAll();
+  if (keepView) return;
+  if (state.views[id]) { state.view = { ...state.views[id] }; applyView(); }
+  else requestAnimationFrame(() => { fitAll(); renderWires(); });
+}
+
+function addLine() {
+  beginEdit(false);
+  let n = state.graph.storylines.length + 1;
+  while (state.graph.storylines.some((l) => l.title === `Линия ${n}`)) n++;
+  const line = { id: uid('line'), title: `Линия ${n}` };
+  state.graph.storylines.push(line);
+  state.views[state.line] = { ...state.view };
+  state.line = line.id;
+  state.sel = { node: null, link: null, group: null, decor: null };
+  state.view = { x: 60, y: 60, k: 1 };
+  applyView();
+  changed(true);
+  const tab = document.querySelector(`.line-tab[data-line="${line.id}"]`);
+  if (tab) renameLine(tab, line);
+}
+
+function renameLine(tab, line) {
+  const input = el('input', { type: 'text', 'aria-label': 'Название линии' });
+  input.value = line.title;
+  tab.querySelector('.t').replaceWith(input);
+  input.focus();
+  input.select();
+  let done = false;
+  const finish = (save) => {
+    if (done) return;
+    done = true;
+    const title = input.value.trim();
+    if (save && title && title !== line.title) { beginEdit(false); line.title = title; changed(true); }
+    else renderTabs();
+  };
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') finish(true); if (e.key === 'Escape') finish(false); e.stopPropagation(); });
+  input.addEventListener('blur', () => finish(true));
+}
+
+function deleteLine(id) {
+  const g = state.graph;
+  const used = [...g.nodes.values()].some((n) => n.storyline === id) || g.groups.some((x) => x.storyline === id) || g.decor.some((x) => x.storyline === id);
+  if (used) { toast('В линии есть ноды или оформление — сначала удалите или перенесите их.'); return; }
+  if (g.storylines.length < 2) return;
+  beginEdit(false);
+  const i = g.storylines.findIndex((l) => l.id === id);
+  g.storylines.splice(i, 1);
+  delete state.views[id];
+  state.line = g.storylines[Math.max(0, i - 1)].id;
+  if (state.views[state.line]) { state.view = { ...state.views[state.line] }; applyView(); }
+  changed(true);
+}
+
+let toastTimer = 0;
+function toast(text) {
+  let t = document.querySelector('.toast');
+  if (!t) { t = el('div', { class: 'toast', role: 'status' }); canvas.append(t); }
+  t.textContent = text;
+  t.style.opacity = '1';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.style.opacity = '0'; }, 2600);
 }
 
 // ───────────────────────── Мышь, касания, клавиатура ─────────────────────────
@@ -1216,7 +1967,10 @@ function toWorld(clientX, clientY) {
 }
 
 canvas.addEventListener('pointerdown', (e) => {
-  if (e.target.closest('.sheet, .zoom, .banner')) return;
+  if (e.target.closest('.sheet, .zoom, .banner, .line-tabs')) return;
+  // Щелчок по холсту забирает фокус у полей инспектора: иначе Ctrl+Z отменял бы набранный текст, а не правку на холсте.
+  const focused = document.activeElement;
+  if (focused && focused.closest && focused.closest('.inspector')) focused.blur();
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pointers.size === 2) { startPinch(); return; }
   if (e.button === 2) return;
@@ -1225,6 +1979,10 @@ canvas.addEventListener('pointerdown', (e) => {
   const nodeDiv = e.target.closest('.node');
   const hit = e.target.closest('path.hit');
 
+  if (!nodeDiv && boardPointerDown(e)) {
+    canvas.setPointerCapture(e.pointerId);
+    return;
+  }
   if (port && nodeDiv) {
     const id = nodeDiv.dataset.id;
     drag = { kind: 'wire', fromId: id, from: portPos(id, 'out'), to: toWorld(e.clientX, e.clientY) };
@@ -1249,6 +2007,7 @@ canvas.addEventListener('pointermove', (e) => {
   if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pinch && pointers.size === 2) { movePinch(); return; }
   if (!drag) return;
+  if (drag.kind === 'item-move' || drag.kind === 'item-resize') { boardPointerMove(e); return; }
   if (drag.kind === 'pan') {
     state.view.x = drag.vx + (e.clientX - drag.startX);
     state.view.y = drag.vy + (e.clientY - drag.startY);
@@ -1297,8 +2056,11 @@ function endPointer(e) {
   } else if (drag.kind === 'node') {
     if (drag.moved) changed(false);
     drag = null;
+  } else if (drag.kind === 'item-move' || drag.kind === 'item-resize') {
+    if (drag.moved) changed(false);
+    drag = null;
   } else if (drag.kind === 'pan') {
-    if (!drag.moved && (state.sel.node || state.sel.link !== null)) { state.sel = { node: null, link: null }; renderAll(); }
+    if (!drag.moved && (state.sel.node || state.sel.link !== null || state.sel.group || state.sel.decor)) { state.sel = { node: null, link: null, group: null, decor: null }; renderAll(); }
     drag = null;
     canvas.classList.remove('panning');
   }
@@ -1341,9 +2103,11 @@ $('zoomOut').addEventListener('click', () => { const r = canvas.getBoundingClien
 $('zoomFit').addEventListener('click', fitAll);
 
 function fitAll() {
-  const nodes = [...state.graph.nodes.values()];
-  if (!nodes.length) { state.view = { x: 60, y: 60, k: 1 }; applyView(); return; }
+  const nodes = [...state.graph.nodes.values()].filter(inLine);
+  const items = state.graph.groups.concat(state.graph.decor).filter(inLine);
+  if (!nodes.length && !items.length) { state.view = { x: 60, y: 60, k: 1 }; applyView(); return; }
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const o of items) { minX = Math.min(minX, o.x); minY = Math.min(minY, o.y); maxX = Math.max(maxX, o.x + o.w); maxY = Math.max(maxY, o.y + o.h); }
   for (const n of nodes) {
     const d = nodeEls.get(n.id);
     minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
@@ -1358,6 +2122,7 @@ function fitAll() {
 function focusNode(id) {
   const n = state.graph.nodes.get(id);
   if (!n) return;
+  if (!inLine(n)) switchLine(n.storyline, true);
   const r = canvas.getBoundingClientRect();
   state.view.x = r.width / 2 - (n.x + 115) * state.view.k;
   state.view.y = r.height / 2 - (n.y + 40) * state.view.k;
@@ -1367,8 +2132,10 @@ function focusNode(id) {
 
 function selectNode(id) {
   if (state.sel.node === id && state.sel.link === null) return;
-  state.sel = { node: id, link: null };
+  const hadItem = state.sel.group || state.sel.decor;
+  state.sel = { node: id, link: null, group: null, decor: null };
   for (const [nid, d] of nodeEls) d.classList.toggle('sel', nid === id);
+  if (hadItem) for (const div of boardEls.values()) div.classList.remove('sel');
   renderWires();
   renderInspector();
 }
@@ -1384,6 +2151,17 @@ function connect(from, to) {
 }
 
 function deleteSelection() {
+  if (state.sel.group || state.sel.decor) {
+    const kind = state.sel.group ? 'group' : 'decor';
+    const list = kind === 'group' ? state.graph.groups : state.graph.decor;
+    const i = list.findIndex((x) => x.id === (state.sel.group || state.sel.decor));
+    if (i < 0) return;
+    beginEdit(false);
+    list.splice(i, 1);
+    state.sel = { node: null, link: null, group: null, decor: null };
+    changed(true);
+    return;
+  }
   if (state.sel.link !== null) {
     beginEdit(false);
     state.graph.links.splice(state.sel.link, 1);
@@ -1401,6 +2179,17 @@ function deleteSelection() {
 }
 
 function duplicateSelection() {
+  if (state.sel.group || state.sel.decor) {
+    const kind = state.sel.group ? 'group' : 'decor';
+    const o = findItem(kind, state.sel.group || state.sel.decor);
+    if (!o) return;
+    beginEdit(false);
+    const copy = { ...o, id: uid(kind === 'group' ? 'g' : 'd'), x: o.x + 40, y: o.y + 40 };
+    (kind === 'group' ? state.graph.groups : state.graph.decor).push(copy);
+    state.sel = { node: null, link: null, group: kind === 'group' ? copy.id : null, decor: kind === 'decor' ? copy.id : null };
+    changed(true);
+    return;
+  }
   const n = state.sel.node && state.graph.nodes.get(state.sel.node);
   if (!n || n.type === 'start') return;
   beginEdit(false);
@@ -1427,11 +2216,12 @@ function addNode(type, at) {
 let palDrag = null;
 function overCanvas(x, y) {
   const hit = document.elementFromPoint(x, y);
-  return !!(hit && hit.closest('#canvas') && !hit.closest('.sheet, .zoom, .banner'));
+  return !!(hit && hit.closest('#canvas') && !hit.closest('.sheet, .zoom, .banner, .line-tabs'));
 }
-function palPointerDown(e, type) {
+// payload: { node: type } | { group: true } | { decor: 'shape'|'icon'|'image', shape|icon|image, w, h }
+function palPointerDown(e, payload) {
   if (e.button !== 0) return;
-  palDrag = { type, id: e.pointerId, x0: e.clientX, y0: e.clientY, ghost: null, moved: false };
+  palDrag = { payload, id: e.pointerId, x0: e.clientX, y0: e.clientY, ghost: null, moved: false };
   e.currentTarget.setPointerCapture(e.pointerId);
 }
 function palPointerMove(e) {
@@ -1440,9 +2230,12 @@ function palPointerMove(e) {
   if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 5) return;
   if (!d.moved) {
     d.moved = true;
+    const p = d.payload;
+    const label = p.node ? TYPES[p.node].label : p.group ? 'Рамка' : p.decor === 'shape' ? SHAPES[p.shape].label : p.decor === 'icon' ? ICONS[p.icon][0] : 'Картинка';
+    const color = p.node ? typeColor(p.node) : 'var(--muted)';
     d.ghost = el('div', { class: 'pal-ghost' },
-      el('div', { class: 'gh', style: `background:${typeColor(d.type)}`, text: TYPES[d.type].label }),
-      el('div', { class: 'gb', text: TYPES[d.type].desc }));
+      el('div', { class: 'gh', style: `background:${color}`, text: label }),
+      el('div', { class: 'gb', text: p.node ? TYPES[p.node].desc : 'Отпустите на холсте' }));
     document.body.append(d.ghost);
   }
   d.ghost.style.left = (e.clientX - 40) + 'px';
@@ -1456,7 +2249,11 @@ function palPointerUp(e, cancelled) {
   canvas.classList.remove('drop');
   if (d.ghost) d.ghost.remove();
   if (cancelled || !d.moved) return; // щелчок без перетаскивания ничего не добавляет
-  if (overCanvas(e.clientX, e.clientY)) addNode(d.type, { x: e.clientX, y: e.clientY });
+  if (!overCanvas(e.clientX, e.clientY)) return;
+  const at = { x: e.clientX, y: e.clientY }, p = d.payload;
+  if (p.node) addNode(p.node, at);
+  else if (p.group) addGroup(at);
+  else addDecor(p, at);
 }
 
 document.addEventListener('keydown', (e) => {
@@ -1464,10 +2261,11 @@ document.addEventListener('keydown', (e) => {
   const mod = e.ctrlKey || e.metaKey;
   if (mod && e.key.toLowerCase() === 'z' && !typing) { e.preventDefault(); if (e.shiftKey) redoOnce(); else undoOnce(); return; }
   if (mod && e.key.toLowerCase() === 'y' && !typing) { e.preventDefault(); redoOnce(); return; }
+  if (mod && e.key.toLowerCase() === 'f') { e.preventDefault(); $('searchInput').focus(); $('searchInput').select(); return; }
   if (typing) return;
   if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicateSelection(); return; }
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSelection(); }
-  if (e.key === 'Escape') { closeSheets(); state.sel = { node: null, link: null }; renderAll(); }
+  if (e.key === 'Escape') { closeSheets(); state.sel = { node: null, link: null, group: null, decor: null }; renderAll(); }
 });
 
 // ───────────────────────── Панели ─────────────────────────
@@ -1552,7 +2350,7 @@ function importText(text) {
   try {
     const g = fromFileFormat(JSON.parse(text.replace(/^﻿/, '')));
     beginEdit(false);
-    state.graph = g;
+    setGraph(g);
     state.sel = { node: null, link: null };
     changed(true);
     fitAll();
@@ -1594,7 +2392,7 @@ const COLOR_VARS = [
   { v: '--wire', label: 'Нитки' },
   { v: '--t-start', label: 'Старт' }, { v: '--t-quest', label: 'Квест' }, { v: '--t-radio', label: 'Рация' },
   { v: '--t-trigger', label: 'Триггер' }, { v: '--t-wait', label: 'Ожидание' }, { v: '--t-and', label: 'И' },
-  { v: '--t-action', label: 'Событие' }, { v: '--t-note', label: 'Заметка' },
+  { v: '--t-action', label: 'Событие' }, { v: '--t-note', label: 'Заметка' }, { v: '--t-cutscene', label: 'Кат-сцена' },
 ];
 let prefs = { theme: null, colors: {}, bg: {} };
 const root = document.documentElement;
@@ -1709,7 +2507,9 @@ function toFileFormat() {
     if (out.lines) out.lines = out.lines.map((l) => ({ seconds: Number(l.seconds) || 0, text: toLocArray(l.text) }));
     return out;
   });
-  return { ...(state.graph.extra || {}), version: FILE_VERSION, languages: langs(), nodes, links: state.graph.links.map((l) => ({ ...l })) };
+  const g = state.graph;
+  return { ...(g.extra || {}), version: FILE_VERSION, languages: langs(), nodes, links: g.links.map((l) => ({ ...l })),
+    storylines: g.storylines.map((l) => ({ ...l })), groups: g.groups.map((x) => ({ ...x })), decor: g.decor.map((x) => ({ ...x })), images: { ...g.images } };
 }
 
 // Миграции формата: MIGRATIONS[n] переводит файл версии n в n+1. Новые версии редактора открывают старые файлы;
@@ -1735,7 +2535,7 @@ function migrateGraph(data) {
 }
 
 // Поля верхнего уровня, которых этот редактор не знает, сохраняются как есть — чтобы не потерять данные новых версий.
-const KNOWN_TOP = new Set(['version', 'languages', 'nodes', 'links']);
+const KNOWN_TOP = new Set(['version', 'languages', 'nodes', 'links', 'storylines', 'groups', 'decor', 'images']);
 
 function fromFileFormat(data) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('не объект JSON');
@@ -1755,7 +2555,7 @@ function fromFileFormat(data) {
   const languages = Array.isArray(data.languages) && data.languages.length ? data.languages.map(String) : ['ru', 'en'];
   const extra = {};
   for (const [k, v] of Object.entries(data)) if (!KNOWN_TOP.has(k)) extra[k] = v;
-  return { languages, nodes, links, extra };
+  return normalizeGraph({ languages, nodes, links, extra, storylines: data.storylines, groups: data.groups, decor: data.decor, images: data.images });
 }
 
 // ───────────────────────── Хранение ─────────────────────────
@@ -1763,7 +2563,7 @@ function fromFileFormat(data) {
 // graph/links — все нитки, graph/meta — языки, graph/catalog — каталог сцены.
 
 const caps = { db: null, downloads: null };
-const saved = { nodes: new Map(), links: null, meta: null };
+const saved = { nodes: new Map(), links: null, meta: null, groups: null, decor: null, images: new Set() };
 let syncTimer = 0, syncing = false, syncAgain = false;
 
 function setStatus(stateName, text) { const s = $('status'); s.dataset.state = stateName; s.textContent = text; }
@@ -1811,8 +2611,23 @@ async function syncDb() {
   }
   const links = JSON.stringify(state.graph.links);
   if (saved.links !== links) { await db.doc('graph/links').set({ links: state.graph.links }); saved.links = links; }
-  const meta = JSON.stringify({ languages: langs() });
-  if (saved.meta !== meta) { await db.doc('graph/meta').set({ languages: langs(), version: FILE_VERSION }); saved.meta = meta; }
+  const meta = JSON.stringify({ languages: langs(), storylines: state.graph.storylines });
+  if (saved.meta !== meta) { await db.doc('graph/meta').set({ languages: langs(), storylines: state.graph.storylines, version: FILE_VERSION }); saved.meta = meta; }
+  const groups = JSON.stringify(state.graph.groups);
+  if (saved.groups !== groups) { await db.doc('graph/groups').set({ groups: state.graph.groups }); saved.groups = groups; }
+  const decor = JSON.stringify(state.graph.decor);
+  if (saved.decor !== decor) { await db.doc('graph/decor').set({ decor: state.graph.decor }); saved.decor = decor; }
+  // Картинки — по документу на штуку (лимит документа 256 КБ; картинка ужата до 512 px).
+  for (const [id, data] of Object.entries(state.graph.images)) {
+    if (saved.images.has(id)) continue;
+    await db.doc('images/' + safeDocId(id)).set({ id, data });
+    saved.images.add(id);
+  }
+  for (const id of [...saved.images]) {
+    if (state.graph.images[id]) continue;
+    await db.doc('images/' + safeDocId(id)).delete();
+    saved.images.delete(id);
+  }
   setStatus('saved', 'Сохранено');
 }
 
@@ -1836,9 +2651,12 @@ function adoptExample() {
 }
 
 async function loadFromDb(db) {
-  const [nodesSnap, linksDoc, metaDoc, catalogDoc] = await Promise.all([
+  const [nodesSnap, linksDoc, metaDoc, catalogDoc, groupsDoc, decorDoc, imagesSnap] = await Promise.all([
     db.collection('nodes').get(), db.doc('graph/links').get(), db.doc('graph/meta').get(), db.doc('graph/catalog').get(),
+    db.doc('graph/groups').get(), db.doc('graph/decor').get(), db.collection('images').get(),
   ]);
+  const images = {};
+  for (const d of imagesSnap.docs) { const v = d.data() || {}; if (v.id && v.data) { images[v.id] = v.data; saved.images.add(v.id); } }
   if (catalogDoc.exists) state.catalog = (catalogDoc.data() || {}).lists || {};
   try {
     const look = await db.doc('graph/appearance').get();
@@ -1854,9 +2672,13 @@ async function loadFromDb(db) {
   }
   const links = linksDoc.exists ? ((linksDoc.data() || {}).links || []).filter((l) => nodes.has(l.from) && nodes.has(l.to)) : [];
   const meta = metaDoc.exists ? metaDoc.data() || {} : {};
-  state.graph = { languages: Array.isArray(meta.languages) && meta.languages.length ? [...meta.languages] : ['ru', 'en'], nodes, links: links.map((l) => ({ ...l })) };
+  setGraph({ languages: Array.isArray(meta.languages) && meta.languages.length ? [...meta.languages] : ['ru', 'en'], nodes, links: links.map((l) => ({ ...l })),
+    storylines: meta.storylines, groups: groupsDoc.exists ? (groupsDoc.data() || {}).groups : [], decor: decorDoc.exists ? (decorDoc.data() || {}).decor : [], images });
   saved.links = JSON.stringify(state.graph.links);
-  saved.meta = JSON.stringify({ languages: langs() });
+  saved.meta = JSON.stringify({ languages: langs(), storylines: state.graph.storylines });
+  saved.groups = JSON.stringify(state.graph.groups);
+  saved.decor = JSON.stringify(state.graph.decor);
+  // Ноды, которым нормализация дописала storyline, уйдут в db при первой правке.
   return true;
 }
 
@@ -1963,7 +2785,7 @@ async function flushFile() {
 }
 
 function loadGraphObject(g) {
-  state.graph = g;
+  setGraph(g);
   state.isExample = false;
   state.sel = { node: null, link: null };
 }
@@ -1992,7 +2814,7 @@ async function initFile(host) {
   if (project) $('brandSub').textContent = `${project.name} · 08_Story/story_graph.json`;
 
   if (!project) {
-    state.graph = exampleGraph(); state.isExample = true;
+    setGraph(exampleGraph()); state.isExample = true;
     setStatus('error', 'Проект не выбран');
     finishInit();
     showSticky('sheetWelcome');
@@ -2008,7 +2830,7 @@ async function initFile(host) {
     enterBroken('Файл не открылся: ' + disk.error);
   } else if (!disk.exists) {
     // Графа в проекте ещё нет — показываем пример; первая правка создаст файл.
-    state.graph = exampleGraph(); state.isExample = true;
+    setGraph(exampleGraph()); state.isExample = true;
     setStatus('saved', 'Новый граф');
   } else {
     const parsed = parseGraphText(disk.text);
@@ -2037,7 +2859,7 @@ function finishInit() {
 
 function enterBroken(reason) {
   file.blocked = 'corrupt';
-  state.graph = { languages: ['ru', 'en'], nodes: new Map(), links: [] };
+  setGraph({ languages: ['ru', 'en'], nodes: new Map(), links: [] });
   state.isExample = false;
   setStatus('error', 'Сохранение выключено');
   $('brokenText').textContent = reason;
@@ -2270,8 +3092,8 @@ $('catalogReload').addEventListener('click', () => loadCatalogFromProject(true))
 // Команды меню приложения.
 function onMenu(command) {
   const typing = document.activeElement && document.activeElement.closest && document.activeElement.closest('input, textarea, select');
-  if (command === 'undo') { if (typing) document.execCommand('undo'); else undoOnce(); }
-  else if (command === 'redo') { if (typing) document.execCommand('redo'); else redoOnce(); }
+  if (command === 'undo') { if (typing) document.execCommand('undo'); else undoOnce('menu'); }
+  else if (command === 'redo') { if (typing) document.execCommand('redo'); else redoOnce('menu'); }
   else if (command === 'history') { $('sheetHistory').hidden = true; if (openSheet('sheetHistory')) renderHistory(); }
   else if (command === 'export') exportGraph();
 }
@@ -2292,7 +3114,7 @@ function exampleGraph() {
     description: { ru: 'Соберите кирпичи и доски и выбросьте их в мусорный контейнер.', en: 'Collect the bricks and boards and throw them into the dumpster.' },
     questType: 'ShelveItems', targetCount: 5, target: '', category: 'Category_Trash', item: '', zone: '', xp: 20, money: 50 });
   const t1 = put({ id: 'n_trig_door', type: 'trigger', x: 600, y: 340, trigger: 'breakableBroken', target: '', category: '', item: '', zone: '',
-    count: 1, value: 0, orderId: '', lootBoxId: '', enemyType: '', questId: '' });
+    count: 1, value: 0, orderId: '', lootBoxId: '', enemyType: '', questId: '', skillId: '' });
   const r2 = put({ id: 'n_radio2', type: 'radio', x: 900, y: 340, speaker: { ru: 'Диспетчер', en: 'Dispatcher' }, portrait: 'dispatcher', lines: [
     { seconds: 5, text: { ru: 'Ты пробился на склад? Там должны остаться патроны — разложи их по полкам.', en: 'You broke into the storeroom? There should be ammo left — put it on the shelves.' } },
   ] });
@@ -2374,17 +3196,56 @@ window.addEventListener('resize', applyLayout);
 
 // ───────────────────────── Запуск ─────────────────────────
 
+// Нижняя полоса: вкладки «Ноды | Формы | Иконки | Картинки». Всё — перетаскиванием на холст.
+let palTab = 'nodes';
+function palItem(cls, title, payload, ...children) {
+  return el('button', { class: 'pal-item ' + cls, type: 'button', title,
+    onpointerdown: (e) => palPointerDown(e, payload), onpointermove: palPointerMove,
+    onpointerup: (e) => palPointerUp(e, false), onpointercancel: (e) => palPointerUp(e, true) }, ...children);
+}
 function buildPalette() {
   const box = $('palItems');
-  for (const [type, t] of Object.entries(TYPES)) {
-    const item = el('button', { class: 'pal-item', type: 'button', title: `${t.label} — ${t.desc}. Перетащите на холст.`,
-      onpointerdown: (e) => palPointerDown(e, type), onpointermove: palPointerMove,
-      onpointerup: (e) => palPointerUp(e, false), onpointercancel: (e) => palPointerUp(e, true) },
-    el('span', { class: 'sw', style: `background:${typeColor(type)}` }),
-    el('span', {}, t.label, el('small', { text: t.desc })));
-    box.append(item);
+  box.textContent = '';
+  document.querySelectorAll('#palTabs button').forEach((b) => { b.classList.toggle('on', b.dataset.tab === palTab); b.setAttribute('aria-selected', String(b.dataset.tab === palTab)); });
+  if (palTab === 'nodes') {
+    for (const [type, t] of Object.entries(TYPES)) {
+      box.append(palItem('', `${t.label} — ${t.desc}. Перетащите на холст.`, { node: type },
+        el('span', { class: 'sw', style: `background:${typeColor(type)}` }), el('span', {}, t.label, el('small', { text: t.desc }))));
+    }
+  } else if (palTab === 'shapes') {
+    box.append(palItem('', 'Рамка — подписанная область: двигает всё, что внутри. Перетащите на холст.', { group: true },
+      el('span', { class: 'sw', style: 'background:transparent;border:2px solid var(--muted)' }), el('span', {}, 'Рамка', el('small', { text: 'Группа с подписью' }))));
+    for (const [shape, sh] of Object.entries(SHAPES)) {
+      const icon = shape === 'text' ? el('span', { style: 'font:700 15px var(--font-head);width:22px;text-align:center', text: 'Aa' })
+        : shapeSvg({ shape, w: 44, h: 32, fill: sh.fill });
+      box.append(palItem('shape-item', `${sh.label}. Перетащите на холст.`, { decor: 'shape', shape }, icon, el('span', {}, sh.label)));
+    }
+  } else if (palTab === 'icons') {
+    for (const [name, [label]] of Object.entries(ICONS)) {
+      box.append(palItem('icon-item', `${label}. Перетащите на холст.`, { decor: 'icon', icon: name }, iconSvg(name)));
+    }
+  } else {
+    box.append(el('button', { class: 'pal-btn', type: 'button', text: 'Загрузить…', title: 'PNG, JPG, WebP, GIF, SVG — уменьшаются до 512 px. Можно просто бросить файл на холст.', onclick: () => $('fileImages').click() }));
+    for (const [id, data] of Object.entries(state.graph.images)) {
+      box.append(palItem('img-item', 'Перетащите на холст.', { decor: 'image', image: id }, el('img', { src: data, alt: '' })));
+    }
+    if (Object.keys(state.graph.images).length) box.append(el('button', { class: 'pal-btn', type: 'button', text: 'Удалить неиспользуемые', onclick: removeUnusedImages }));
+    else box.append(el('span', { class: 'hint', style: 'margin:0', text: 'Бросьте картинку с компьютера прямо на холст.' }));
   }
 }
+// Колесо над полосой листает её вбок, если карточки не помещаются.
+$('palItems').addEventListener('wheel', (e) => {
+  const box = e.currentTarget;
+  if (box.scrollWidth <= box.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+  e.preventDefault();
+  box.scrollLeft += e.deltaY;
+}, { passive: false });
+$('palTabs').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-tab]');
+  if (!b || b.dataset.tab === palTab) return;
+  palTab = b.dataset.tab;
+  buildPalette();
+});
 
 async function init() {
   buildPalette();
@@ -2413,14 +3274,14 @@ async function init() {
     state.storage = 'local';
     try {
       const raw = localStorage.getItem(LOCAL_KEY);
-      if (raw) { state.graph = fromFileFormat(JSON.parse(raw)); loaded = true; }
+      if (raw) { setGraph(fromFileFormat(JSON.parse(raw))); loaded = true; }
       const cat = localStorage.getItem(LOCAL_KEY + '-catalog');
       if (cat) state.catalog = JSON.parse(cat);
     } catch { /* пусто — покажем пример */ }
     setStatus('local', 'Только в этом браузере');
   }
 
-  if (!loaded) { state.graph = exampleGraph(); state.isExample = true; }
+  if (!loaded) { setGraph(exampleGraph()); state.isExample = true; }
   renderAll();
   validate();
   requestAnimationFrame(() => { renderWires(); fitAll(); });

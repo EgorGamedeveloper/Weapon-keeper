@@ -8,8 +8,8 @@ using UnityEngine;
 ///
 /// Правила графа: нода включается, когда завершилась ЛЮБАЯ нода, чья нитка в неё входит; нода «И» — когда
 /// завершились ВСЕ. «Старт» и триггеры без входящих ниток включаются в начале игры. Включённая нода
-/// завершается по-своему: квест — когда выполнен, рация — когда разговор закончен, триггер — когда игрок
-/// сделал нужное, ожидание — через N секунд, «И» и «Событие» — сразу.
+/// завершается по-своему: квест — когда выполнен, рация — когда разговор закончен, кат-сцена — когда досмотрена
+/// или пропущена, триггер — когда игрок сделал нужное, ожидание — через N секунд, «И» и «Событие» — сразу.
 ///
 /// Сейв хранит только завершённые ноды (в порядке завершения). Всё остальное выводится заново: при загрузке
 /// ноды, готовые к включению, включаются снова — квест продолжится (его прогресс восстановил QuestManager),
@@ -38,6 +38,9 @@ public class StoryDirector : MonoBehaviour
 
     [Tooltip("Переговоры по рации. Пусто — ноды «Рация» пропускаются с предупреждением.")]
     public RadioCallUI radio;
+
+    [Tooltip("Показ кат-сцен. Пусто — ноды «Кат-сцена» пропускаются с предупреждением.")]
+    public StoryCutscenePlayer cutscenes;
 
     [Tooltip("Каталог предметов — для триггеров по конкретному предмету. Пусто — возьмётся у GameBootstrap.")]
     public ItemCatalog itemCatalog;
@@ -201,6 +204,10 @@ public class StoryDirector : MonoBehaviour
                 ActivateRadio(node);
                 break;
 
+            case StoryNodeData.Cutscene:
+                ActivateCutscene(node);
+                break;
+
             case StoryNodeData.Trigger:
                 ActivateTrigger(node);
                 break;
@@ -289,6 +296,21 @@ public class StoryDirector : MonoBehaviour
             lines = node.lines,
             onFinished = () => { if (active.Contains(node.id)) Complete(node); },
         });
+    }
+
+    private void ActivateCutscene(StoryNodeData node)
+    {
+        StoryCutscene cutscene = scene != null ? scene.FindCutscene(node.target) : null;
+        if (cutscenes == null || cutscene == null)
+        {
+            // Сюжет не застревает: нода проходит сразу, в консоли видно, чего не хватает.
+            Debug.LogWarning(cutscenes == null
+                ? $"[Story] Нода «Кат-сцена» {node.id}: на сцене нет StoryCutscenePlayer — кат-сцена пропущена."
+                : $"[Story] Нода «Кат-сцена» {node.id}: в сцене нет StoryCutscene с id «{node.target}» — кат-сцена пропущена.", this);
+            Complete(node);
+            return;
+        }
+        cutscenes.Enqueue(cutscene, node.skippable, node.hideHud, () => { if (active.Contains(node.id)) Complete(node); });
     }
 
     private void ActivateTrigger(StoryNodeData node)

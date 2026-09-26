@@ -21,6 +21,7 @@ public class StoryScene
     public ShippingService Shipping { get; private set; }
     public SupplyService Supply { get; private set; }
     public ItemCatalog Items { get; private set; }
+    public PlayerSkills Skills { get; private set; }
 
     private readonly Dictionary<Type, Component[]> cache = new Dictionary<Type, Component[]>();
     private readonly HashSet<string> warned = new HashSet<string>();
@@ -36,6 +37,7 @@ public class StoryScene
             Equipment = Object.FindAnyObjectByType<EquipmentInventory>(),
             Shipping = Object.FindAnyObjectByType<ShippingService>(),
             Supply = Object.FindAnyObjectByType<SupplyService>(),
+            Skills = Object.FindAnyObjectByType<PlayerSkills>(),
             Items = director.itemCatalog,
         };
 
@@ -77,6 +79,15 @@ public class StoryScene
         if (string.IsNullOrEmpty(storyId)) return null;
         foreach (StoryObject storyObject in All<StoryObject>())
             if (storyObject != null && storyObject.storyId == storyId) return storyObject;
+        return null;
+    }
+
+    /// <summary>Кат-сцена по storyId.</summary>
+    public StoryCutscene FindCutscene(string storyId)
+    {
+        if (string.IsNullOrEmpty(storyId)) return null;
+        foreach (StoryCutscene cutscene in All<StoryCutscene>())
+            if (cutscene != null && cutscene.storyId == storyId) return cutscene;
         return null;
     }
 

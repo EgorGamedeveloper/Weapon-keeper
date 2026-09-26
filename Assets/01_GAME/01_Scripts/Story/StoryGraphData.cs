@@ -113,12 +113,17 @@ public class StoryNodeData
     public string orderId;
     public string lootBoxId;
     public string enemyType;
+    public string skillId;
 
     // wait
     public float seconds;
 
     // action
     public string action;
+
+    // cutscene (target — storyId кат-сцены)
+    public bool skippable = true;
+    public bool hideHud = true;
 
     // note
     public string text;
@@ -131,6 +136,7 @@ public class StoryNodeData
     public const string And = "and";
     public const string Action = "action";
     public const string Note = "note";
+    public const string Cutscene = "cutscene";
 }
 
 /// <summary>Выбор текста графа на языке игры.</summary>

@@ -33,6 +33,10 @@ public abstract class StoryTrigger
         { "crateArrived", () => new CrateArrivedTrigger() },
         { "crateOpened", () => new CrateOpenedTrigger() },
         { "questCompleted", () => new QuestCompletedTrigger() },
+        { "crateOrdered", () => new CrateOrderedTrigger() },
+        { "itemReceived", () => new ItemReceivedTrigger() },
+        { "itemPurchased", () => new ItemPurchasedTrigger() },
+        { "skillUnlocked", () => new SkillUnlockedTrigger() },
     };
 
     /// <summary>Создать триггер вида kind (null — неизвестный вид).</summary>
