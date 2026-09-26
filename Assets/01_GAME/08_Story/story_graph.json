@@ -1,0 +1,203 @@
+{
+  "version": 1,
+  "languages": [
+    "ru",
+    "en"
+  ],
+  "nodes": [
+    {
+      "id": "n_start",
+      "type": "start",
+      "x": -50,
+      "y": 127,
+      "storyline": "main"
+    },
+    {
+      "id": "n_radio1",
+      "type": "radio",
+      "x": 273,
+      "y": 119,
+      "speaker": [
+        {
+          "lang": "ru",
+          "text": "Диспетчер"
+        },
+        {
+          "lang": "en",
+          "text": "Dispatcher"
+        }
+      ],
+      "portrait": "dispatcher",
+      "lines": [
+        {
+          "seconds": 4,
+          "text": [
+            {
+              "lang": "ru",
+              "text": "Приём, это диспетчер. Слышишь меня?"
+            },
+            {
+              "lang": "en",
+              "text": "Come in, this is dispatch. Do you read me?"
+            }
+          ]
+        },
+        {
+          "seconds": 5,
+          "text": [
+            {
+              "lang": "ru",
+              "text": "Магазин теперь твой. Начни с мусора — кирпичи и доски в контейнер у входа."
+            },
+            {
+              "lang": "en",
+              "text": "The shop is yours now. Start with the rubble — bricks and boards go in the dumpster by the entrance."
+            }
+          ]
+        }
+      ],
+      "storyline": "main"
+    },
+    {
+      "id": "q_cleardebris",
+      "type": "quest",
+      "x": 600,
+      "y": 110,
+      "questId": "cleardebris",
+      "title": [
+        {
+          "lang": "ru",
+          "text": "Убрать обломки"
+        },
+        {
+          "lang": "en",
+          "text": "Clear the debris"
+        }
+      ],
+      "description": [
+        {
+          "lang": "ru",
+          "text": "Соберите кирпичи и доски и выбросьте их в мусорный контейнер."
+        },
+        {
+          "lang": "en",
+          "text": "Collect the bricks and boards and throw them into the dumpster."
+        }
+      ],
+      "questType": "ShelveItems",
+      "targetCount": 5,
+      "target": "",
+      "category": "Category_Trash",
+      "item": "",
+      "zone": "",
+      "xp": 20,
+      "money": 50,
+      "storyline": "main"
+    },
+    {
+      "id": "n_radio2",
+      "type": "radio",
+      "x": 1046,
+      "y": 139,
+      "speaker": [
+        {
+          "lang": "ru",
+          "text": "Диспетчер"
+        },
+        {
+          "lang": "en",
+          "text": "Dispatcher"
+        }
+      ],
+      "portrait": "dispatcher",
+      "lines": [
+        {
+          "seconds": 5,
+          "text": [
+            {
+              "lang": "ru",
+              "text": "Ты пробился на склад? Там должны остаться патроны — разложи их по полкам."
+            },
+            {
+              "lang": "en",
+              "text": "You broke into the storeroom? There should be ammo left — put it on the shelves."
+            }
+          ]
+        }
+      ],
+      "storyline": "main"
+    },
+    {
+      "id": "n_bonus",
+      "type": "action",
+      "x": 1800,
+      "y": 220,
+      "action": "giveMoney",
+      "value": 150,
+      "target": "",
+      "storyline": "main"
+    },
+    {
+      "id": "n_note",
+      "type": "note",
+      "x": 101,
+      "y": 334,
+      "text": "Пример сюжета: откройте «Каталог» и загрузите scene_catalog.json из Unity — тогда цели выбираются из списков.\n\nТриггер «Сломан объект» ждёт, пока выберете дверь склада.",
+      "storyline": "main"
+    },
+    {
+      "id": "n_6cva61",
+      "type": "trigger",
+      "x": 696,
+      "y": 332,
+      "storyline": "main",
+      "trigger": "repairPointRepaired",
+      "target": "",
+      "category": "",
+      "item": "",
+      "zone": "",
+      "count": 1,
+      "value": 0,
+      "orderId": "",
+      "lootBoxId": "",
+      "enemyType": "",
+      "questId": "",
+      "skillId": ""
+    }
+  ],
+  "links": [
+    {
+      "from": "n_start",
+      "fromPort": "out",
+      "to": "n_radio1",
+      "toPort": "in"
+    },
+    {
+      "from": "n_radio1",
+      "fromPort": "out",
+      "to": "q_cleardebris",
+      "toPort": "in"
+    },
+    {
+      "from": "n_radio2",
+      "fromPort": "out",
+      "to": "n_bonus",
+      "toPort": "in"
+    },
+    {
+      "from": "q_cleardebris",
+      "fromPort": "out",
+      "to": "n_radio2",
+      "toPort": "in"
+    }
+  ],
+  "storylines": [
+    {
+      "id": "main",
+      "title": "Основная линия"
+    }
+  ],
+  "groups": [],
+  "decor": [],
+  "images": {}
+}

@@ -65,6 +65,9 @@ public class Breakable : MonoBehaviour
     [Tooltip("Сколько ударов кувалдой выдерживает.")]
     [Min(1)] public int hitPoints = 2;
 
+    [Tooltip("Насколько объект вздрагивает от удара кувалдой, градусы (доска — заметно, стена — чуть-чуть).")]
+    [Range(0f, 10f)] public float hitShakeAngle = 4f;
+
     [Header("Лом")]
     [Tooltip("Куда заходит лапка лома: позиция — точка у кромки, ось Z — вдоль объекта наружу (от шарнира), " +
              "ось Y — от стены к игроку. Пусто — конец объекта по длинной оси, ближайший к прицелу.")]
@@ -370,7 +373,7 @@ public class Breakable : MonoBehaviour
 
         SoundPlayer.Play(hitSound, point);
         shakeTween?.Complete();
-        shakeTween = LiftTarget.DOShakeRotation(0.25f, 4f, 18, 90f);
+        if (hitShakeAngle > 0f) shakeTween = LiftTarget.DOShakeRotation(0.25f, hitShakeAngle, 18, 90f);
         return false;
     }
 
@@ -387,8 +390,9 @@ public class Breakable : MonoBehaviour
         shakeTween?.Kill();
 
         Transform target = LiftTarget;
-        SoundPlayer.Play(breakSound, target.position);
-        SpawnEffect(dustEffect, target.position);
+        Vector3 center = GetVisualCenter();
+        SoundPlayer.Play(breakSound, center);
+        SpawnEffect(dustEffect, center);
 
         GameObject[] spawns = mode == BreakMode.Smash && spawnOnSmash != null && spawnOnSmash.Length > 0 ? spawnOnSmash : spawnOnBreak;
         for (int i = 0; i < spawns.Length; i++)
@@ -410,7 +414,7 @@ public class Breakable : MonoBehaviour
                 UnityEngine.Random.Range(-spawnScatterRadius.x, spawnScatterRadius.x),
                 0f,
                 UnityEngine.Random.Range(-spawnScatterRadius.y, spawnScatterRadius.y));
-            Instantiate(prefab, transform.position + offset, UnityEngine.Random.rotation);
+            Instantiate(prefab, center + offset, UnityEngine.Random.rotation);
         }
 
         if (intactVisual != null) intactVisual.SetActive(false);
@@ -443,6 +447,21 @@ public class Breakable : MonoBehaviour
         foreach (var col in GetComponentsInChildren<Collider>())
             col.enabled = false;
         if (hideSelfOnBreak) gameObject.SetActive(false);
+    }
+
+    /// <summary>Центр видимой части объекта (у проёма пивот стоит на полу — обломки не должны
+    /// рождаться в полу).</summary>
+    private Vector3 GetVisualCenter()
+    {
+        bool any = false;
+        Bounds bounds = default;
+        foreach (var r in renderers)
+        {
+            if (r == null || !r.enabled || !r.gameObject.activeInHierarchy) continue;
+            if (!any) { bounds = r.bounds; any = true; }
+            else bounds.Encapsulate(r.bounds);
+        }
+        return any ? bounds.center : LiftTarget.position;
     }
 
     private static void SpawnEffect(GameObject prefab, Vector3 position)

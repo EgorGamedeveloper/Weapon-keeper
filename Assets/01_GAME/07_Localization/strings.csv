@@ -134,7 +134,7 @@ ach.first_wall.desc,Заделайте пролом в стене.,Patch up a ho
 ach.all_stains.name,Ни пятнышка,Spotless
 ach.all_stains.desc,Отмойте все пятна крови в магазине.,Clean every blood stain in the shop.
 ach.break_5.name,Ломать — не строить,Demolition Crew
-ach.break_5.desc,Разберите ломом 5 объектов.,Pry apart 5 objects with the crowbar.
+ach.break_5.desc,Разберите 5 объектов ломом или кувалдой.,Pry off or smash 5 objects.
 ach.debris_10.name,Генеральная уборка,Spring Cleaning
 ach.debris_10.desc,Выбросите в мусор 10 обломков.,Throw 10 pieces of debris in the trash.
 ach.first_quest.name,Первое поручение,First Assignment
@@ -233,6 +233,15 @@ hud.level_short,Ур. {0},Lv. {0}
 hud.skill_points_hint,+{0} оч. навыков · Tab,+{0} skill pts · Tab
 hud.action.place,ЛКМ — поставить,LMB — place
 hud.action.take,{0} — взять,{0} — take
+hud.action.pickup,ЛКМ — взять,LMB — take
+hud.action.scrub,ЛКМ — оттереть,LMB — scrub
+hud.action.pry,ЛКМ — поддеть ломом,LMB — pry with the crowbar
+hud.stain.title,Пятно крови,Blood stain
+hud.mode.scrub,Водите мышью по пятну · ПКМ — выйти,Move the mouse over the stain · RMB — exit
+hud.mode.pry,Качайте мышью вверх-вниз · ПКМ — выйти,Rock the mouse up and down · RMB — exit
+hud.breakable.board,Прибитая доска,Nailed board
+hud.breakable.brickwall,Заложенный проём,Bricked-up doorway
+hud.xp_gain,+{0} XP,+{0} XP
 interact.elevator.title,Лифт,Elevator
 interact.elevator.broken,Лифт не работает — нужен ремонт,The elevator is broken — needs repair
 interact.elevator.moving,Лифт едет…,The elevator is moving…
@@ -275,7 +284,9 @@ item.boarddebris.desc,Описание предмета,Item description
 item.brick.name,Кирпич,Brick
 item.brick.desc,Описание предмета,Item description
 item.crowbar.name,Лом,Crowbar
-item.crowbar.desc,Описание предмета,Item description
+item.crowbar.desc,Поддевает и снимает прибитые доски: наведите на доску и качайте мышью вверх-вниз.,Pries off nailed boards: aim at a board and rock the mouse up and down.
+item.sledgehammer.name,Кувалда,Sledgehammer
+item.sledgehammer.desc,Тяжёлая кувалда: разбивает доски и кирпичную кладку. Зомби тоже не понравится.,A heavy sledgehammer: smashes boards and brickwork. Zombies won't like it either.
 item.elevatormotor.name,Мотор лифта,Elevator motor
 item.elevatormotor.desc,"Установите в щиток лифта, чтобы он снова заработал.",Install it in the elevator control box to get it running again.
 item.generatorparts.name,Запчасти генератора,Generator parts

@@ -208,6 +208,7 @@ public class SaveLoadService : MonoBehaviour
         var repairList = new List<RepairPointSave>();
         var cleanedList = new List<string>();
         var brokenList = new List<string>();
+        var brickWallList = new List<BrickWallSave>();
         var slotList = new List<SlotSave>();
 
         foreach (var pid in FindObjectsByType<PersistentId>(FindObjectsInactive.Include, FindObjectsSortMode.None))
@@ -238,6 +239,9 @@ public class SaveLoadService : MonoBehaviour
             if (breakable != null)
             {
                 if (breakable.IsBroken) brokenList.Add(pid.Id);
+                var brickWall = pid.GetComponent<BrickWallSmash>();
+                if (brickWall != null && !brickWall.IsBroken && brickWall.KnockedOutCount > 0)
+                    brickWallList.Add(new BrickWallSave { id = pid.Id, knockedOut = brickWall.GetKnockedOut() });
                 continue;
             }
 
@@ -258,6 +262,7 @@ public class SaveLoadService : MonoBehaviour
         data.repairPoints = repairList.ToArray();
         data.cleanedStainIds = cleanedList.ToArray();
         data.brokenBreakableIds = brokenList.ToArray();
+        data.brickWalls = brickWallList.ToArray();
         data.shelfSlots = slotList.ToArray();
     }
 
@@ -426,6 +431,13 @@ public class SaveLoadService : MonoBehaviour
             if (!byId.TryGetValue(breakId, out var pid)) continue;
             var breakable = pid.GetComponent<Breakable>();
             if (breakable != null) breakable.RestoreBroken();
+        }
+
+        foreach (var wallSave in data.brickWalls)
+        {
+            if (!byId.TryGetValue(wallSave.id, out var pid)) continue;
+            var brickWall = pid.GetComponent<BrickWallSmash>();
+            if (brickWall != null) brickWall.RestoreKnockedOut(wallSave.knockedOut);
         }
 
         // Сейв авторитетен: всё, что сейчас лежит в мире/на полках по разметке сцены — не в счёт,
