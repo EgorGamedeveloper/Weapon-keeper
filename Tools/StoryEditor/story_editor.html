@@ -29,6 +29,7 @@
   --t-and: #7d69b6;
   --t-action: #6c8f35;
   --t-note: #b49b2c;
+  --t-cutscene: #a4466f;
   --note-bg: #fbf5d7;
   --font-ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-head: "Barlow Condensed", "Arial Narrow", "IBM Plex Sans", sans-serif;
@@ -42,7 +43,7 @@
     --node: #20262c; --node-shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 6px 18px rgba(0, 0, 0, .35);
     --wire: #6d7985; --wire-sel: #eda63a; --note-bg: #34301c;
     --t-start: #8b97a3; --t-quest: #e0a33a; --t-radio: #3fb0a8; --t-trigger: #e0674f; --t-wait: #7f92b0;
-    --t-and: #9884d0; --t-action: #8fb152; --t-note: #d2bb4f;
+    --t-and: #9884d0; --t-action: #8fb152; --t-note: #d2bb4f; --t-cutscene: #d06a95;
   }
 }
 :root[data-theme="dark"] {
@@ -52,7 +53,7 @@
   --node: #20262c; --node-shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 6px 18px rgba(0, 0, 0, .35);
   --wire: #6d7985; --wire-sel: #eda63a; --note-bg: #34301c;
   --t-start: #8b97a3; --t-quest: #e0a33a; --t-radio: #3fb0a8; --t-trigger: #e0674f; --t-wait: #7f92b0;
-  --t-and: #9884d0; --t-action: #8fb152; --t-note: #d2bb4f;
+  --t-and: #9884d0; --t-action: #8fb152; --t-note: #d2bb4f; --t-cutscene: #d06a95;
 }
 
 html, body { height: 100%; }
@@ -229,6 +230,8 @@ body.resizing-h, body.resizing-h * { cursor: row-resize !important; }
 .field textarea { resize: vertical; min-height: 54px; }
 .field .mono, input.mono { font-family: var(--font-mono); font-size: 12.5px; }
 .field .help { font-size: 11.5px; color: var(--muted); line-height: 1.4; }
+.check-field { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+.check-field input { width: 16px; height: 16px; accent-color: var(--accent); }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .loc { display: grid; grid-template-columns: 28px 1fr; gap: 4px 6px; align-items: start; }
 .loc-head { display: flex; align-items: center; gap: 6px; }
@@ -480,6 +483,7 @@ const TYPES = {
   start:   { label: 'Старт',    color: '--t-start',   inPort: false, outPort: true,  desc: 'Начало новой игры' },
   quest:   { label: 'Квест',    color: '--t-quest',   inPort: true,  outPort: true,  desc: 'Задание в списке квестов' },
   radio:   { label: 'Рация',    color: '--t-radio',   inPort: true,  outPort: true,  desc: 'Вызов и переговоры' },
+  cutscene:{ label: 'Кат-сцена', color: '--t-cutscene', inPort: true, outPort: true,  desc: 'Timeline-сцена из Unity' },
   trigger: { label: 'Триггер',  color: '--t-trigger', inPort: true,  outPort: true,  desc: 'Действие игрока' },
   wait:    { label: 'Ожидание', color: '--t-wait',    inPort: true,  outPort: true,  desc: 'Пауза в секундах' },
   and:     { label: 'И',        color: '--t-and',     inPort: true,  outPort: true,  desc: 'Ждёт все входы' },
@@ -502,6 +506,7 @@ const TARGETS = {
   shelf:      { catalog: 'shelves',      label: 'Полка' },
   spawn:      { catalog: 'enemySpawns',  label: 'Точка спавна врага' },
   storyObject:{ catalog: 'storyObjects', label: 'Объект сюжета (StoryObject)' },
+  cutscene:   { catalog: 'cutscenes',    label: 'Кат-сцена (StoryCutscene)' },
 };
 
 // Что спрашивает квест каждого типа: target — вид цели, required — обязательна ли.
@@ -547,7 +552,7 @@ const CATALOG_LISTS = {
   repairPoints: 'Точки ремонта', breakables: 'Разрушаемые', stains: 'Пятна', shelves: 'Полки', categories: 'Категории полок',
   zones: 'Зоны доставки', items: 'Предметы', enemySpawns: 'Точки спавна', enemyTypes: 'Типы врагов', orders: 'Заказы',
   lootBoxes: 'Ящики поставки', storyObjects: 'Объекты сюжета', quests: 'Квесты вне графа', speakers: 'Говорящие',
-  skills: 'Навыки',
+  skills: 'Навыки', cutscenes: 'Кат-сцены',
 };
 
 const FILE_VERSION = 1;
@@ -601,6 +606,7 @@ function newNode(type, x, y) {
     case 'wait': n.seconds = 3; break;
     case 'action': Object.assign(n, { action: 'giveMoney', value: 100, target: '' }); break;
     case 'note': n.text = ''; break;
+    case 'cutscene': Object.assign(n, { target: '', skippable: true, hideHud: true }); break;
   }
   return n;
 }
@@ -711,6 +717,12 @@ function nodeSummary(n) {
       break;
     }
     case 'note': body.textContent = n.text || 'Пустая заметка'; break;
+    case 'cutscene': {
+      const name = n.target ? catalogName('cutscenes', n.target) : '';
+      add(name ? 't' : 'empty', name || 'Какая сцена?');
+      add('m', [n.skippable !== false ? 'можно пропустить' : 'без пропуска', n.hideHud !== false ? 'без HUD' : 'с HUD'].join(' · '));
+      break;
+    }
   }
   return body;
 }
@@ -983,6 +995,12 @@ function renderInspector() {
       insp.append(el('div', { class: 'insp-empty', text: 'Нода «И» ждёт, пока сработают ВСЕ ноды, чьи нитки в неё входят. Обычные ноды включаются от любой входящей нитки.' }));
       break;
     case 'action': renderAction(n); break;
+    case 'cutscene':
+      insp.append(catalogInput(n, 'target', 'cutscenes', TARGETS.cutscene.label, true));
+      insp.append(checkField(n, 'skippable', 'Можно пропустить (удерживать E)'));
+      insp.append(checkField(n, 'hideHud', 'Прятать интерфейс на время показа'));
+      insp.append(el('div', { class: 'help', text: 'Сцену собирают в Unity: Tools → Weapon Keeper → Story → Create Cutscene, затем Timeline. Нода завершается, когда кат-сцена досмотрена или пропущена; управление игроком на это время выключено.' }));
+      break;
     case 'note': {
       const ta = el('textarea', { rows: 6 });
       ta.value = n.text || '';
@@ -1051,6 +1069,13 @@ function renderRadio(n) {
   insp.append(el('div', { class: 'field' }, el('div', { class: 'lbl', text: 'Реплики' }), box,
     el('button', { class: 'btn', type: 'button', text: '+ Реплика', onclick: () => { beginEdit(false); n.lines.push({ seconds: 4, text: {} }); changed(false); renderInspector(); } })));
   insp.append(el('div', { class: 'help', text: 'В игре: «Входящий вызов» → игрок жмёт E → HUD гаснет, в руках рация, реплики идут строкой внизу. E допечатывает и листает.' }));
+}
+
+function checkField(n, key, label) {
+  const box = el('input', { type: 'checkbox' });
+  box.checked = n[key] !== false;
+  box.addEventListener('change', () => { beginEdit(false); n[key] = box.checked; changed(false); });
+  return el('label', { class: 'check-field' }, box, el('span', { text: label }));
 }
 
 function renderTrigger(n) {
@@ -1170,6 +1195,10 @@ function validate() {
     }
     if (n.type === 'and' && (incoming.get(n.id) || []).length < 2) add('warn', n.id, '«И» с одним входом ничего не ждёт — соедините с ней две ноды или больше.');
     if (n.type === 'wait' && !(n.seconds > 0)) add('warn', n.id, 'Ожидание 0 секунд.');
+    if (n.type === 'cutscene') {
+      if (!n.target) add('err', n.id, 'Не выбрана кат-сцена.');
+      else checkCatalog(add, n, 'target', 'cutscenes', true);
+    }
   }
 
   // Переводы на остальные языки — только справка.
@@ -1609,7 +1638,7 @@ const COLOR_VARS = [
   { v: '--wire', label: 'Нитки' },
   { v: '--t-start', label: 'Старт' }, { v: '--t-quest', label: 'Квест' }, { v: '--t-radio', label: 'Рация' },
   { v: '--t-trigger', label: 'Триггер' }, { v: '--t-wait', label: 'Ожидание' }, { v: '--t-and', label: 'И' },
-  { v: '--t-action', label: 'Событие' }, { v: '--t-note', label: 'Заметка' },
+  { v: '--t-action', label: 'Событие' }, { v: '--t-note', label: 'Заметка' }, { v: '--t-cutscene', label: 'Кат-сцена' },
 ];
 let prefs = { theme: null, colors: {}, bg: {} };
 const root = document.documentElement;

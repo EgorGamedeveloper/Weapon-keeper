@@ -379,3 +379,4 @@ order.rifle.message,Одна M16 и боезапас. Платим щедро.,O
 radio.incoming,Входящий вызов по рации,Incoming radio call
 radio.answer,[{0}] Ответить,[{0}] Answer
 radio.skip,[{0}] Дальше,[{0}] Next
+cutscene.skip,Удерживайте [{0}] — пропустить,Hold [{0}] to skip

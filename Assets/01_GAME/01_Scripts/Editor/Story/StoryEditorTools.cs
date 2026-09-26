@@ -7,7 +7,9 @@ using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Playables;
 using UnityEngine.SceneManagement;
+using UnityEngine.Timeline;
 using Object = UnityEngine.Object;
 
 /// <summary>
@@ -26,6 +28,7 @@ public static class StoryEditorTools
     public const string GraphPath = StoryFolder + "/story_graph.json";
     public const string CatalogPath = StoryFolder + "/scene_catalog.json";
     public const string QuestFolder = "Assets/01_GAME/04_Data/Quests/Story";
+    public const string CutsceneFolder = StoryFolder + "/Cutscenes";
     public const string QuestCatalogPath = "Assets/01_GAME/04_Data/Story/StoryQuestCatalog.asset";
     public const string EditorUrl = "https://claude.ai/artifact/P8aAP6hr6d9pWyf9W1pciN";
 
@@ -82,6 +85,11 @@ public static class StoryEditorTools
             StoryUIBuilder.BuildRadioUI();
             report.AppendLine("✔ Собран префаб " + StoryUIBuilder.RadioPath + ".");
         }
+        if (AssetDatabase.LoadAssetAtPath<GameObject>(StoryUIBuilder.CutscenePath) == null)
+        {
+            StoryUIBuilder.BuildCutsceneUI();
+            report.AppendLine("✔ Собран префаб " + StoryUIBuilder.CutscenePath + ".");
+        }
 
         string scenePath = WeaponKeeperSetup.GameplayScenePath;
         if (File.Exists(FullPath(scenePath)))
@@ -106,7 +114,8 @@ public static class StoryEditorTools
         var ids = new HashSet<string>();
         var questIds = new HashSet<string>();
         var known = new HashSet<string> { StoryNodeData.Start, StoryNodeData.Quest, StoryNodeData.Radio, StoryNodeData.Trigger,
-                                          StoryNodeData.Wait, StoryNodeData.And, StoryNodeData.Action, StoryNodeData.Note };
+                                          StoryNodeData.Wait, StoryNodeData.And, StoryNodeData.Action, StoryNodeData.Note,
+                                          StoryNodeData.Cutscene };
         var triggerKinds = new HashSet<string>(StoryTrigger.Kinds);
         var actions = new HashSet<string> { "giveMoney", "giveXp", "enableObject", "disableObject" };
 
@@ -126,6 +135,7 @@ public static class StoryEditorTools
             if (node.type == StoryNodeData.Trigger && !triggerKinds.Contains(node.trigger)) errors.Add($"{node.id}: неизвестный вид триггера «{node.trigger}».");
             if (node.type == StoryNodeData.Action && !actions.Contains(node.action)) errors.Add($"{node.id}: неизвестное событие «{node.action}».");
             if (node.type == StoryNodeData.Radio && (node.lines == null || node.lines.Length == 0)) errors.Add($"{node.id}: у рации нет реплик.");
+            if (node.type == StoryNodeData.Cutscene && string.IsNullOrEmpty(node.target)) errors.Add($"{node.id}: у кат-сцены не выбрана сцена.");
         }
 
         if (!graph.nodes.Any(n => n != null && n.type == StoryNodeData.Start)) errors.Add("Нет ноды «Старт».");
@@ -220,6 +230,8 @@ public static class StoryEditorTools
     {
         RadioCallUI radio = SceneSetupUtility.EnsurePrefabInstance<RadioCallUI>(scene, StoryUIBuilder.RadioPath, report);
         if (radio != null) WireRadio(scene, radio, report);
+        StoryCutscenePlayer cutscenes = SceneSetupUtility.EnsurePrefabInstance<StoryCutscenePlayer>(scene, StoryUIBuilder.CutscenePath, report);
+        if (cutscenes != null) WireCutscenes(scene, cutscenes, radio, report);
 
         StoryDirector director = SceneSetupUtility.EnsureSceneObject<StoryDirector>(scene, "Story", report);
         Undo.RecordObject(director, "Story");
@@ -227,6 +239,7 @@ public static class StoryEditorTools
         director.questCatalog = catalog;
         director.questManager = SceneSetupUtility.FindInScene<QuestManager>(scene);
         director.radio = radio;
+        director.cutscenes = cutscenes;
         if (director.itemCatalog == null) director.itemCatalog = LoadAll<ItemCatalog>().FirstOrDefault();
         SceneSetupUtility.MarkModified(director);
         if (director.questManager == null) report.AppendLine("✖ В сцене нет QuestManager — квесты графа не запустятся.");
@@ -274,6 +287,37 @@ public static class StoryEditorTools
         SceneSetupUtility.MarkModified(radio);
     }
 
+    private static void WireCutscenes(Scene scene, StoryCutscenePlayer player, RadioCallUI radio, StringBuilder report)
+    {
+        Undo.RecordObject(player, "Cutscenes");
+        player.itemInteraction = SceneSetupUtility.FindInScene<PlayerItemInteraction>(scene);
+        player.weaponHolster = SceneSetupUtility.FindInScene<WeaponHolster>(scene);
+        player.heldItems = SceneSetupUtility.FindInScene<EquippedItemHolder>(scene);
+        player.radio = radio;
+
+        var disable = new List<Behaviour>();
+        PlayerCharacterController movement = SceneSetupUtility.FindInScene<PlayerCharacterController>(scene);
+        if (movement != null) disable.Add(movement);
+        if (player.itemInteraction != null) disable.Add(player.itemInteraction);
+        PlayerInventoryModeController mode = SceneSetupUtility.FindInScene<PlayerInventoryModeController>(scene);
+        if (mode != null) disable.Add(mode);
+        PlayerToolActions tools = SceneSetupUtility.FindInScene<PlayerToolActions>(scene);
+        if (tools != null) disable.Add(tools);
+        PlacementVision vision = SceneSetupUtility.FindInScene<PlacementVision>(scene);
+        if (vision != null) disable.Add(vision);
+        player.disableDuringCutscene = disable.ToArray();
+        player.hudGroups = FindHudGroups(scene).ToArray();
+        SceneSetupUtility.MarkModified(player);
+
+        if (radio != null)
+        {
+            Undo.RecordObject(radio, "Radio");
+            radio.cutscenes = player;
+            SceneSetupUtility.MarkModified(radio);
+        }
+        report.AppendLine($"✔ Кат-сцены: на время показа выключаются компонентов — {disable.Count}, гаснут канвасов HUD — {player.hudGroups.Length}.");
+    }
+
     /// <summary>Канвасы HUD: экранные корневые канвасы сцены, кроме окон настроек, паузы, достижений и самой рации.</summary>
     private static List<CanvasGroup> FindHudGroups(Scene scene)
     {
@@ -281,7 +325,8 @@ public static class StoryEditorTools
         foreach (Canvas canvas in SceneSetupUtility.FindAllInScene<Canvas>(scene))
         {
             if (!canvas.isRootCanvas || canvas.renderMode == RenderMode.WorldSpace) continue;
-            if (canvas.GetComponentInChildren<RadioCallUI>(true) != null || canvas.GetComponentInChildren<SettingsWindow>(true) != null
+            if (canvas.GetComponentInChildren<RadioCallUI>(true) != null || canvas.GetComponentInChildren<StoryCutscenePlayer>(true) != null
+                || canvas.GetComponentInChildren<SettingsWindow>(true) != null
                 || canvas.GetComponentInChildren<PauseMenu>(true) != null || canvas.GetComponentInChildren<AchievementsWindow>(true) != null
                 || canvas.GetComponentInChildren<AchievementToastUI>(true) != null || canvas.GetComponentInChildren<ConfirmDialog>(true) != null)
                 continue;
@@ -319,6 +364,7 @@ public static class StoryEditorTools
         public List<CatalogEntry> quests = new List<CatalogEntry>();
         public List<CatalogEntry> speakers = new List<CatalogEntry>();
         public List<CatalogEntry> skills = new List<CatalogEntry>();
+        public List<CatalogEntry> cutscenes = new List<CatalogEntry>();
     }
 
     [MenuItem(MenuRoot + "Export Scene Catalog", priority = 20)]
@@ -359,6 +405,9 @@ public static class StoryEditorTools
         foreach (StoryObject storyObject in SceneSetupUtility.FindAllInScene<StoryObject>(scene))
             if (!string.IsNullOrEmpty(storyObject.storyId))
                 catalog.storyObjects.Add(Entry(storyObject.storyId, $"{storyObject.storyId} — {ShortPath(storyObject.transform)}"));
+        foreach (StoryCutscene cutscene in SceneSetupUtility.FindAllInScene<StoryCutscene>(scene))
+            if (!string.IsNullOrEmpty(cutscene.storyId) && catalog.cutscenes.All(e => e.id != cutscene.storyId))
+                catalog.cutscenes.Add(Entry(cutscene.storyId, $"{cutscene.storyId} — {ShortPath(cutscene.transform)}"));
 
         foreach (ShelfCategory category in LoadAll<ShelfCategory>())
             catalog.categories.Add(Entry(category.name, string.IsNullOrEmpty(category.categoryName) ? category.name : $"{category.categoryName} ({category.name})"));
@@ -391,7 +440,7 @@ public static class StoryEditorTools
 
         string summary = $"Точки ремонта: {catalog.repairPoints.Count}, разрушаемые: {catalog.breakables.Count}, пятна: {catalog.stains.Count}, " +
                          $"полки: {catalog.shelves.Count}, зоны: {catalog.zones.Count}, предметы: {catalog.items.Count}, точки спавна: {catalog.enemySpawns.Count}, " +
-                         $"объекты сюжета: {catalog.storyObjects.Count}.";
+                         $"объекты сюжета: {catalog.storyObjects.Count}, кат-сцены: {catalog.cutscenes.Count}, навыки: {catalog.skills.Count}.";
         Debug.Log($"[Story] {CatalogPath}: {summary}");
         EditorUtility.DisplayDialog(Title, $"Каталог сохранён в {CatalogPath}.\n\n{summary}\n\nЗагрузите его в веб-редакторе (кнопка «Каталог») " +
                                            "или закоммитьте — Claude загрузит сам." + (missing.Count > 0 ? "\n\nНе забудьте сохранить сцену." : ""), "OK");
@@ -561,6 +610,46 @@ public static class StoryEditorTools
         StoryUIBuilder.BuildRadioUI();
         AssetDatabase.SaveAssets();
         EditorUtility.DisplayDialog(Title, $"Префаб {StoryUIBuilder.RadioPath} пересобран. Ссылки в сцене сохранятся — это тот же префаб.", "OK");
+    }
+
+    [MenuItem(MenuRoot + "Create Cutscene", priority = 30)]
+    private static void CreateCutscene()
+    {
+        if (!SceneSetupUtility.CheckNotPlaying(Title)) return;
+        Scene scene = SceneManager.GetActiveScene();
+        string id = "cutscene_" + (SceneSetupUtility.FindAllInScene<StoryCutscene>(scene).Count() + 1);
+
+        UIBuilderKit.EnsureFolder(CutsceneFolder);
+        string timelinePath = AssetDatabase.GenerateUniqueAssetPath($"{CutsceneFolder}/{id}.playable");
+        var timeline = ScriptableObject.CreateInstance<TimelineAsset>();
+        AssetDatabase.CreateAsset(timeline, timelinePath);
+
+        var root = new GameObject("Cutscene_" + id);
+        Undo.RegisterCreatedObjectUndo(root, "Create Cutscene");
+        if (SceneView.lastActiveSceneView != null) root.transform.position = SceneView.lastActiveSceneView.pivot;
+        var cutscene = root.AddComponent<StoryCutscene>();
+        cutscene.storyId = id;
+        var director = root.AddComponent<PlayableDirector>();
+        director.playableAsset = timeline;
+        director.playOnAwake = false;
+        director.extrapolationMode = DirectorWrapMode.Hold;
+        cutscene.director = director;
+
+        var cameraObject = new GameObject("CutsceneCamera");
+        cameraObject.transform.SetParent(root.transform, false);
+        cameraObject.transform.localPosition = new Vector3(0f, 1.7f, -4f);
+        var camera = cameraObject.AddComponent<Camera>();
+        Camera main = Camera.main;
+        camera.depth = (main != null ? main.depth : 0f) + 10f;
+        camera.enabled = false;
+        cutscene.cutsceneCamera = camera;
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        Selection.activeGameObject = root;
+        EditorUtility.DisplayDialog(Title, $"Кат-сцена «{id}» создана: объект {root.name} в сцене и Timeline {timelinePath}.\n\n" +
+                                           "1. Откройте Window → Sequencing → Timeline и соберите сцену (камера — CutsceneCamera).\n" +
+                                           "2. Переименуйте storyId, если хотите, и сохраните сцену.\n" +
+                                           "3. Export Scene Catalog — кат-сцена появится в ноде «Кат-сцена» редактора.", "OK");
     }
 
     private static IEnumerable<T> LoadAll<T>() where T : Object

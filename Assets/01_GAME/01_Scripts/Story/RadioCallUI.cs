@@ -96,6 +96,8 @@ public class RadioCallUI : MonoBehaviour
     public EquippedItemHolder heldItems;
     [Tooltip("Общая блокировка ввода окон: пока открыто окно (навыки, терминал, пауза), на вызов не ответить.")]
     public GameplayInputBlocker inputBlocker;
+    [Tooltip("Показ кат-сцен: пока идёт кат-сцена, вызов ждёт.")]
+    public StoryCutscenePlayer cutscenes;
 
     [Header("Звук")]
     [Tooltip("Источник звуков рации (канал UI или SFX).")]
@@ -198,7 +200,8 @@ public class RadioCallUI : MonoBehaviour
 
     /// <summary>Можно отвечать: игра не на паузе, окна закрыты, курсор в игре.</summary>
     private bool CanTalk =>
-        Time.timeScale > 0f && (inputBlocker == null || !inputBlocker.IsBlocked) && Cursor.lockState == CursorLockMode.Locked;
+        Time.timeScale > 0f && (inputBlocker == null || !inputBlocker.IsBlocked) && Cursor.lockState == CursorLockMode.Locked
+        && (cutscenes == null || !cutscenes.IsPlaying);
 
     private void UpdateRinging()
     {

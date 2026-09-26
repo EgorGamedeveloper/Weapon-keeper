@@ -10,13 +10,15 @@ using UnityEngine.UI;
 /// Строит из кода всё, что нужно разговору по рации:
 /// - префаб 03_Prefabs/UI/Story/RadioCallUI — плашка «Входящий вызов» вверху экрана и строка субтитров внизу;
 /// - простые звуки рации (писк вызова, щелчок ответа и отбоя) — WAV в 08_Story/Audio, пока нет настоящих;
-/// - модель рации в руке из примитивов (дочерний объект камеры) — пока нет настоящей модели.
+/// - модель рации в руке из примитивов (дочерний объект камеры) — пока нет настоящей модели;
+/// - префаб 03_Prefabs/UI/Story/StoryCutscenePlayer — показ кат-сцен: чёрные полосы и подсказка пропуска.
 /// Всё это заменяемо: префаб можно перестроить или поправить руками, звуки и модель — назначить свои.
 /// </summary>
 public static class StoryUIBuilder
 {
     public const string PrefabFolder = "Assets/01_GAME/03_Prefabs/UI/Story";
     public const string RadioPath = PrefabFolder + "/RadioCallUI.prefab";
+    public const string CutscenePath = PrefabFolder + "/StoryCutscenePlayer.prefab";
     public const string AudioFolder = StoryEditorTools.StoryFolder + "/Audio";
     private const string MaterialFolder = "Assets/01_GAME/06_Materials";
 
@@ -103,6 +105,45 @@ public static class StoryUIBuilder
         radio.hangUpClip = AssetDatabase.LoadAssetAtPath<AudioClip>(AudioFolder + "/radio_hangup.wav");
 
         return UIBuilderKit.SavePrefab(root, RadioPath);
+    }
+
+    // ───────────────────────── Кат-сцены ─────────────────────────
+
+    /// <summary>Экран кат-сцены: чёрные полосы сверху и снизу и подсказка «Удерживайте [E] — пропустить» с полоской.</summary>
+    public static GameObject BuildCutsceneUI()
+    {
+        UIBuilderKit.ResetStringCache();
+        GameObject root = UIBuilderKit.CreateCanvasRoot("StoryCutscenePlayer", 95, false);
+        var player = root.AddComponent<StoryCutscenePlayer>();
+
+        RectTransform bars = UIBuilderKit.CreateRect("Letterbox", root.transform);
+        UIBuilderKit.Stretch(bars);
+        player.letterbox = bars.gameObject.AddComponent<CanvasGroup>();
+        Image top = UIBuilderKit.CreateImage("Top", bars, Color.black);
+        UIBuilderKit.Anchor(top.rectTransform, 0f, 1f, 1f, 1f, 0f, -120f, 0f, 0f);
+        Image bottom = UIBuilderKit.CreateImage("Bottom", bars, Color.black);
+        UIBuilderKit.Anchor(bottom.rectTransform, 0f, 0f, 1f, 0f, 0f, 0f, 0f, -120f);
+
+        RectTransform skip = UIBuilderKit.CreateRect("Skip", root.transform);
+        skip.anchorMin = skip.anchorMax = new Vector2(1f, 0f);
+        skip.pivot = new Vector2(1f, 0f);
+        skip.sizeDelta = new Vector2(460f, 60f);
+        skip.anchoredPosition = new Vector2(-40f, 30f);
+        player.skipGroup = skip.gameObject.AddComponent<CanvasGroup>();
+
+        player.skipText = UIBuilderKit.CreateText("Hint", skip, null, 22f, UIBuilderKit.MutedTextColor,
+            TextAlignmentOptions.BottomRight, FontStyles.Normal, UIBuilderKit.Ru("cutscene.skip").Replace("{0}", "E"));
+        UIBuilderKit.Anchor(player.skipText.rectTransform, 0f, 0f, 1f, 1f, 0f, 14f, 0f, 0f);
+
+        Image track = UIBuilderKit.CreateImage("Track", skip, new Color(1f, 1f, 1f, 0.15f));
+        UIBuilderKit.Anchor(track.rectTransform, 0f, 0f, 1f, 0f, 160f, 0f, 0f, -4f);
+        player.skipFill = UIBuilderKit.CreateImage("Fill", track.transform, UIBuilderKit.AccentColor, UIBuilderKit.Square);
+        UIBuilderKit.Stretch(player.skipFill.rectTransform);
+        player.skipFill.type = Image.Type.Filled;
+        player.skipFill.fillMethod = Image.FillMethod.Horizontal;
+        player.skipFill.fillAmount = 0f;
+
+        return UIBuilderKit.SavePrefab(root, CutscenePath);
     }
 
     // ───────────────────────── Модель рации ─────────────────────────

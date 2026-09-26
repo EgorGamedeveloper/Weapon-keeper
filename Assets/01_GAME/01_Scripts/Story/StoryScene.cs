@@ -82,6 +82,15 @@ public class StoryScene
         return null;
     }
 
+    /// <summary>Кат-сцена по storyId.</summary>
+    public StoryCutscene FindCutscene(string storyId)
+    {
+        if (string.IsNullOrEmpty(storyId)) return null;
+        foreach (StoryCutscene cutscene in All<StoryCutscene>())
+            if (cutscene != null && cutscene.storyId == storyId) return cutscene;
+        return null;
+    }
+
     /// <summary>Ассет предмета по itemId (через ItemCatalog; без каталога — null).</summary>
     public ItemData FindItem(string itemId)
     {
