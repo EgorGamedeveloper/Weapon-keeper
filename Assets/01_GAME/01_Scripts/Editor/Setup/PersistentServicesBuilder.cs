@@ -3,7 +3,8 @@ using UnityEngine;
 
 /// <summary>
 /// Префаб постоянных сервисов 03_Prefabs/Systems/PersistentServices: PersistentServicesRoot + Steam +
-/// локализация + настройки + статистика и достижения (с отладочной панелью F9 и канвасом тостов).
+/// локализация + настройки + статистика и достижения (с отладочной панелью F9 и канвасом тостов) +
+/// звуки интерфейса (UISoundFeedback, звуки — из SoundAssetsBuilder).
 /// Кладётся и в Bootstrap, и в игровую сцену — см. PersistentServicesRoot. Префаб пересобирается целиком:
 /// ссылки на ассеты проставляются заново.
 /// </summary>
@@ -40,6 +41,12 @@ public static class PersistentServicesBuilder
         stats.catalog = catalog;
 
         root.AddComponent<AchievementDebugOverlay>();
+
+        var uiSounds = root.AddComponent<UISoundFeedback>();
+        uiSounds.hoverSound = SoundAssetsBuilder.Cue("UI_Hover");
+        uiSounds.clickSound = SoundAssetsBuilder.Cue("UI_Click");
+        uiSounds.windowOpenSound = SoundAssetsBuilder.Cue("UI_Open");
+        uiSounds.windowCloseSound = SoundAssetsBuilder.Cue("UI_Close");
         AchievementsUIBuilder.BuildToastCanvas(root.transform);
 
         return UIBuilderKit.SavePrefab(root, PrefabPath);
@@ -57,6 +64,7 @@ public static class PersistentServicesBuilder
                && prefab.GetComponent<SettingsService>() != null
                && prefab.GetComponent<StatsService>() != null
                && prefab.GetComponent<AchievementDebugOverlay>() != null
+               && prefab.GetComponent<UISoundFeedback>() != null
                && prefab.GetComponentInChildren<AchievementToastUI>(true) != null;
     }
 }

@@ -1,0 +1,323 @@
+{
+    "repairPoints": [
+        {
+            "id": "1f089a578cb444e594c05707e7bf8dc3",
+            "name": "05_Gameplay/Interactables/BrickWall_Damaged"
+        },
+        {
+            "id": "73d68dccaff348aeaba77566556b36bb",
+            "name": "05_Gameplay/Terminal/Generator"
+        },
+        {
+            "id": "9a8c5e555bb54c1d92828033ce2897d5",
+            "name": "05_Gameplay/Terminal/ElevatorPanel"
+        }
+    ],
+    "breakables": [
+        {
+            "id": "434466895a5d4d93bf2e7a077503fa05",
+            "name": "Window/WoodPlank_M"
+        },
+        {
+            "id": "14f6490791ca433391ec96f9b2fe47e6",
+            "name": "Window/WoodPlank_M (2)"
+        }
+    ],
+    "stains": [
+        {
+            "id": "2d221bb7370045b6a2aa1c4bba328a71",
+            "name": "05_Gameplay/Interactables/TestStain"
+        }
+    ],
+    "shelves": [
+        {
+            "id": "4199e711500645a8ad4cd58b0f22919a",
+            "name": "05_Gameplay/Shelves/Shelf [Shelf_AmmoBox]"
+        },
+        {
+            "id": "cbdb0b9c906c4e6e81c27f79c7a9454f",
+            "name": "Shelves/Shelf/Shelf (1) [Shelf_Gun]"
+        },
+        {
+            "id": "629ccfe7a1a34aecbb22a83de42991ef",
+            "name": "05_Gameplay/Shelves/ShelfM16 [Shelf_M16]"
+        },
+        {
+            "id": "9e126f660d8340ccb8ce16a1fdc7e681",
+            "name": "05_Gameplay/Shelves/TrashBin [Category_Trash]"
+        }
+    ],
+    "categories": [
+        {
+            "id": "Category_Trash",
+            "name": "Trash (Category_Trash)"
+        },
+        {
+            "id": "Shelf_AmmoBox",
+            "name": "AmmoBox (Shelf_AmmoBox)"
+        },
+        {
+            "id": "Shelf_Gun",
+            "name": "Gun (Shelf_Gun)"
+        },
+        {
+            "id": "Shelf_M16",
+            "name": "M16 (Shelf_M16)"
+        }
+    ],
+    "zones": [
+        {
+            "id": "test_delivery_brick",
+            "name": "test_delivery_brick — 05_Gameplay/Delivery/TestDeliveryZone"
+        }
+    ],
+    "items": [
+        {
+            "id": "ammobox_556",
+            "name": "Коробка патронов 5.56 (ammobox_556)"
+        },
+        {
+            "id": "boarddebris",
+            "name": "Обломок доски (boarddebris)"
+        },
+        {
+            "id": "brick",
+            "name": "Кирпич (brick)"
+        },
+        {
+            "id": "crowbar",
+            "name": "Лом (crowbar)"
+        },
+        {
+            "id": "elevatormotor",
+            "name": "Мотор лифта (elevatormotor)"
+        },
+        {
+            "id": "generatorparts",
+            "name": "Запчасти генератора (generatorparts)"
+        },
+        {
+            "id": "gun",
+            "name": "Gun-14F (gun)"
+        },
+        {
+            "id": "m16",
+            "name": "M16 (m16)"
+        },
+        {
+            "id": "shippingbox",
+            "name": "Коробка для отправки (shippingbox)"
+        },
+        {
+            "id": "sledgehammer",
+            "name": "Кувалда (sledgehammer)"
+        }
+    ],
+    "enemySpawns": [
+        {
+            "id": "91f566152b4846949a86e014f08ba018",
+            "name": "07_Enemies/SpawnPoint_Wanderer_Far [\"zombie\"]"
+        },
+        {
+            "id": "0ddb50ec7c4b43d4b0860b3fed8e7d95",
+            "name": "07_Enemies/SpawnPoint_Wanderer [\"zombie\"]"
+        },
+        {
+            "id": "11db37c806ab460e9dfb4cbbb335be7e",
+            "name": "07_Enemies/SpawnPoint_Sleeper [zombie_sleeper]"
+        },
+        {
+            "id": "60cb09ecc69f487fb2e5d3c869873cce",
+            "name": "07_Enemies/SpawnPoint_Runner [zombie_runner]"
+        },
+        {
+            "id": "71eac75a3bec4b239653aeac90ae05e5",
+            "name": "07_Enemies/SpawnPoint_Passive [zombie_passive]"
+        }
+    ],
+    "enemyTypes": [
+        {
+            "id": "\"zombie\"",
+            "name": "EnemyData_Zombie"
+        },
+        {
+            "id": "zombie_horde",
+            "name": "EnemyData_ZombieHorde"
+        },
+        {
+            "id": "zombie_passive",
+            "name": "EnemyData_ZombiePassive"
+        },
+        {
+            "id": "zombie_runner",
+            "name": "EnemyData_ZombieRunner"
+        },
+        {
+            "id": "zombie_sleeper",
+            "name": "EnemyData_ZombieSleeper"
+        }
+    ],
+    "orders": [
+        {
+            "id": "ammobig",
+            "name": "Блокпост №4 (ammobig)"
+        },
+        {
+            "id": "ammosmall",
+            "name": "Отряд «Север» (ammosmall)"
+        },
+        {
+            "id": "pistol",
+            "name": "Шериф Коллинз (pistol)"
+        },
+        {
+            "id": "pistolpair",
+            "name": "Семья Уокер (pistolpair)"
+        },
+        {
+            "id": "rifle",
+            "name": "Наёмники «Ворон» (rifle)"
+        }
+    ],
+    "lootBoxes": [
+        {
+            "id": "ammo",
+            "name": "Амуниция (ammo)"
+        },
+        {
+            "id": "pistols",
+            "name": "Пистолеты (pistols)"
+        },
+        {
+            "id": "rifles",
+            "name": "Винтовки (rifles)"
+        }
+    ],
+    "storyObjects": [],
+    "quests": [
+        {
+            "id": "cleanbloodstains",
+            "name": "Отмыть пятна крови (cleanbloodstains)"
+        },
+        {
+            "id": "deliverbrick",
+            "name": "Доставить кирпич (deliverbrick)"
+        },
+        {
+            "id": "repairelevator",
+            "name": "Починить лифт (repairelevator)"
+        },
+        {
+            "id": "repairwall",
+            "name": "Заделать пролом в стене (repairwall)"
+        },
+        {
+            "id": "startgenerator",
+            "name": "Запустить генератор (startgenerator)"
+        }
+    ],
+    "speakers": [],
+    "skills": [
+        {
+            "id": "catalog_express",
+            "name": "Экспресс-доставка (catalog_express)"
+        },
+        {
+            "id": "catalog_heavy",
+            "name": "Продажа: тяжёлое (catalog_heavy)"
+        },
+        {
+            "id": "catalog_pistols",
+            "name": "Продажа: пистолеты (catalog_pistols)"
+        },
+        {
+            "id": "catalog_rifles",
+            "name": "Продажа: винтовки (catalog_rifles)"
+        },
+        {
+            "id": "catalog_shotguns",
+            "name": "Продажа: дробовики (catalog_shotguns)"
+        },
+        {
+            "id": "catalog_supplies",
+            "name": "Продажа: амуниция (catalog_supplies)"
+        },
+        {
+            "id": "catalog_trader",
+            "name": "Торговец (catalog_trader)"
+        },
+        {
+            "id": "catalog_wholesale",
+            "name": "Оптовик (catalog_wholesale)"
+        },
+        {
+            "id": "cleaner_capacity1",
+            "name": "Вместительные руки (cleaner_capacity1)"
+        },
+        {
+            "id": "cleaner_capacity2",
+            "name": "Вместительные руки II (cleaner_capacity2)"
+        },
+        {
+            "id": "cleaner_diligent",
+            "name": "Прилежный (cleaner_diligent)"
+        },
+        {
+            "id": "cleaner_reach",
+            "name": "Длинные руки (cleaner_reach)"
+        },
+        {
+            "id": "gunsmith_heavy",
+            "name": "Лицензия: тяжёлое (gunsmith_heavy)"
+        },
+        {
+            "id": "gunsmith_magazine",
+            "name": "Большой магазин (gunsmith_magazine)"
+        },
+        {
+            "id": "gunsmith_pistols",
+            "name": "Лицензия: пистолеты (gunsmith_pistols)"
+        },
+        {
+            "id": "gunsmith_reload1",
+            "name": "Быстрые руки (gunsmith_reload1)"
+        },
+        {
+            "id": "gunsmith_reload2",
+            "name": "Быстрые руки II (gunsmith_reload2)"
+        },
+        {
+            "id": "gunsmith_rifles",
+            "name": "Лицензия: винтовки (gunsmith_rifles)"
+        },
+        {
+            "id": "gunsmith_shotguns",
+            "name": "Лицензия: дробовики (gunsmith_shotguns)"
+        },
+        {
+            "id": "gunsmith_steady",
+            "name": "Твёрдая рука (gunsmith_steady)"
+        },
+        {
+            "id": "survival_parkour",
+            "name": "Паркур (survival_parkour)"
+        },
+        {
+            "id": "survival_sprint",
+            "name": "Спринтер (survival_sprint)"
+        },
+        {
+            "id": "survival_tough",
+            "name": "Крепкий (survival_tough)"
+        },
+        {
+            "id": "survival_tough2",
+            "name": "Крепкий II (survival_tough2)"
+        },
+        {
+            "id": "survival_walk",
+            "name": "Лёгкий шаг (survival_walk)"
+        }
+    ],
+    "cutscenes": []
+}

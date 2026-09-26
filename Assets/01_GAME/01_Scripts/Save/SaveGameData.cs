@@ -33,6 +33,8 @@ public class SaveGameData
     public RepairPointSave[] repairPoints = Array.Empty<RepairPointSave>();
     public string[] cleanedStainIds = Array.Empty<string>();
     public string[] brokenBreakableIds = Array.Empty<string>();
+    /// <summary>Выбитые кирпичи ещё не обрушенных кладок (в старых сейвах поля нет → пусто: кладки целые).</summary>
+    public BrickWallSave[] brickWalls = Array.Empty<BrickWallSave>();
 
     public TidyUpEntrySave[] tidyUp = Array.Empty<TidyUpEntrySave>();
     public int tidyUpActiveIndex;
@@ -117,6 +119,15 @@ public class SlotSave
     public string[] itemIds = Array.Empty<string>();
     /// <summary>Параллельно itemIds (версия 2+).</summary>
     public bool[] placementRewarded = Array.Empty<bool>();
+}
+
+/// <summary>Кладка, которую разбивают по кирпичу (BrickWallSmash): какие кирпичи уже выбиты.</summary>
+[Serializable]
+public class BrickWallSave
+{
+    public string id;
+    /// <summary>Индексы выбитых кирпичей по порядку иерархии кладки.</summary>
+    public int[] knockedOut = Array.Empty<int>();
 }
 
 /// <summary>Состояние одной точки ремонта.</summary>

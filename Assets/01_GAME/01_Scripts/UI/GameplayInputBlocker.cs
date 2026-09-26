@@ -44,7 +44,17 @@ public class GameplayInputBlocker : MonoBehaviour
                 foreach (var weapon in weaponMount.GetComponentsInChildren<Weapon>(true)) Block(weapon);
         }
 
-        if (!releaseCursor) return;
+        if (!releaseCursor)
+        {
+            // Выключенный CursorLockController в своём OnDisable освобождает курсор — режиму работы он
+            // нужен захваченным (иначе режим принял бы это за открытое окно и сразу закрылся).
+            if (cursorOwners.Count == 0)
+            {
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible = false;
+            }
+            return;
+        }
         cursorOwners.Add(owner);
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;

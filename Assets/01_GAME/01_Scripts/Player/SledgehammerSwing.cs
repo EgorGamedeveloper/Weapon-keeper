@@ -5,6 +5,8 @@ using UnityEngine;
 /// Удар кувалдой: пока кувалда в руках (слот экипировки), ЛКМ — замах, удар и возврат (анимация
 /// модели в руке через DOTween). В момент удара — SphereCast из центра камеры:
 /// - враг (EnemyHealth) — урон через ChangeHealth(−damage), тот же путь, что у Easy Weapons;
+/// - кирпичная кладка (BrickWallSmash) — удар по конкретному кирпичу: сдвигается, вылетает, а после
+///   нескольких выбитых кладка обрушивается;
 /// - Breakable — Hit(): дрожит, пыль; после своего числа ударов разбит (или только звучит, если
 ///   кувалдой он не ломается);
 /// - любая другая твёрдая поверхность — звук удара и пыль.
@@ -176,6 +178,13 @@ public class SledgehammerSwing : MonoBehaviour
         {
             enemy.ChangeHealth(-damage);
             SoundPlayer.Play(enemyHitSound, point);
+            return;
+        }
+
+        BrickWallSmash wall = hit.collider.GetComponentInParent<BrickWallSmash>();
+        if (wall != null && !wall.IsBroken)
+        {
+            wall.Hit(point, ray.direction);
             return;
         }
 
