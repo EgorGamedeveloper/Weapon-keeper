@@ -1,0 +1,11 @@
+"lang"
+{
+	"russian"
+	{
+		"tokens"
+		{
+			"#Status_MainMenu"	"В главном меню"
+			"#Status_Restoring"	"Восстанавливает оружейный магазин: %progress%"
+		}
+	}
+}

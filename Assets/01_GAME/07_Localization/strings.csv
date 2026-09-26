@@ -1,0 +1,175 @@
+key,ru,en
+# Строки с ключом на # — комментарии. Перевод строки внутри ячейки — \n.,,
+# Общие,,
+common.ok,ОК,OK
+common.cancel,Отмена,Cancel
+common.yes,Да,Yes
+common.no,Нет,No
+common.back,Назад,Back
+common.close,Закрыть,Close
+common.apply,Применить,Apply
+common.on,Вкл,On
+common.off,Выкл,Off
+# Главное меню,,
+menu.settings,Настройки,Settings
+menu.new_game,Новая игра,New Game
+menu.continue,Продолжить,Continue
+menu.quit,Выход,Quit
+menu.confirm_yes,"Да, начать заново","Yes, start over"
+menu.confirm_no,Отмена,Cancel
+# Окно настроек,,
+settings.title,Настройки,Settings
+settings.tab.graphics,Графика,Graphics
+settings.tab.controls,Управление,Controls
+settings.tab.audio,Звук,Audio
+settings.tab.game,Игра,Game
+settings.reset,По умолчанию,Defaults
+settings.section.display,Экран,Display
+settings.section.quality,Качество,Quality
+settings.section.image,Изображение,Image
+settings.section.mouse,Мышь,Mouse
+settings.section.camera,Камера,Camera
+settings.graphics.resolution,Разрешение,Resolution
+settings.graphics.window_mode,Режим окна,Window mode
+settings.graphics.vsync,Вертикальная синхронизация,V-Sync
+settings.graphics.fps_limit,Ограничение FPS,Frame rate limit
+settings.graphics.quality,Пресет качества,Quality preset
+settings.graphics.render_scale,Масштаб рендеринга,Render scale
+settings.graphics.antialiasing,Сглаживание,Anti-aliasing
+settings.graphics.aa_quality,Качество сглаживания,Anti-aliasing quality
+settings.graphics.msaa,MSAA,MSAA
+settings.graphics.shadows,Тени,Shadows
+settings.graphics.shadow_distance,Дальность теней,Shadow distance
+settings.graphics.fov,Поле зрения,Field of view
+settings.graphics.brightness,Яркость,Brightness
+settings.graphics.bloom,Свечение (Bloom),Bloom
+settings.graphics.motion_blur,Размытие в движении,Motion blur
+settings.window_mode.exclusive,Полный экран,Fullscreen
+settings.window_mode.borderless,Окно без рамки,Borderless window
+settings.window_mode.windowed,В окне,Windowed
+settings.aa.off,Выкл,Off
+settings.aa.fxaa,FXAA (быстрое),FXAA (fast)
+settings.aa.smaa,SMAA,SMAA
+settings.aa.taa,TAA (временное),TAA (temporal)
+settings.level.low,Низкое,Low
+settings.level.medium,Среднее,Medium
+settings.level.high,Высокое,High
+settings.fps.unlimited,Без ограничения,Unlimited
+settings.unit.meters,{0:0} м,{0:0} m
+settings.unit.degrees,{0:0}°,{0:0}°
+settings.unit.seconds,{0:0.00} с,{0:0.00} s
+settings.quality.fastest,Самое быстрое,Fastest
+settings.quality.fast,Быстрое,Fast
+settings.quality.simple,Простое,Simple
+settings.quality.good,Хорошее,Good
+settings.quality.beautiful,Красивое,Beautiful
+settings.quality.fantastic,Максимальное,Fantastic
+settings.quality.very_low,Очень низкое,Very Low
+settings.quality.low,Низкое,Low
+settings.quality.medium,Среднее,Medium
+settings.quality.high,Высокое,High
+settings.quality.very_high,Очень высокое,Very High
+settings.quality.ultra,Ультра,Ultra
+settings.quality.performant,Производительность,Performant
+settings.quality.balanced,Баланс,Balanced
+settings.quality.high_fidelity,Высокое качество,High Fidelity
+settings.controls.sensitivity,Чувствительность мыши,Mouse sensitivity
+settings.controls.separate_y,Отдельно по вертикали,Separate vertical sensitivity
+settings.controls.sensitivity_y,Чувствительность по вертикали,Vertical sensitivity
+settings.controls.invert_y,Инверсия оси Y,Invert Y axis
+settings.controls.smoothing,Сглаживание мыши,Mouse smoothing
+settings.controls.head_bob,Покачивание камеры,Camera bobbing
+settings.audio.master,Общая громкость,Master volume
+settings.audio.music,Музыка,Music
+settings.audio.sfx,Эффекты,Sound effects
+settings.audio.ui,Интерфейс,Interface
+settings.audio.ambience,Окружение,Ambience
+settings.audio.background,Звук в фоне,Play audio in background
+settings.game.language,Язык,Language
+settings.game.hints,Подсказки,Hints
+settings.unsaved.title,Несохранённые изменения,Unsaved changes
+settings.unsaved.message,Применить изменения перед выходом?,Apply your changes before leaving?
+settings.unsaved.discard,Не сохранять,Discard
+settings.display.title,Оставить настройки экрана?,Keep these display settings?
+settings.display.message,Изображение в порядке? Без подтверждения прежние настройки вернутся через {0} с.,Does everything look right? The previous settings will be restored in {0} s.
+settings.display.keep,Оставить,Keep
+settings.display.revert,Вернуть,Revert
+# Меню паузы,,
+pause.title,Пауза,Paused
+pause.resume,Продолжить,Resume
+pause.settings,Настройки,Settings
+pause.achievements,Достижения,Achievements
+pause.main_menu,Выйти в главное меню,Main menu
+pause.quit,Выйти из игры,Quit game
+pause.to_menu.title,Выйти в главное меню?,Return to the main menu?
+pause.to_menu.message,Прогресс будет сохранён.,Your progress will be saved.
+pause.to_menu.message_no_save,"Сцена запущена без главного меню (Bootstrap), поэтому сохранение выключено: прогресс этой сессии не сохранится.","The scene was started without the main menu (Bootstrap), so saving is disabled: progress from this session will be lost."
+pause.to_menu.confirm,Выйти в меню,Leave
+pause.quit.title,Выйти из игры?,Quit the game?
+pause.quit.message,Прогресс сохранится автоматически.,Your progress will be saved automatically.
+pause.quit.confirm,Выйти,Quit
+# Достижения: окно и тост,,
+achievements.title,Достижения,Achievements
+achievements.summary,Получено: {0} из {1},Unlocked: {0} of {1}
+achievements.unlocked,Получено,Unlocked
+achievements.progress,{0} / {1},{0} / {1}
+achievements.hidden.title,Скрытое достижение,Hidden achievement
+achievements.hidden.description,"Продолжайте играть, чтобы открыть его.",Keep playing to reveal it.
+toast.achievement,Достижение получено,Achievement unlocked
+# Достижения: названия и описания,,
+ach.first_kill.name,Первая кровь,First Blood
+ach.first_kill.desc,Убейте первого зомби.,Kill your first zombie.
+ach.kill_10.name,Санитар,Pest Control
+ach.kill_10.desc,Убейте 10 зомби.,Kill 10 zombies.
+ach.kill_100.name,Гроза мертвецов,Undead Nightmare
+ach.kill_100.desc,Убейте 100 зомби.,Kill 100 zombies.
+ach.first_shelf.name,Открытие витрины,Grand Opening
+ach.first_shelf.desc,Поставьте первый товар на полку.,Put your first item on a shelf.
+ach.shelf_25.name,Мерчендайзер,Merchandiser
+ach.shelf_25.desc,Расставьте по полкам 25 предметов.,Shelve 25 items.
+ach.shelf_100.name,Образцовый магазин,Model Store
+ach.shelf_100.desc,Расставьте по полкам 100 предметов.,Shelve 100 items.
+ach.first_wall.name,Каменщик,Bricklayer
+ach.first_wall.desc,Заделайте пролом в стене.,Patch up a hole in the wall.
+ach.all_stains.name,Ни пятнышка,Spotless
+ach.all_stains.desc,Отмойте все пятна крови в магазине.,Clean every blood stain in the shop.
+ach.break_5.name,Ломать — не строить,Demolition Crew
+ach.break_5.desc,Разберите ломом 5 объектов.,Pry apart 5 objects with the crowbar.
+ach.debris_10.name,Генеральная уборка,Spring Cleaning
+ach.debris_10.desc,Выбросите в мусор 10 обломков.,Throw 10 pieces of debris in the trash.
+ach.first_quest.name,Первое поручение,First Assignment
+ach.first_quest.desc,Выполните первое задание.,Complete your first task.
+ach.quests_5.name,Управляющий,Store Manager
+ach.quests_5.desc,Выполните 5 заданий.,Complete 5 tasks.
+ach.first_delivery.name,Курьер,Courier
+ach.first_delivery.desc,Доставьте предмет по заданию.,Deliver an item for a task.
+ach.level_5.name,Опытный кладовщик,Seasoned Keeper
+ach.level_5.desc,Достигните 5-го уровня.,Reach level 5.
+ach.level_10.name,Ветеран оружейной,Armory Veteran
+ach.level_10.desc,Достигните 10-го уровня.,Reach level 10.
+ach.money_1000.name,Первая тысяча,First Grand
+ach.money_1000.desc,Заработайте 1000 $.,Earn $1000.
+ach.money_10000.name,Капиталист,Tycoon
+ach.money_10000.desc,Заработайте 10 000 $.,"Earn $10,000."
+ach.play_1h.name,Смена отработана,Full Shift
+ach.play_1h.desc,Проведите в игре 1 час.,Play for 1 hour.
+ach.jumps_100.name,Кузнечик,Grasshopper
+ach.jumps_100.desc,Подпрыгните 100 раз.,Jump 100 times.
+ach.walk_5km.name,Обход территории,Patrol Duty
+ach.walk_5km.desc,Пройдите 5 км.,Walk 5 km.
+"# Статистика: названия (окно отладки, таблица для Steamworks)",,
+stat.enemies_killed,Убито зомби,Zombies killed
+stat.items_shelved,Расставлено товаров,Items shelved
+stat.items_picked_up,Подобрано предметов,Items picked up
+stat.walls_repaired,Заделано стен,Walls repaired
+stat.stains_cleaned,Отмыто пятен,Stains cleaned
+stat.objects_broken,Разобрано объектов,Objects broken
+stat.quests_completed,Выполнено заданий,Tasks completed
+stat.items_delivered,Доставлено предметов,Items delivered
+stat.money_earned,Заработано денег,Money earned
+stat.jumps,Прыжков,Jumps
+stat.distance_walked_m,Пройдено метров,Meters walked
+stat.play_time_min,Минут в игре,Minutes played
+stat.max_level,Максимальный уровень,Highest level
+stat.repairs_completed,Выполнено ремонтов,Repairs completed
+stat.debris_disposed,Выброшено обломков,Debris disposed
