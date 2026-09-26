@@ -113,6 +113,76 @@ async function dragPal(page, label, dx = 420, dy = 240) {
   await page.mouse.move(pal.x + 20, pal.y + 10); await page.mouse.down();
   await page.mouse.move(pal.x + 200, pal.y + 5, { steps: 6 }); await page.mouse.up();
   ok(await page.locator('.node').count() === nBefore + 1, 'отпущено мимо холста — нода не добавлена');
+  {
+  // Двойной щелчок по палитре — нода в центр
+  const nDbl = await page.locator('.node').count();
+  await page.locator('.pal-item:has-text("Ожидание")').click();
+  ok(await page.locator('.node').count() === nDbl, 'одиночный щелчок ноду не добавляет');
+  await page.locator('.pal-item:has-text("Ожидание")').dblclick();
+  ok(await page.locator('.node').count() === nDbl + 1 && (await page.locator('.node.sel .n-head').textContent()).includes('Ожидание'), 'двойной щелчок добавил ноду');
+  const cvr = await page.locator('#canvas').boundingBox(), dbl = await page.locator('.node.sel').boundingBox();
+  ok(Math.abs(dbl.x + dbl.width / 2 - (cvr.x + cvr.width / 2)) < 160 && Math.abs(dbl.y - (cvr.y + cvr.height / 2)) < 120, 'и поставил её в центр холста');
+  await page.keyboard.press('Delete');
+  // Бросить ноду на нитку — встаёт в разрыв
+  const wire = await page.evaluate(() => {
+    const hit = document.querySelector('#wires path.hit');
+    const len = hit.getTotalLength(), p = hit.getPointAtLength(len / 2);
+    const m = hit.getScreenCTM();
+    return { x: p.x * m.a + m.e, y: p.y * m.d + m.f, links: document.querySelectorAll('#wires path.hit').length };
+  });
+  const cvb0 = await page.locator('#canvas').boundingBox();
+  const pw = await page.locator('.pal-item:has-text("Ожидание")').boundingBox();
+  await page.mouse.move(pw.x + 20, pw.y + 10); await page.mouse.down();
+  await page.mouse.move(wire.x, wire.y, { steps: 10 });
+  ok(await page.locator('#wires path.split').count() === 1, 'нитка под курсором подсвечена');
+  await page.mouse.up();
+  const splitId = await page.locator('.node.sel').getAttribute('data-id');
+  await page.click('#btnExport');
+  const sj = JSON.parse(await page.locator('#exportText').inputValue());
+  await page.click('#sheetExport [data-close]');
+  const inL = sj.links.filter((l) => l.to === splitId), outL = sj.links.filter((l) => l.from === splitId);
+  ok(inL.length === 1 && outL.length === 1 && !sj.links.some((l) => l.from === inL[0].from && l.to === outL[0].to), 'нода встала в разрыв: A → новая → B');
+  await page.keyboard.press('Control+z');
+  ok(await page.locator('#wires path.hit').count() === wire.links, 'Ctrl+Z вернул нитку целой');
+  // Свободную ноду с холста тоже можно бросить на нитку
+  await page.locator('.pal-item:has-text("Ожидание")').dblclick();
+  const freeId = await page.locator('.node.sel').getAttribute('data-id');
+  const fh = await page.locator('.node.sel .n-head').boundingBox();
+  await page.mouse.move(fh.x + 30, fh.y + 8); await page.mouse.down();
+  await page.mouse.move(wire.x + 30 - 30, wire.y, { steps: 10 }); await page.mouse.up();
+  await page.click('#btnExport');
+  const sj2 = JSON.parse(await page.locator('#exportText').inputValue());
+  await page.click('#sheetExport [data-close]');
+  ok(sj2.links.some((l) => l.to === freeId) && sj2.links.some((l) => l.from === freeId), 'перетащенная свободная нода встала в разрыв');
+  await page.keyboard.press('Control+z');
+  await page.keyboard.press('Control+z');
+  // Средняя кнопка не тянет ноду
+  const anyNode = page.locator('.node').first();
+  const mb0 = await anyNode.boundingBox();
+  await page.mouse.move(mb0.x + 40, mb0.y + 8); await page.mouse.down({ button: 'middle' });
+  await page.mouse.move(mb0.x + 140, mb0.y + 80, { steps: 5 }); await page.mouse.up({ button: 'middle' });
+  const mb1 = await anyNode.boundingBox();
+  ok(Math.abs((mb1.x - mb0.x) - 100) < 3, 'средняя кнопка двигает холст, а не ноду (нода сдвинулась вместе с холстом)');
+  await page.mouse.move(mb0.x + 140, mb0.y + 80); await page.mouse.down({ button: 'middle' });
+  await page.mouse.move(mb0.x + 40, mb0.y + 8, { steps: 5 }); await page.mouse.up({ button: 'middle' });
+  }
+
+  {
+  // Длинная нода листается внутри
+  await page.locator('.pal-item:has-text("Заметка")').dblclick();
+  await page.locator('.inspector textarea').first().fill(Array.from({ length: 40 }, (_, i) => 'Строка ' + (i + 1)).join('\n'));
+  const longBody = page.locator('.node.sel .n-body');
+  const [sh, ch] = await longBody.evaluate((b) => [b.scrollHeight, b.clientHeight]);
+  ok(sh > ch + 50 && ch <= 190, 'длинная нода ограничена по высоте и прокручивается: ' + ch + '/' + sh);
+  const bb = await longBody.boundingBox();
+  const k0 = await page.locator('#zoomLabel').textContent();
+  await page.mouse.move(bb.x + 40, bb.y + 60); await page.mouse.wheel(0, 300);
+  await page.waitForTimeout(200);
+  ok((await longBody.evaluate((b) => b.scrollTop)) > 0 && (await page.locator('#zoomLabel').textContent()) === k0, 'колесо над нодой листает её, масштаб не меняется');
+  await page.keyboard.press('Escape');
+  await page.locator('.node', { hasText: 'Строка 1' }).locator('.n-head').click();
+  await page.keyboard.press('Delete');
+  }
   // Нода «Кат-сцена» и новые триггеры
   await dragPal(page, 'Кат-сцена', 500, 300);
   ok((await page.locator('.node.sel .n-head').textContent()).includes('Кат-сцена'), 'нода «Кат-сцена» добавлена');
@@ -173,6 +243,7 @@ async function dragPal(page, label, dx = 420, dy = 240) {
   await page.keyboard.press('Control+z');
   await page.locator('.line-tab').first().click();
   // Рамки и оформление
+  await page.click('#zoomOut'); await page.click('#zoomOut'); // чтобы рамка целиком помещалась на холсте
   await page.click('#palTabs button[data-tab="shapes"]');
   const cvb = await page.locator('#canvas').boundingBox();
   // рамка вокруг «Старта»
@@ -212,6 +283,19 @@ async function dragPal(page, label, dx = 420, dy = 240) {
   await page.mouse.move(cvb.x + 760, cvb.y + 220, { steps: 8 }); await page.mouse.up();
   ok(await page.locator('.bi.decor svg').count() >= 1, 'иконка на холсте');
   await page.locator('.inspector .swatches button').nth(2).click();
+  {
+    const icon = page.locator('.bi.decor.sel');
+    const rt = await icon.locator('.rt').boundingBox();
+    const ib2 = await icon.boundingBox();
+    const cx = ib2.x + ib2.width / 2, cy = ib2.y + ib2.height / 2;
+    await page.mouse.move(rt.x + rt.width / 2, rt.y + rt.height / 2); await page.mouse.down();
+    // по кругу на 90° по часовой: из правого верхнего угла в правый нижний
+    await page.mouse.move(cx + (cy - (rt.y + rt.height / 2)), cy + ((rt.x + rt.width / 2) - cx), { steps: 8 }); await page.mouse.up();
+    const rot = Number(await page.locator('.inspector input[type="number"]').last().inputValue());
+    ok(Math.abs(rot - 90) <= 2 && (await icon.getAttribute('style')).includes('rotate('), 'кружок вверху справа поворачивает элемент: ' + rot + '°');
+    await page.keyboard.press('Control+z');
+    ok(Number(await page.locator('.inspector input[type="number"]').last().inputValue()) === 0 || (await page.locator('.bi.decor.sel').count()) === 0, 'Ctrl+Z отменил поворот');
+  }
   ok((await page.locator('.bi.decor.sel').getAttribute('style')).includes('--t-trigger'), 'цвет иконки меняется');
   await page.keyboard.press('Control+d');
   const decorCount = await page.locator('.bi.decor').count();

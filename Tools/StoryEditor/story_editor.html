@@ -214,7 +214,13 @@ body.resizing-h, body.resizing-h * { cursor: row-resize !important; }
   position: absolute; right: -6px; bottom: -6px; width: 14px; height: 14px; border-radius: 3px; background: var(--accent);
   border: 2px solid var(--panel); cursor: nwse-resize; opacity: 0; pointer-events: auto;
 }
-.bi.sel .rz, .bi:hover .rz { opacity: 1; }
+.bi .rt {
+  position: absolute; right: -8px; top: -8px; width: 14px; height: 14px; border-radius: 50%; background: var(--panel);
+  border: 2px solid var(--accent); cursor: grab; opacity: 0; pointer-events: auto;
+}
+.bi .rt::after { content: ""; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; border-radius: 50%; background: var(--accent); }
+.bi.sel .rz, .bi:hover .rz, .bi.sel .rt, .bi:hover .rt { opacity: 1; }
+body.rotating, body.rotating * { cursor: grabbing !important; }
 .bi.group { border: 2px solid var(--gc); border-radius: 10px; background: color-mix(in srgb, var(--gc) 9%, transparent); pointer-events: none; }
 .bi.group .g-head {
   position: absolute; left: -2px; right: -2px; top: -2px; height: 38px; border-radius: 10px 10px 0 0; pointer-events: auto; cursor: grab;
@@ -233,6 +239,7 @@ body.resizing-h, body.resizing-h * { cursor: row-resize !important; }
 .wires path { fill: none; stroke: var(--wire); stroke-width: 2.2; pointer-events: stroke; cursor: pointer; }
 .wires path.hit { stroke: transparent; stroke-width: 14; }
 .wires path.sel { stroke: var(--wire-sel); stroke-width: 3; }
+.wires path.split { stroke: var(--accent); stroke-width: 4; stroke-dasharray: 8 5; }
 .wires path.temp { stroke: var(--accent); stroke-dasharray: 6 5; pointer-events: none; }
 
 .node {
@@ -253,11 +260,16 @@ body.resizing-h, body.resizing-h * { cursor: row-resize !important; }
   color: #fff; font: 600 14px/1.1 var(--font-head); letter-spacing: .06em; text-transform: uppercase;
 }
 .n-head .n-id { margin-left: 4px; font: 400 11px var(--font-mono); letter-spacing: 0; text-transform: none; opacity: .8; }
-.n-body { padding: 8px 10px 10px; font-size: 12.5px; line-height: 1.4; }
+.n-body {
+  padding: 8px 10px 10px; font-size: 12.5px; line-height: 1.4; max-height: 170px; overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+}
+.n-body::-webkit-scrollbar { width: 6px; }
+.n-body::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+.n-body::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 .n-body .t { font-weight: 600; font-size: 13px; }
 .n-body .m { color: var(--muted); }
-.n-body .q { border-left: 2px solid var(--line); padding-left: 6px; margin-top: 4px; color: var(--muted);
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.n-body .q { border-left: 2px solid var(--line); padding-left: 6px; margin-top: 4px; color: var(--muted); white-space: pre-wrap; }
 .n-body .empty { color: var(--danger); }
 .port {
   position: absolute; top: 9px; width: 14px; height: 14px; border-radius: 50%; background: var(--node);
@@ -428,7 +440,7 @@ body.resizing-h, body.resizing-h * { cursor: row-resize !important; }
       <div id="palItems"></div>
       <input class="hidden-file" type="file" id="fileImages" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" multiple>
       <span class="pal-help" tabindex="0" role="note" aria-label="Подсказка"
-        title="Перетащите ноду из полосы на холст.&#10;Нитка — от правого кружка ноды к левому кружку другой: следующая нода включится, когда эта завершится.&#10;Del — удалить · Ctrl+D — копия · Ctrl+Z — отмена · колесо — масштаб, фон — сдвиг.">?</span>
+        title="Перетащите ноду из полосы на холст (или дважды щёлкните — встанет в центр). Брошенная на нитку — встанет в разрыв.&#10;Нитка — от правого кружка ноды к левому кружку другой: следующая нода включится, когда эта завершится.&#10;Del — удалить · Ctrl+D — копия · Ctrl+Z — отмена · колесо — масштаб, фон — сдвиг.">?</span>
     </aside>
 
     <main class="canvas" id="canvas" aria-label="Граф сюжета">
@@ -840,13 +852,17 @@ function nodeSummary(n) {
       add(title ? 't' : 'empty', title || 'Без названия');
       const qt = QUEST_TYPES.find((q) => q.id === n.questType);
       add('m', `${qt ? qt.label : n.questType} × ${n.targetCount || 1} · ${n.xp || 0} XP · $${n.money || 0}`);
+      const desc = locText(n.description);
+      if (desc) add('q', desc);
       break;
     }
     case 'radio': {
       const who = locText(n.speaker);
       add(who ? 't' : 'empty', who || 'Кто говорит?');
-      const first = n.lines && n.lines[0] ? locText(n.lines[0].text) : '';
-      add('q', first ? `«${first}»` : 'Нет реплик');
+      // Все реплики целиком: длинный разговор листается прокруткой внутри ноды.
+      const lines = (n.lines || []).map((l) => locText(l.text)).filter(Boolean);
+      if (!lines.length) add('q', 'Нет реплик');
+      for (const line of lines) add('q', `«${line}»`);
       add('m', `Реплик: ${(n.lines || []).length}`);
       break;
     }
@@ -956,7 +972,9 @@ function renderWires() {
     const d = wirePath(a, b);
     const vis = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     vis.setAttribute('d', d);
+    vis.dataset.vis = i;
     if (state.sel.link === i) vis.setAttribute('class', 'sel');
+    else if (splitHover === i) vis.setAttribute('class', 'split');
     const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     hit.setAttribute('d', d);
     hit.setAttribute('class', 'hit');
@@ -1134,7 +1152,7 @@ function renderInspector() {
   }
   if (!n) {
     insp.append(el('h2', { text: 'Свойства' }),
-      el('div', { class: 'insp-empty', text: 'Выберите ноду, рамку или элемент оформления, чтобы изменить. Новое перетащите на холст из полосы внизу: ноды, формы, иконки, картинки (картинку можно бросить и прямо с компьютера).' }));
+      el('div', { class: 'insp-empty', text: 'Выберите ноду, рамку или элемент оформления, чтобы изменить. Новое перетащите на холст из полосы внизу или дважды щёлкните по карточке — встанет в центр. Ноду со входом и выходом можно бросить прямо на нитку — она встанет в разрыв. Картинку можно бросить и прямо с компьютера.' }));
     insp.classList.add('closed');
     return;
   }
@@ -1528,7 +1546,8 @@ function buildDecorEl(d) {
     const lines = String(d.text || 'Надпись').split('\n').length;
     div.append(el('div', { class: 'txt', style: `font-size:${Math.max(8, (d.h / lines) * 0.78)}px`, text: d.text || 'Надпись' }));
   } else div.append(shapeSvg(d));
-  div.append(el('div', { class: 'rz', title: 'Размер (Shift — с пропорциями)' }));
+  div.append(el('div', { class: 'rz', title: 'Размер (Shift — с пропорциями)' }),
+    el('div', { class: 'rt', title: 'Поворот: тяните по кругу (Shift — шагами по 15°)' }));
   placeItem(div, d);
   boardEls.set('decor:' + d.id, div);
   return div;
@@ -1551,6 +1570,13 @@ function boardPointerDown(e) {
   if (!o) return false;
   if (kind === 'group' && !e.target.closest('.g-head, .rz')) return false; // внутри рамки — как по холсту
   selectItem(kind, id);
+  if (kind === 'decor' && e.target.closest('.rt')) {
+    const r = bi.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    drag = { kind: 'item-rotate', item: o, itemKind: kind, cx, cy, a0: Math.atan2(e.clientY - cy, e.clientX - cx), rot0: Number(o.rot) || 0, moved: false };
+    document.body.classList.add('rotating');
+    return true;
+  }
   if (e.target.closest('.rz')) {
     drag = { kind: 'item-resize', item: o, itemKind: kind, startX: e.clientX, startY: e.clientY, w0: o.w, h0: o.h, moved: false };
     return true;
@@ -1571,6 +1597,17 @@ function boardPointerDown(e) {
   return true;
 }
 function boardPointerMove(e) {
+  if (drag.kind === 'item-rotate') {
+    const a = Math.atan2(e.clientY - drag.cy, e.clientX - drag.cx);
+    let rot = drag.rot0 + (a - drag.a0) * 180 / Math.PI;
+    if (e.shiftKey) rot = Math.round(rot / 15) * 15;
+    rot = Math.round(((rot % 360) + 540) % 360 - 180); // −180…180
+    if (!drag.moved) { if (rot === Math.round(drag.rot0)) return; beginEdit(false); drag.moved = true; }
+    drag.item.rot = rot;
+    const div = boardEls.get('decor:' + drag.item.id);
+    if (div) div.style.transform = `rotate(${rot}deg)`;
+    return;
+  }
   const dx = (e.clientX - drag.startX) / state.view.k, dy = (e.clientY - drag.startY) / state.view.k;
   if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 3) return;
   if (!drag.moved) { beginEdit(false); drag.moved = true; }
@@ -1973,7 +2010,18 @@ canvas.addEventListener('pointerdown', (e) => {
   if (focused && focused.closest && focused.closest('.inspector')) focused.blur();
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pointers.size === 2) { startPinch(); return; }
-  if (e.button === 2) return;
+  // Средняя кнопка — всегда сдвиг холста (ноду за неё не тянем); правая — ничего. Тянуть ноды — только левой.
+  if (e.button === 1) {
+    e.preventDefault();
+    drag = { kind: 'pan', startX: e.clientX, startY: e.clientY, vx: state.view.x, vy: state.view.y, moved: true };
+    canvas.classList.add('panning');
+    canvas.setPointerCapture(e.pointerId);
+    return;
+  }
+  if (e.button !== 0) return;
+  // Полоса прокрутки внутри ноды — её тянет браузер, ноду не двигаем.
+  const bodyHit = e.target.classList && e.target.classList.contains('n-body') ? e.target : null;
+  if (bodyHit && e.offsetX >= bodyHit.clientWidth) return;
 
   const port = e.target.closest('.port.out');
   const nodeDiv = e.target.closest('.node');
@@ -2007,7 +2055,7 @@ canvas.addEventListener('pointermove', (e) => {
   if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pinch && pointers.size === 2) { movePinch(); return; }
   if (!drag) return;
-  if (drag.kind === 'item-move' || drag.kind === 'item-resize') { boardPointerMove(e); return; }
+  if (drag.kind === 'item-move' || drag.kind === 'item-resize' || drag.kind === 'item-rotate') { boardPointerMove(e); return; }
   if (drag.kind === 'pan') {
     state.view.x = drag.vx + (e.clientX - drag.startX);
     state.view.y = drag.vy + (e.clientY - drag.startY);
@@ -2021,6 +2069,8 @@ canvas.addEventListener('pointermove', (e) => {
     n.x = Math.round(drag.nx + dx); n.y = Math.round(drag.ny + dy);
     const d = nodeEls.get(n.id);
     d.style.left = n.x + 'px'; d.style.top = n.y + 'px';
+    // Свободную ноду (без ниток) можно бросить на нитку — встанет в разрыв.
+    splitHover = canSplice(n) ? wireAt(e.clientX, e.clientY, n.id) : null;
     renderWires();
   } else if (drag.kind === 'wire') {
     drag.to = toWorld(e.clientX, e.clientY);
@@ -2054,10 +2104,15 @@ function endPointer(e) {
     drag = null;
     renderWires();
   } else if (drag.kind === 'node') {
-    if (drag.moved) changed(false);
+    const splitIdx = splitHover;
+    splitHover = null;
+    if (drag.moved && splitIdx !== null) { spliceIntoLink(splitIdx, drag.id); changed(true); }
+    else if (drag.moved) changed(false);
+    else renderWires();
     drag = null;
-  } else if (drag.kind === 'item-move' || drag.kind === 'item-resize') {
-    if (drag.moved) changed(false);
+  } else if (drag.kind === 'item-move' || drag.kind === 'item-resize' || drag.kind === 'item-rotate') {
+    document.body.classList.remove('rotating');
+    if (drag.moved) changed(true); // true — обновить и поле «Поворот» в инспекторе
     drag = null;
   } else if (drag.kind === 'pan') {
     if (!drag.moved && (state.sel.node || state.sel.link !== null || state.sel.group || state.sel.decor)) { state.sel = { node: null, link: null, group: null, decor: null }; renderAll(); }
@@ -2066,10 +2121,14 @@ function endPointer(e) {
   }
 }
 canvas.addEventListener('pointerup', endPointer);
+canvas.addEventListener('mousedown', (e) => { if (e.button === 1) e.preventDefault(); }); // без автопрокрутки средней кнопкой
 canvas.addEventListener('pointercancel', endPointer);
 
 canvas.addEventListener('wheel', (e) => {
   if (e.target.closest('.sheet')) return;
+  // Колесо над длинной нодой листает её содержимое (Ctrl+колесо — всё равно масштаб).
+  const body = e.target.closest('.n-body');
+  if (body && !e.ctrlKey && body.scrollHeight > body.clientHeight + 1) return;
   e.preventDefault();
   const factor = Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015));
   zoomAt(e.clientX, e.clientY, state.view.k * factor);
@@ -2202,14 +2261,44 @@ function duplicateSelection() {
   changed(true);
 }
 
-// Новая нода — только перетаскиванием из палитры: встаёт туда, где отпустили (at — точка на экране).
-function addNode(type, at) {
+// Новая нода из палитры: встаёт туда, где отпустили (at — точка на экране). splitIdx — нитка, в разрыв которой
+// её бросили: A → B становится A → новая → B.
+function addNode(type, at, splitIdx = null) {
   const w = toWorld(at.x, at.y);
   beginEdit(false);
   const n = newNode(type, w.x - 40, w.y - 12); // курсор — на заголовке новой ноды
   state.graph.nodes.set(n.id, n);
+  if (splitIdx !== null) spliceIntoLink(splitIdx, n.id);
   state.sel = { node: n.id, link: null };
   changed(true);
+}
+
+// ── Вставка ноды в нитку ──
+let splitHover = null; // индекс нитки под курсором, в которую встанет нода
+// В нитку встаёт нода со входом и выходом и без собственных ниток (иначе граф перепутался бы).
+function canSplice(n) {
+  const t = TYPES[n.type];
+  return !!(t && t.inPort && t.outPort) && !state.graph.links.some((l) => l.from === n.id || l.to === n.id);
+}
+function canSpliceType(type) { const t = TYPES[type]; return !!(t && t.inPort && t.outPort); }
+function wireAt(clientX, clientY, excludeId) {
+  const w = toWorld(clientX, clientY);
+  const pt = new DOMPoint(w.x, w.y);
+  for (const hit of wiresSvg.querySelectorAll('path.hit')) {
+    const i = Number(hit.dataset.link);
+    const l = state.graph.links[i];
+    if (!l || l.from === excludeId || l.to === excludeId) continue;
+    if (hit.isPointInStroke(pt)) return i;
+  }
+  return null;
+}
+function spliceIntoLink(i, id) {
+  const l = state.graph.links[i];
+  if (!l || l.from === id || l.to === id) return;
+  state.graph.links.splice(i, 1);
+  const has = (from, to) => state.graph.links.some((x) => x.from === from && x.to === to);
+  if (!has(l.from, id)) state.graph.links.push({ from: l.from, fromPort: l.fromPort || 'out', to: id, toPort: 'in' });
+  if (!has(id, l.to)) state.graph.links.push({ from: id, fromPort: 'out', to: l.to, toPort: l.toPort || 'in' });
 }
 
 // Перетаскивание из палитры: призрак ноды идёт за курсором, на холсте — рамка «сюда можно».
@@ -2240,7 +2329,10 @@ function palPointerMove(e) {
   }
   d.ghost.style.left = (e.clientX - 40) + 'px';
   d.ghost.style.top = (e.clientY - 12) + 'px';
-  canvas.classList.toggle('drop', overCanvas(e.clientX, e.clientY));
+  const over = overCanvas(e.clientX, e.clientY);
+  canvas.classList.toggle('drop', over);
+  const split = over && d.payload.node && canSpliceType(d.payload.node) ? wireAt(e.clientX, e.clientY, null) : null;
+  if (split !== splitHover) { splitHover = split; renderWires(); }
 }
 function palPointerUp(e, cancelled) {
   const d = palDrag;
@@ -2248,10 +2340,12 @@ function palPointerUp(e, cancelled) {
   palDrag = null;
   canvas.classList.remove('drop');
   if (d.ghost) d.ghost.remove();
+  const splitIdx = splitHover;
+  if (splitHover !== null) { splitHover = null; renderWires(); }
   if (cancelled || !d.moved) return; // щелчок без перетаскивания ничего не добавляет
   if (!overCanvas(e.clientX, e.clientY)) return;
   const at = { x: e.clientX, y: e.clientY }, p = d.payload;
-  if (p.node) addNode(p.node, at);
+  if (p.node) addNode(p.node, at, splitIdx);
   else if (p.group) addGroup(at);
   else addDecor(p, at);
 }
@@ -3199,9 +3293,20 @@ window.addEventListener('resize', applyLayout);
 // Нижняя полоса: вкладки «Ноды | Формы | Иконки | Картинки». Всё — перетаскиванием на холст.
 let palTab = 'nodes';
 function palItem(cls, title, payload, ...children) {
-  return el('button', { class: 'pal-item ' + cls, type: 'button', title,
+  return el('button', { class: 'pal-item ' + cls, type: 'button', title: title.replace('Перетащите на холст.', 'Перетащите на холст или дважды щёлкните — встанет в центр.'),
     onpointerdown: (e) => palPointerDown(e, payload), onpointermove: palPointerMove,
-    onpointerup: (e) => palPointerUp(e, false), onpointercancel: (e) => palPointerUp(e, true) }, ...children);
+    onpointerup: (e) => palPointerUp(e, false), onpointercancel: (e) => palPointerUp(e, true),
+    ondblclick: () => addAtCenter(payload) }, ...children);
+}
+// Двойной щелчок по палитре: элемент в центр видимой части холста (каждый следующий — чуть сдвинут, чтобы не слипались).
+let centerSeq = 0;
+function addAtCenter(p) {
+  const r = canvas.getBoundingClientRect();
+  const off = (centerSeq++ % 5) * 24;
+  const at = { x: r.left + r.width / 2 - 75 + off, y: r.top + r.height / 2 - 30 + off };
+  if (p.node) addNode(p.node, at);
+  else if (p.group) addGroup(at);
+  else addDecor(p, at);
 }
 function buildPalette() {
   const box = $('palItems');
