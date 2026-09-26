@@ -247,21 +247,23 @@ interact.box.title,Коробка заказа,Order box
 interact.box.take_item,ЛКМ — достать предмет (осталось {0}),LMB — take an item out ({0} left)
 interact.box.sealed,Запечатана — отнесите на крышу в зону отправки,Sealed — carry it to the shipping zone on the roof
 interact.box.pack,Уложите товар по заказу (см. терминал),Pack the ordered items (see the terminal)
-bootstrap.menucanvas.title,GUN KEEPER,
-bootstrap.menucanvas.footer,GEGA Games — v1.0,
+# Надписи сцен (Localization/Extract Texts From Open Scene),,
+bootstrap.menucanvas.title,GUN KEEPER,GUN KEEPER
+bootstrap.menucanvas.footer,GEGA Games — v1.0,GEGA Games — v1.0
 bootstrap.menucanvas.confirmnewgamepanel.dialog.message,"Начать новую игру?
-Сохранённый прогресс будет перезаписан.",
-bootstrap.menucanvas.confirmnewgamepanel.dialog.yesbutton.label,Начать заново,
-testscene.03_ui.canvas.iteminfopanel.infotext,Информация о предмете,
-testscene.03_ui.canvas.skilltreewindow.window.panel.title,Навыки,
-testscene.03_ui.canvas.skilltreewindow.window.panel.pointsbadge.label,очков навыков,
-testscene.03_ui.canvas.skilltreewindow.window.panel.hint,Tab / Esc — закрыть,
-testscene.03_ui.canvas.skilltreewindow.window.panel.detailpanel.effectsheader,Эффект,
-testscene.03_ui.canvas.skilltreewindow.window.panel.detailpanel.requirementsheader,Требования,
-testscene.03_ui.canvas.terminalwindow.window.monitor.screen.content.close.label,[X],
-testscene.03_ui.canvas.terminalwindow.window.monitor.screen.content.suppliespage.intransittitle,В ПУТИ:,
-testscene.03_ui.canvas.terminalwindow.window.monitor.screen.content.suppliespage.empty,— нет активных доставок —,
-testscene.03_ui.canvas.terminalwindow.window.monitor.screen.content.orderspage.inboxtitle,ВХОДЯЩИЕ ЗАКАЗЫ:,
-testscene.03_ui.canvas.terminalwindow.window.monitor.screen.content.orderspage.empty,"— новых заказов нет, загляните позже —",
-testscene.03_ui.canvas.terminalwindow.window.monitor.screen.content.orderspage.activepanel.cancelbutton.label,[ ОТМЕНИТЬ ЗАКАЗ ],
-testscene.03_ui.canvas.terminalwindow.window.monitor.screen.content.footer,ESC — ВЫХОД,
+Сохранённый прогресс будет перезаписан.","Start a new game?
+Your saved progress will be overwritten."
+bootstrap.menucanvas.confirmnewgamepanel.dialog.yesbutton.label,Начать заново,Start over
+testscene.03_ui.canvas.iteminfopanel.infotext,Информация о предмете,Item info
+testscene.03_ui.canvas.skilltreewindow.window.panel.title,Навыки,Skills
+testscene.03_ui.canvas.skilltreewindow.window.panel.pointsbadge.label,очков навыков,skill points
+testscene.03_ui.canvas.skilltreewindow.window.panel.hint,Tab / Esc — закрыть,Tab / Esc — close
+testscene.03_ui.canvas.skilltreewindow.window.panel.detailpanel.effectsheader,Эффект,Effect
+testscene.03_ui.canvas.skilltreewindow.window.panel.detailpanel.requirementsheader,Требования,Requirements
+testscene.03_ui.canvas.terminalwindow.window.monitor.screen.content.close.label,[X],[X]
+testscene.03_ui.canvas.terminalwindow.window.monitor.screen.content.suppliespage.intransittitle,В ПУТИ:,IN TRANSIT:
+testscene.03_ui.canvas.terminalwindow.window.monitor.screen.content.suppliespage.empty,— нет активных доставок —,— no active deliveries —
+testscene.03_ui.canvas.terminalwindow.window.monitor.screen.content.orderspage.inboxtitle,ВХОДЯЩИЕ ЗАКАЗЫ:,INCOMING ORDERS:
+testscene.03_ui.canvas.terminalwindow.window.monitor.screen.content.orderspage.empty,"— новых заказов нет, загляните позже —","— no new orders, check back later —"
+testscene.03_ui.canvas.terminalwindow.window.monitor.screen.content.orderspage.activepanel.cancelbutton.label,[ ОТМЕНИТЬ ЗАКАЗ ],[ CANCEL ORDER ]
+testscene.03_ui.canvas.terminalwindow.window.monitor.screen.content.footer,ESC — ВЫХОД,ESC — EXIT
