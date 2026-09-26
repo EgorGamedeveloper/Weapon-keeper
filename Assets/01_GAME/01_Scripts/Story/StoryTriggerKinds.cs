@@ -337,3 +337,61 @@ public class QuestCompletedTrigger : StoryTrigger
     private void Handle(QuestProgress progress) { if (progress != null && progress.data == quest) Fire(); }
     protected override bool IsSatisfied() => Scene.Quests.IsCompleted(quest);
 }
+
+/// <summary>Ящик поставки оплачен в терминале (конкретный — lootBoxId, или любой), count раз.</summary>
+public class CrateOrderedTrigger : StoryTrigger
+{
+    protected override bool Subscribe()
+    {
+        if (Scene.Supply == null) { Scene.Warn(Node.id, $"Триггер «{Node.trigger}» ({Node.id}): в сцене нет SupplyService."); return false; }
+        Scene.Supply.OnCrateOrdered += Handle;
+        return true;
+    }
+    protected override void Unsubscribe() => Scene.Supply.OnCrateOrdered -= Handle;
+    private void Handle(LootBoxData box) { if (Matches(Node.lootBoxId, box != null ? box.lootBoxId : null)) Count(); }
+}
+
+/// <summary>Из вскрытого ящика выпал предмет item — count штук (случайный лут: «первая M16 из поставки»).</summary>
+public class ItemReceivedTrigger : StoryTrigger
+{
+    protected override bool Subscribe()
+    {
+        if (Scene.Supply == null) { Scene.Warn(Node.id, $"Триггер «{Node.trigger}» ({Node.id}): в сцене нет SupplyService."); return false; }
+        Scene.Supply.OnItemReceived += Handle;
+        return true;
+    }
+    protected override void Unsubscribe() => Scene.Supply.OnItemReceived -= Handle;
+    private void Handle(ItemData item) { if (Matches(Node.item, item != null ? item.itemId : null)) Count(); }
+}
+
+/// <summary>Предмет куплен в терминале напрямую (item или любой), count раз. Сработает, когда магазин
+/// инструментов начнёт вызывать SupplyService.NotifyItemPurchased.</summary>
+public class ItemPurchasedTrigger : StoryTrigger
+{
+    protected override bool Subscribe()
+    {
+        if (Scene.Supply == null) { Scene.Warn(Node.id, $"Триггер «{Node.trigger}» ({Node.id}): в сцене нет SupplyService."); return false; }
+        Scene.Supply.OnItemPurchased += Handle;
+        return true;
+    }
+    protected override void Unsubscribe() => Scene.Supply.OnItemPurchased -= Handle;
+    private void Handle(ItemData item) { if (Matches(Node.item, item != null ? item.itemId : null)) Count(); }
+}
+
+/// <summary>Открыт навык skillId. Уже открытый (в том числе из сейва или выданный на старте) засчитывается сразу.</summary>
+public class SkillUnlockedTrigger : StoryTrigger
+{
+    private SkillData skill;
+
+    protected override bool Subscribe()
+    {
+        if (Scene.Skills == null) { Scene.Warn(Node.id, $"Триггер «{Node.trigger}» ({Node.id}): в сцене нет PlayerSkills."); return false; }
+        skill = Scene.Skills.FindBySkillId(Node.skillId);
+        if (skill == null) { Scene.Warn(Node.id, $"Триггер «{Node.trigger}» ({Node.id}): навык «{Node.skillId}» не найден в SkillCatalog."); return false; }
+        Scene.Skills.OnSkillsChanged += Handle;
+        return true;
+    }
+    protected override void Unsubscribe() => Scene.Skills.OnSkillsChanged -= Handle;
+    private void Handle() { if (IsSatisfied()) Fire(); }
+    protected override bool IsSatisfied() => Scene.Skills.IsOwned(skill);
+}

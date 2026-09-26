@@ -54,6 +54,16 @@ public class SupplyService : MonoBehaviour
     /// <summary>Ящик вскрыт игроком. Для сюжетных триггеров.</summary>
     public event Action<LootBoxData> OnCrateOpened;
 
+    /// <summary>Ящик оплачен в терминале (не при загрузке сейва). Для сюжетных триггеров.</summary>
+    public event Action<LootBoxData> OnCrateOrdered;
+
+    /// <summary>Из вскрытого ящика выпал предмет — по разу на штуку. Для сюжетных триггеров.</summary>
+    public event Action<ItemData> OnItemReceived;
+
+    /// <summary>Предмет (инструмент) куплен в терминале напрямую, без ящика. Поднимает NotifyItemPurchased —
+    /// задел под будущую покупку инструментов; сюжетный триггер «Куплен предмет» уже слушает его.</summary>
+    public event Action<ItemData> OnItemPurchased;
+
     private readonly List<SupplyDelivery> deliveries = new List<SupplyDelivery>();
     private readonly List<LootCrate> crates = new List<LootCrate>();
 
@@ -81,7 +91,14 @@ public class SupplyService : MonoBehaviour
         float time = GetDeliveryTime(box);
         deliveries.Add(new SupplyDelivery { box = box, remaining = time, total = time });
         OnChanged?.Invoke();
+        OnCrateOrdered?.Invoke(box);
         return true;
+    }
+
+    /// <summary>Сообщить о покупке предмета в терминале (для будущего магазина инструментов).</summary>
+    public void NotifyItemPurchased(ItemData item)
+    {
+        if (item != null) OnItemPurchased?.Invoke(item);
     }
 
     private void Update()
@@ -136,6 +153,9 @@ public class SupplyService : MonoBehaviour
 
         OnChanged?.Invoke();
         if (openedBox != null) OnCrateOpened?.Invoke(openedBox);
+        if (OnItemReceived != null)
+            foreach (var item in spawned)
+                if (item != null && item.itemData != null) OnItemReceived(item.itemData);
     }
 
     // ───────── сейв ─────────

@@ -318,6 +318,7 @@ public static class StoryEditorTools
         public List<CatalogEntry> storyObjects = new List<CatalogEntry>();
         public List<CatalogEntry> quests = new List<CatalogEntry>();
         public List<CatalogEntry> speakers = new List<CatalogEntry>();
+        public List<CatalogEntry> skills = new List<CatalogEntry>();
     }
 
     [MenuItem(MenuRoot + "Export Scene Catalog", priority = 20)]
@@ -369,6 +370,9 @@ public static class StoryEditorTools
             if (!string.IsNullOrEmpty(order.orderId)) catalog.orders.Add(Entry(order.orderId, $"{order.customer} ({order.orderId})"));
         foreach (LootBoxData box in LoadAll<LootBoxData>())
             if (!string.IsNullOrEmpty(box.lootBoxId)) catalog.lootBoxes.Add(Entry(box.lootBoxId, $"{box.title} ({box.lootBoxId})"));
+
+        foreach (SkillData skill in LoadAll<SkillData>())
+            if (!string.IsNullOrEmpty(skill.skillId)) catalog.skills.Add(Entry(skill.skillId, $"{skill.title} ({skill.skillId})"));
 
         // Квесты вне графа (для триггера «Выполнен квест»).
         StoryQuestCatalog storyQuests = AssetDatabase.LoadAssetAtPath<StoryQuestCatalog>(QuestCatalogPath);

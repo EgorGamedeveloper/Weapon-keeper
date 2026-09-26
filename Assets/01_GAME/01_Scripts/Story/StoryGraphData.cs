@@ -113,6 +113,7 @@ public class StoryNodeData
     public string orderId;
     public string lootBoxId;
     public string enemyType;
+    public string skillId;
 
     // wait
     public float seconds;

@@ -512,7 +512,7 @@ const QUEST_FIELDS = {
   DeliverItem:  { target: null,     targetRequired: false, category: false, zone: true,  item: true },
 };
 
-// Виды триггеров. Поля: target (вид цели), category, item, zone, count, value, orderId, lootBoxId, enemyType, questId.
+// Виды триггеров. Поля: target (вид цели), category, item, zone, count, value, orderId, lootBoxId, enemyType, questId, skillId.
 // req — обязательные поля. Добавить вид: строка здесь + класс-триггер в Unity (Story/Triggers).
 const TRIGGERS = [
   { id: 'repairPointRepaired', label: 'Починена точка ремонта', fields: { target: 'repair' }, req: ['target'] },
@@ -529,7 +529,11 @@ const TRIGGERS = [
   { id: 'orderShipped',        label: 'Отправлен заказ',        fields: { orderId: 1 }, req: [] },
   { id: 'crateArrived',        label: 'Приехал ящик поставки',  fields: { lootBoxId: 1 }, req: [] },
   { id: 'crateOpened',         label: 'Открыт ящик поставки',   fields: { lootBoxId: 1 }, req: [] },
-  { id: 'questCompleted',      label: 'Выполнен квест вне графа', fields: { questId: 1 }, req: ['questId'] },
+  { id: 'crateOrdered',        label: 'Куплен ящик поставки',   fields: { lootBoxId: 1, count: 1 }, req: [] },
+  { id: 'itemReceived',        label: 'Выпал предмет из ящика', fields: { item: 1, count: 1 }, req: ['item'] },
+  { id: 'itemPurchased',       label: 'Куплен предмет/инструмент в терминале', fields: { item: 1, count: 1 }, req: [] },
+  { id: 'skillUnlocked',       label: 'Открыт навык',           fields: { skillId: 1 }, req: ['skillId'] },
+  { id: 'questCompleted',      label: 'Выполнен квест (любой линии или вне графа)', fields: { questId: 1 }, req: ['questId'] },
 ];
 
 const ACTIONS = [
@@ -543,6 +547,7 @@ const CATALOG_LISTS = {
   repairPoints: 'Точки ремонта', breakables: 'Разрушаемые', stains: 'Пятна', shelves: 'Полки', categories: 'Категории полок',
   zones: 'Зоны доставки', items: 'Предметы', enemySpawns: 'Точки спавна', enemyTypes: 'Типы врагов', orders: 'Заказы',
   lootBoxes: 'Ящики поставки', storyObjects: 'Объекты сюжета', quests: 'Квесты вне графа', speakers: 'Говорящие',
+  skills: 'Навыки',
 };
 
 const FILE_VERSION = 1;
@@ -591,7 +596,7 @@ function newNode(type, x, y) {
       break;
     case 'trigger':
       Object.assign(n, { trigger: 'repairPointRepaired', target: '', category: '', item: '', zone: '', count: 1, value: 0,
-        orderId: '', lootBoxId: '', enemyType: '', questId: '' });
+        orderId: '', lootBoxId: '', enemyType: '', questId: '', skillId: '' });
       break;
     case 'wait': n.seconds = 3; break;
     case 'action': Object.assign(n, { action: 'giveMoney', value: 100, target: '' }); break;
@@ -721,6 +726,7 @@ function triggerDetail(n, t) {
   if (t.fields.orderId && n.orderId) parts.push(catalogName('orders', n.orderId));
   if (t.fields.lootBoxId && n.lootBoxId) parts.push(catalogName('lootBoxes', n.lootBoxId));
   if (t.fields.questId && n.questId) parts.push(catalogName('quests', n.questId));
+  if (t.fields.skillId && n.skillId) parts.push(catalogName('skills', n.skillId));
   if (t.fields.value) parts.push(String(n.value || 0));
   if (t.fields.count && (n.count || 1) > 1) parts.push('× ' + n.count);
   return parts.filter(Boolean).join(' · ');
@@ -831,7 +837,14 @@ function renderBanner() {
 
 const insp = $('inspector');
 
-function catalogList(name) { return Array.isArray(state.catalog[name]) ? state.catalog[name] : []; }
+function catalogList(name) {
+  const list = Array.isArray(state.catalog[name]) ? state.catalog[name] : [];
+  if (name !== 'quests') return list;
+  // Для «Выполнен квест»: квесты самого графа (всех линий) + квесты вне графа из каталога.
+  const own = [...state.graph.nodes.values()].filter((n) => n.type === 'quest' && n.questId)
+    .map((n) => ({ id: n.questId, name: `${locText(n.title) || n.questId} (${n.questId}, граф)` }));
+  return own.concat(list.filter((e) => !own.some((o) => o.id === e.id)));
+}
 function catalogName(name, id) {
   if (!id) return '';
   const hit = catalogList(name).find((e) => e.id === id);
@@ -1052,6 +1065,7 @@ function renderTrigger(n) {
   if (t.fields.orderId) insp.append(catalogInput(n, 'orderId', 'orders', 'Заказ', req('orderId')));
   if (t.fields.lootBoxId) insp.append(catalogInput(n, 'lootBoxId', 'lootBoxes', 'Ящик поставки', req('lootBoxId')));
   if (t.fields.questId) insp.append(catalogInput(n, 'questId', 'quests', 'Квест', req('questId')));
+  if (t.fields.skillId) insp.append(catalogInput(n, 'skillId', 'skills', 'Навык', req('skillId')));
   if (t.fields.value) insp.append(fieldWrap(t.fields.value + ' *', textInput(n, 'value', { number: true, min: 0 })));
   if (t.fields.count) insp.append(fieldWrap('Сколько раз', textInput(n, 'count', { number: true, min: 1 })));
   insp.append(el('div', { class: 'help', text: 'Триггер начинает слушать, когда в него пришла нитка (без входящих ниток — с начала игры). Если условие уже выполнено, срабатывает сразу.' }));
@@ -1142,6 +1156,7 @@ function validate() {
         checkCatalog(add, n, 'enemyType', 'enemyTypes', !!t.fields.enemyType);
         checkCatalog(add, n, 'orderId', 'orders', !!t.fields.orderId);
         checkCatalog(add, n, 'lootBoxId', 'lootBoxes', !!t.fields.lootBoxId);
+        checkCatalog(add, n, 'skillId', 'skills', !!t.fields.skillId);
       }
     }
     if (n.type === 'action') {
@@ -1177,7 +1192,7 @@ function validate() {
 
 function fieldLabel(t, key) {
   if (key === 'target') return TARGETS[t.fields.target].label;
-  return { category: 'Категория полки', item: 'Предмет', zone: 'Зона', value: t.fields.value, questId: 'Квест', orderId: 'Заказ', lootBoxId: 'Ящик', enemyType: 'Тип врага' }[key] || key;
+  return { category: 'Категория полки', item: 'Предмет', zone: 'Зона', value: t.fields.value, questId: 'Квест', orderId: 'Заказ', lootBoxId: 'Ящик', enemyType: 'Тип врага', skillId: 'Навык' }[key] || key;
 }
 
 function checkCatalog(add, n, key, catalogKey, relevant) {
@@ -2292,7 +2307,7 @@ function exampleGraph() {
     description: { ru: 'Соберите кирпичи и доски и выбросьте их в мусорный контейнер.', en: 'Collect the bricks and boards and throw them into the dumpster.' },
     questType: 'ShelveItems', targetCount: 5, target: '', category: 'Category_Trash', item: '', zone: '', xp: 20, money: 50 });
   const t1 = put({ id: 'n_trig_door', type: 'trigger', x: 600, y: 340, trigger: 'breakableBroken', target: '', category: '', item: '', zone: '',
-    count: 1, value: 0, orderId: '', lootBoxId: '', enemyType: '', questId: '' });
+    count: 1, value: 0, orderId: '', lootBoxId: '', enemyType: '', questId: '', skillId: '' });
   const r2 = put({ id: 'n_radio2', type: 'radio', x: 900, y: 340, speaker: { ru: 'Диспетчер', en: 'Dispatcher' }, portrait: 'dispatcher', lines: [
     { seconds: 5, text: { ru: 'Ты пробился на склад? Там должны остаться патроны — разложи их по полкам.', en: 'You broke into the storeroom? There should be ammo left — put it on the shelves.' } },
   ] });
