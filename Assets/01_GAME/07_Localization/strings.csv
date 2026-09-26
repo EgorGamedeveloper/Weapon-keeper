@@ -268,110 +268,110 @@ testscene.03_ui.canvas.terminalwindow.window.monitor.screen.content.orderspage.e
 testscene.03_ui.canvas.terminalwindow.window.monitor.screen.content.orderspage.activepanel.cancelbutton.label,[ ОТМЕНИТЬ ЗАКАЗ ],[ CANCEL ORDER ]
 testscene.03_ui.canvas.terminalwindow.window.monitor.screen.content.footer,ESC — ВЫХОД,ESC — EXIT
 # Данные: предметы,,
-item.ammobox_556.name,Коробка патронов 5.56,
-item.ammobox_556.desc,Патроны калибра 5.56,
-item.boarddebris.name,Обломок доски,
-item.boarddebris.desc,Описание предмета,
-item.brick.name,Кирпич,
-item.brick.desc,Описание предмета,
-item.crowbar.name,Лом,
-item.crowbar.desc,Описание предмета,
-item.elevatormotor.name,Мотор лифта,
-item.elevatormotor.desc,"Установите в щиток лифта, чтобы он снова заработал.",
-item.generatorparts.name,Запчасти генератора,
-item.generatorparts.desc,"Нужны, чтобы запустить генератор здания.",
-item.gun.name,Gun-14F,
-item.gun.desc,"Пистолет модели Gun-14F ",
-item.m16.name,M16,
-item.m16.desc,"Винтовка модели M16 ",
-item.shippingbox.name,Коробка для отправки,
-item.shippingbox.desc,Уложите в неё товар по заказу из терминала и отнесите на крышу в зону отправки.,
+item.ammobox_556.name,Коробка патронов 5.56,5.56 ammo box
+item.ammobox_556.desc,Патроны калибра 5.56,5.56 caliber rounds
+item.boarddebris.name,Обломок доски,Broken board
+item.boarddebris.desc,Описание предмета,Item description
+item.brick.name,Кирпич,Brick
+item.brick.desc,Описание предмета,Item description
+item.crowbar.name,Лом,Crowbar
+item.crowbar.desc,Описание предмета,Item description
+item.elevatormotor.name,Мотор лифта,Elevator motor
+item.elevatormotor.desc,"Установите в щиток лифта, чтобы он снова заработал.",Install it in the elevator control box to get it running again.
+item.generatorparts.name,Запчасти генератора,Generator parts
+item.generatorparts.desc,"Нужны, чтобы запустить генератор здания.",Needed to start the building's generator.
+item.gun.name,Gun-14F,Gun-14F
+item.gun.desc,"Пистолет модели Gun-14F ",Gun-14F pistol
+item.m16.name,M16,M16
+item.m16.desc,"Винтовка модели M16 ",M16 rifle
+item.shippingbox.name,Коробка для отправки,Shipping box
+item.shippingbox.desc,Уложите в неё товар по заказу из терминала и отнесите на крышу в зону отправки.,Pack the items from a terminal order into it and carry it to the shipping zone on the roof.
 # Данные: квесты,,
-quest.cleanbloodstains.title,Отмыть пятна крови,
-quest.cleanbloodstains.desc,Оттереть пятно крови в здании.,
-quest.cleardebris.title,Убрать обломки,
-quest.cleardebris.desc,Соберите кирпичи и доски и выбросьте их в мусорный контейнер.,
-quest.deliverbrick.title,Доставить кирпич,
-quest.deliverbrick.desc,Отнесите кирпич в отмеченную зону доставки и бросьте его там.,
-quest.repairelevator.title,Починить лифт,
-quest.repairelevator.desc,"Найдите мотор и установите его в щиток лифта, чтобы подняться на крышу.",
-quest.repairwall.title,Заделать пролом в стене,
-quest.repairwall.desc,Принесите кирпич к повреждённой стене и заделайте пролом.,
-quest.startgenerator.title,Запустить генератор,
-quest.startgenerator.desc,Найдите запчасти и почините генератор — без электричества терминал не работает.,
-quest.stockammo.title,Пополнить запас патронов,
-quest.stockammo.desc,Расставьте патроны 5.56 на складской полке.,
+quest.cleanbloodstains.title,Отмыть пятна крови,Clean the bloodstains
+quest.cleanbloodstains.desc,Оттереть пятно крови в здании.,Scrub the bloodstain in the building.
+quest.cleardebris.title,Убрать обломки,Clear the debris
+quest.cleardebris.desc,Соберите кирпичи и доски и выбросьте их в мусорный контейнер.,Collect the bricks and boards and throw them into the dumpster.
+quest.deliverbrick.title,Доставить кирпич,Deliver a brick
+quest.deliverbrick.desc,Отнесите кирпич в отмеченную зону доставки и бросьте его там.,Carry a brick to the marked delivery zone and drop it there.
+quest.repairelevator.title,Починить лифт,Repair the elevator
+quest.repairelevator.desc,"Найдите мотор и установите его в щиток лифта, чтобы подняться на крышу.",Find the motor and install it in the elevator control box to get up to the roof.
+quest.repairwall.title,Заделать пролом в стене,Patch the hole in the wall
+quest.repairwall.desc,Принесите кирпич к повреждённой стене и заделайте пролом.,Bring bricks to the damaged wall and patch the hole.
+quest.startgenerator.title,Запустить генератор,Start the generator
+quest.startgenerator.desc,Найдите запчасти и почините генератор — без электричества терминал не работает.,Find the parts and repair the generator — the terminal won't work without power.
+quest.stockammo.title,Пополнить запас патронов,Restock ammo
+quest.stockammo.desc,Расставьте патроны 5.56 на складской полке.,Put the 5.56 rounds on the storage shelf.
 # Данные: ветки навыков,,
-skillbranch.branch_catalog.name,Каталог,
-skillbranch.branch_cleaner.name,Уборщик,
-skillbranch.branch_gunsmith.name,Оружейник,
-skillbranch.branch_survival.name,Выживание,
+skillbranch.branch_catalog.name,Каталог,Catalog
+skillbranch.branch_cleaner.name,Уборщик,Cleaner
+skillbranch.branch_gunsmith.name,Оружейник,Gunsmith
+skillbranch.branch_survival.name,Выживание,Survival
 # Данные: навыки,,
-skill.catalog_express.title,Экспресс-доставка,
-skill.catalog_express.desc,Лутбоксы приезжают быстрее.,
-skill.catalog_heavy.title,Продажа: тяжёлое,
-skill.catalog_heavy.desc,Разрешает продавать гранатомёты и ракетницы.,
-skill.catalog_pistols.title,Продажа: пистолеты,
-skill.catalog_pistols.desc,Разрешает продавать пистолеты.,
-skill.catalog_rifles.title,Продажа: винтовки,
-skill.catalog_rifles.desc,Разрешает продавать автоматы и винтовки.,
-skill.catalog_shotguns.title,Продажа: дробовики,
-skill.catalog_shotguns.desc,Разрешает продавать дробовики.,
-skill.catalog_supplies.title,Продажа: амуниция,
-skill.catalog_supplies.desc,Разрешает продавать патроны и аптечки.,
-skill.catalog_trader.title,Торговец,
-skill.catalog_trader.desc,Заказчики платят больше за отправленный товар.,
-skill.catalog_wholesale.title,Оптовик,
-skill.catalog_wholesale.desc,Поставщики дают скидку на все лутбоксы.,
-skill.cleaner_capacity1.title,Вместительные руки,
-skill.cleaner_capacity1.desc,Носите в инвентаре уборки больше предметов за один заход.,
-skill.cleaner_capacity2.title,Вместительные руки II,
-skill.cleaner_capacity2.desc,Ещё больше места в инвентаре уборки.,
-skill.cleaner_diligent.title,Прилежный,
-skill.cleaner_diligent.desc,"Больше опыта за любую работу: уборку, ремонт, расстановку и квесты.",
-skill.cleaner_reach.title,Длинные руки,
-skill.cleaner_reach.desc,Подбирайте предметы с большего расстояния.,
-skill.gunsmith_heavy.title,Лицензия: тяжёлое,
-skill.gunsmith_heavy.desc,Разрешает экипировать гранатомёты и ракетницы.,
-skill.gunsmith_magazine.title,Большой магазин,
-skill.gunsmith_magazine.desc,Больше патронов в магазине.,
-skill.gunsmith_pistols.title,Лицензия: пистолеты,
-skill.gunsmith_pistols.desc,Разрешает экипировать пистолеты. Выдаётся в начале игры.,
-skill.gunsmith_reload1.title,Быстрые руки,
-skill.gunsmith_reload1.desc,Перезаряжайте оружие быстрее.,
-skill.gunsmith_reload2.title,Быстрые руки II,
-skill.gunsmith_reload2.desc,Перезарядка ещё быстрее.,
-skill.gunsmith_rifles.title,Лицензия: винтовки,
-skill.gunsmith_rifles.desc,Разрешает экипировать автоматы и винтовки (M16).,
-skill.gunsmith_shotguns.title,Лицензия: дробовики,
-skill.gunsmith_shotguns.desc,Разрешает экипировать дробовики.,
-skill.gunsmith_steady.title,Твёрдая рука,
-skill.gunsmith_steady.desc,Меньше отдача и разброс при стрельбе.,
-skill.survival_parkour.title,Паркур,
-skill.survival_parkour.desc,Прыгайте выше.,
-skill.survival_sprint.title,Спринтер,
-skill.survival_sprint.desc,"Бегайте быстрее — пригодится, когда зомби близко.",
-skill.survival_tough.title,Крепкий,
-skill.survival_tough.desc,Больше здоровья.,
-skill.survival_tough2.title,Крепкий II,
-skill.survival_tough2.desc,Ещё больше здоровья.,
-skill.survival_walk.title,Лёгкий шаг,
-skill.survival_walk.desc,Ходите быстрее по магазину.,
+skill.catalog_express.title,Экспресс-доставка,Express delivery
+skill.catalog_express.desc,Лутбоксы приезжают быстрее.,Loot boxes arrive faster.
+skill.catalog_heavy.title,Продажа: тяжёлое,Sales: heavy weapons
+skill.catalog_heavy.desc,Разрешает продавать гранатомёты и ракетницы.,Allows selling grenade and rocket launchers.
+skill.catalog_pistols.title,Продажа: пистолеты,Sales: pistols
+skill.catalog_pistols.desc,Разрешает продавать пистолеты.,Allows selling pistols.
+skill.catalog_rifles.title,Продажа: винтовки,Sales: rifles
+skill.catalog_rifles.desc,Разрешает продавать автоматы и винтовки.,Allows selling assault rifles and rifles.
+skill.catalog_shotguns.title,Продажа: дробовики,Sales: shotguns
+skill.catalog_shotguns.desc,Разрешает продавать дробовики.,Allows selling shotguns.
+skill.catalog_supplies.title,Продажа: амуниция,Sales: supplies
+skill.catalog_supplies.desc,Разрешает продавать патроны и аптечки.,Allows selling ammo and medkits.
+skill.catalog_trader.title,Торговец,Trader
+skill.catalog_trader.desc,Заказчики платят больше за отправленный товар.,Customers pay more for shipped goods.
+skill.catalog_wholesale.title,Оптовик,Wholesaler
+skill.catalog_wholesale.desc,Поставщики дают скидку на все лутбоксы.,Suppliers give a discount on all loot boxes.
+skill.cleaner_capacity1.title,Вместительные руки,Roomy hands
+skill.cleaner_capacity1.desc,Носите в инвентаре уборки больше предметов за один заход.,Carry more items in your cleanup inventory per trip.
+skill.cleaner_capacity2.title,Вместительные руки II,Roomy hands II
+skill.cleaner_capacity2.desc,Ещё больше места в инвентаре уборки.,Even more room in your cleanup inventory.
+skill.cleaner_diligent.title,Прилежный,Diligent
+skill.cleaner_diligent.desc,"Больше опыта за любую работу: уборку, ремонт, расстановку и квесты.","More XP for any work: cleaning, repairs, shelving and quests."
+skill.cleaner_reach.title,Длинные руки,Long arms
+skill.cleaner_reach.desc,Подбирайте предметы с большего расстояния.,Pick up items from farther away.
+skill.gunsmith_heavy.title,Лицензия: тяжёлое,License: heavy weapons
+skill.gunsmith_heavy.desc,Разрешает экипировать гранатомёты и ракетницы.,Allows equipping grenade and rocket launchers.
+skill.gunsmith_magazine.title,Большой магазин,Extended magazine
+skill.gunsmith_magazine.desc,Больше патронов в магазине.,More rounds per magazine.
+skill.gunsmith_pistols.title,Лицензия: пистолеты,License: pistols
+skill.gunsmith_pistols.desc,Разрешает экипировать пистолеты. Выдаётся в начале игры.,Allows equipping pistols. Granted at the start of the game.
+skill.gunsmith_reload1.title,Быстрые руки,Quick hands
+skill.gunsmith_reload1.desc,Перезаряжайте оружие быстрее.,Reload weapons faster.
+skill.gunsmith_reload2.title,Быстрые руки II,Quick hands II
+skill.gunsmith_reload2.desc,Перезарядка ещё быстрее.,Reload even faster.
+skill.gunsmith_rifles.title,Лицензия: винтовки,License: rifles
+skill.gunsmith_rifles.desc,Разрешает экипировать автоматы и винтовки (M16).,Allows equipping assault rifles and rifles (M16).
+skill.gunsmith_shotguns.title,Лицензия: дробовики,License: shotguns
+skill.gunsmith_shotguns.desc,Разрешает экипировать дробовики.,Allows equipping shotguns.
+skill.gunsmith_steady.title,Твёрдая рука,Steady hand
+skill.gunsmith_steady.desc,Меньше отдача и разброс при стрельбе.,Less recoil and spread when shooting.
+skill.survival_parkour.title,Паркур,Parkour
+skill.survival_parkour.desc,Прыгайте выше.,Jump higher.
+skill.survival_sprint.title,Спринтер,Sprinter
+skill.survival_sprint.desc,"Бегайте быстрее — пригодится, когда зомби близко.",Run faster — handy when zombies are close.
+skill.survival_tough.title,Крепкий,Tough
+skill.survival_tough.desc,Больше здоровья.,More health.
+skill.survival_tough2.title,Крепкий II,Tough II
+skill.survival_tough2.desc,Ещё больше здоровья.,Even more health.
+skill.survival_walk.title,Лёгкий шаг,Light step
+skill.survival_walk.desc,Ходите быстрее по магазину.,Walk faster around the shop.
 # Данные: ящики терминала,,
-lootbox.ammo.title,Амуниция,
-lootbox.ammo.desc,Патроны 5.56 — ходовой товар.,
-lootbox.pistols.title,Пистолеты,
-lootbox.pistols.desc,Пара пистолетов и немного патронов.,
-lootbox.rifles.title,Винтовки,
-lootbox.rifles.desc,Автоматические винтовки M16 с боезапасом.,
+lootbox.ammo.title,Амуниция,Ammo
+lootbox.ammo.desc,Патроны 5.56 — ходовой товар.,5.56 rounds — a bestseller.
+lootbox.pistols.title,Пистолеты,Pistols
+lootbox.pistols.desc,Пара пистолетов и немного патронов.,A couple of pistols and some ammo.
+lootbox.rifles.title,Винтовки,Rifles
+lootbox.rifles.desc,Автоматические винтовки M16 с боезапасом.,M16 assault rifles with ammo.
 # Данные: заказы,,
-order.ammobig.customer,Блокпост №4,
-order.ammobig.message,Держим оборону третьи сутки. Шлите патроны.,
-order.ammosmall.customer,Отряд «Север»,
-order.ammosmall.message,"Срочно нужны патроны, отправьте что есть.",
-order.pistol.customer,Шериф Коллинз,
-order.pistol.message,Нужен надёжный ствол и пара магазинов.,
-order.pistolpair.customer,Семья Уокер,
-order.pistolpair.message,Два пистолета для защиты дома.,
-order.rifle.customer,Наёмники «Ворон»,
-order.rifle.message,Одна M16 и боезапас. Платим щедро.,
+order.ammobig.customer,Блокпост №4,Checkpoint No. 4
+order.ammobig.message,Держим оборону третьи сутки. Шлите патроны.,We've been holding the line for three days. Send ammo.
+order.ammosmall.customer,Отряд «Север»,"""North"" squad"
+order.ammosmall.message,"Срочно нужны патроны, отправьте что есть.","We urgently need ammo, send whatever you have."
+order.pistol.customer,Шериф Коллинз,Sheriff Collins
+order.pistol.message,Нужен надёжный ствол и пара магазинов.,I need a reliable gun and a couple of magazines.
+order.pistolpair.customer,Семья Уокер,The Walker family
+order.pistolpair.message,Два пистолета для защиты дома.,Two pistols for home defense.
+order.rifle.customer,Наёмники «Ворон»,"""Raven"" mercenaries"
+order.rifle.message,Одна M16 и боезапас. Платим щедро.,One M16 and ammo. We pay well.
