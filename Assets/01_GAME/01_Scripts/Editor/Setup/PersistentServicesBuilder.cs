@@ -3,8 +3,9 @@ using UnityEngine;
 
 /// <summary>
 /// Префаб постоянных сервисов 03_Prefabs/Systems/PersistentServices: PersistentServicesRoot + Steam +
-/// локализация + настройки (и остальное, что должно жить весь процесс). Кладётся и в Bootstrap, и в игровую сцену —
-/// см. PersistentServicesRoot. Префаб пересобирается целиком: ссылки на ассеты проставляются заново.
+/// локализация + настройки + статистика и достижения (с отладочной панелью F9 и канвасом тостов).
+/// Кладётся и в Bootstrap, и в игровую сцену — см. PersistentServicesRoot. Префаб пересобирается целиком:
+/// ссылки на ассеты проставляются заново.
 /// </summary>
 public static class PersistentServicesBuilder
 {
@@ -31,6 +32,14 @@ public static class PersistentServicesBuilder
 
         var settings = root.AddComponent<SettingsService>();
         settings.defaults = defaults;
+
+        var catalog = AssetDatabase.LoadAssetAtPath<AchievementCatalog>(AchievementAssetsCreator.CatalogPath);
+        if (catalog == null) catalog = AchievementAssetsCreator.CreateOrUpdateAssets();
+        var stats = root.AddComponent<StatsService>();
+        stats.catalog = catalog;
+
+        root.AddComponent<AchievementDebugOverlay>();
+        AchievementsUIBuilder.BuildToastCanvas(root.transform);
 
         return UIBuilderKit.SavePrefab(root, PrefabPath);
     }

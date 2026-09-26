@@ -103,3 +103,68 @@ pause.to_menu.confirm,Выйти в меню,Leave
 pause.quit.title,Выйти из игры?,Quit the game?
 pause.quit.message,Прогресс сохранится автоматически.,Your progress will be saved automatically.
 pause.quit.confirm,Выйти,Quit
+# Достижения: окно и тост,,
+achievements.title,Достижения,Achievements
+achievements.summary,Получено: {0} из {1},Unlocked: {0} of {1}
+achievements.unlocked,Получено,Unlocked
+achievements.progress,{0} / {1},{0} / {1}
+achievements.hidden.title,Скрытое достижение,Hidden achievement
+achievements.hidden.description,"Продолжайте играть, чтобы открыть его.",Keep playing to reveal it.
+toast.achievement,Достижение получено,Achievement unlocked
+# Достижения: названия и описания,,
+ach.first_kill.name,Первая кровь,First Blood
+ach.first_kill.desc,Убейте первого зомби.,Kill your first zombie.
+ach.kill_10.name,Санитар,Pest Control
+ach.kill_10.desc,Убейте 10 зомби.,Kill 10 zombies.
+ach.kill_100.name,Гроза мертвецов,Undead Nightmare
+ach.kill_100.desc,Убейте 100 зомби.,Kill 100 zombies.
+ach.first_shelf.name,Открытие витрины,Grand Opening
+ach.first_shelf.desc,Поставьте первый товар на полку.,Put your first item on a shelf.
+ach.shelf_25.name,Мерчендайзер,Merchandiser
+ach.shelf_25.desc,Расставьте по полкам 25 предметов.,Shelve 25 items.
+ach.shelf_100.name,Образцовый магазин,Model Store
+ach.shelf_100.desc,Расставьте по полкам 100 предметов.,Shelve 100 items.
+ach.first_wall.name,Каменщик,Bricklayer
+ach.first_wall.desc,Заделайте пролом в стене.,Patch up a hole in the wall.
+ach.all_stains.name,Ни пятнышка,Spotless
+ach.all_stains.desc,Отмойте все пятна крови в магазине.,Clean every blood stain in the shop.
+ach.break_5.name,Ломать — не строить,Demolition Crew
+ach.break_5.desc,Разберите ломом 5 объектов.,Pry apart 5 objects with the crowbar.
+ach.debris_10.name,Генеральная уборка,Spring Cleaning
+ach.debris_10.desc,Выбросите в мусор 10 обломков.,Throw 10 pieces of debris in the trash.
+ach.first_quest.name,Первое поручение,First Assignment
+ach.first_quest.desc,Выполните первое задание.,Complete your first task.
+ach.quests_5.name,Управляющий,Store Manager
+ach.quests_5.desc,Выполните 5 заданий.,Complete 5 tasks.
+ach.first_delivery.name,Курьер,Courier
+ach.first_delivery.desc,Доставьте предмет по заданию.,Deliver an item for a task.
+ach.level_5.name,Опытный кладовщик,Seasoned Keeper
+ach.level_5.desc,Достигните 5-го уровня.,Reach level 5.
+ach.level_10.name,Ветеран оружейной,Armory Veteran
+ach.level_10.desc,Достигните 10-го уровня.,Reach level 10.
+ach.money_1000.name,Первая тысяча,First Grand
+ach.money_1000.desc,Заработайте 1000 $.,Earn $1000.
+ach.money_10000.name,Капиталист,Tycoon
+ach.money_10000.desc,Заработайте 10 000 $.,"Earn $10,000."
+ach.play_1h.name,Смена отработана,Full Shift
+ach.play_1h.desc,Проведите в игре 1 час.,Play for 1 hour.
+ach.jumps_100.name,Кузнечик,Grasshopper
+ach.jumps_100.desc,Подпрыгните 100 раз.,Jump 100 times.
+ach.walk_5km.name,Обход территории,Patrol Duty
+ach.walk_5km.desc,Пройдите 5 км.,Walk 5 km.
+"# Статистика: названия (окно отладки, таблица для Steamworks)",,
+stat.enemies_killed,Убито зомби,Zombies killed
+stat.items_shelved,Расставлено товаров,Items shelved
+stat.items_picked_up,Подобрано предметов,Items picked up
+stat.walls_repaired,Заделано стен,Walls repaired
+stat.stains_cleaned,Отмыто пятен,Stains cleaned
+stat.objects_broken,Разобрано объектов,Objects broken
+stat.quests_completed,Выполнено заданий,Tasks completed
+stat.items_delivered,Доставлено предметов,Items delivered
+stat.money_earned,Заработано денег,Money earned
+stat.jumps,Прыжков,Jumps
+stat.distance_walked_m,Пройдено метров,Meters walked
+stat.play_time_min,Минут в игре,Minutes played
+stat.max_level,Максимальный уровень,Highest level
+stat.repairs_completed,Выполнено ремонтов,Repairs completed
+stat.debris_disposed,Выброшено обломков,Debris disposed

@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
-/// Меню паузы в игровой сцене: продолжить / настройки / выйти в главное меню / выйти из игры.
+/// Меню паузы в игровой сцене: продолжить / настройки / достижения / выйти в главное меню / выйти из игры.
 ///
 /// Esc открывает паузу, только если в прошлом кадре курсор был захвачен: значит, игрок в игре, а не в
 /// другом окне (навыки, терминал — те сами закрываются по Esc и держат GameplayInputBlocker). Состояние
@@ -46,6 +46,9 @@ public class PauseMenu : MonoBehaviour
     [Tooltip("Окно настроек (префаб SettingsWindow в этой же сцене).")]
     public SettingsWindow settingsWindow;
 
+    [Tooltip("Окно достижений (префаб AchievementsWindow в этой же сцене). Пусто — кнопка «Достижения» скрыта.")]
+    public AchievementsWindow achievementsWindow;
+
     [Tooltip("Диалог подтверждения выхода.")]
     public ConfirmDialog dialog;
 
@@ -79,7 +82,11 @@ public class PauseMenu : MonoBehaviour
         if (settingsButton != null) settingsButton.onClick.AddListener(OpenSettings);
         if (mainMenuButton != null) mainMenuButton.onClick.AddListener(AskQuitToMainMenu);
         if (quitButton != null) quitButton.onClick.AddListener(AskQuitGame);
-        if (achievementsButton != null) achievementsButton.gameObject.SetActive(false);
+        if (achievementsButton != null)
+        {
+            achievementsButton.gameObject.SetActive(achievementsWindow != null);
+            achievementsButton.onClick.AddListener(OpenAchievements);
+        }
     }
 
     private void OnDisable()
@@ -102,8 +109,9 @@ public class PauseMenu : MonoBehaviour
             return;
         }
 
-        // Окно настроек поверх паузы закроется своим Update — позже в этом же кадре.
+        // Окна поверх паузы закроются своим Update — позже в этом же кадре.
         if (settingsWindow != null && settingsWindow.IsOpen) return;
+        if (achievementsWindow != null && achievementsWindow.IsOpen) return;
 
         escapeFrame = Time.frameCount;
         if (dialog != null && dialog.IsOpen) dialog.Cancel();
@@ -136,6 +144,9 @@ public class PauseMenu : MonoBehaviour
 
         UiWindowAnimation.Show(windowGroup, panel);
         OnPauseChanged?.Invoke(true);
+
+        // Пауза — удобный момент отправить статистику (не чаще StatsService.minSecondsBetweenStores).
+        if (StatsService.Instance != null) StatsService.Instance.RequestStore(false);
     }
 
     /// <summary>Снять паузу.</summary>
@@ -143,6 +154,7 @@ public class PauseMenu : MonoBehaviour
     {
         if (!IsOpen) return;
         if (settingsWindow != null && settingsWindow.IsOpen) settingsWindow.Close();
+        if (achievementsWindow != null && achievementsWindow.IsOpen) achievementsWindow.Close();
         if (dialog != null && dialog.IsOpen) dialog.Cancel();
 
         IsOpen = false;
@@ -169,6 +181,11 @@ public class PauseMenu : MonoBehaviour
     private void OpenSettings()
     {
         if (settingsWindow != null) settingsWindow.Open();
+    }
+
+    private void OpenAchievements()
+    {
+        if (achievementsWindow != null) achievementsWindow.Open();
     }
 
     private void AskQuitToMainMenu()
@@ -206,6 +223,8 @@ public class PauseMenu : MonoBehaviour
             RestoreGameState();
             OnPauseChanged?.Invoke(false);
         }
+
+        if (StatsService.Instance != null) StatsService.Instance.RequestStore(true);
 
         GameBootstrap bootstrap = FindAnyObjectByType<GameBootstrap>();
         if (bootstrap != null) bootstrap.ReturnToMainMenu();
