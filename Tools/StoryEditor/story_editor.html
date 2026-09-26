@@ -98,16 +98,31 @@ button { cursor: pointer; }
 
 /* ── Рабочая область ── */
 .work {
-  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 320px; grid-template-rows: minmax(0, 1fr) auto;
-  grid-template-areas: "canvas insp" "pal insp"; min-height: 0;
+  --insp-w: 320px; --pal-h: 56px;
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 6px var(--insp-w);
+  grid-template-rows: minmax(0, 1fr) 6px var(--pal-h);
+  grid-template-areas: "canvas vsplit insp" "hsplit vsplit insp" "pal vsplit insp"; min-height: 0;
 }
 .canvas { grid-area: canvas; }
 .inspector { grid-area: insp; }
-/* Палитра — полоса под холстом: ноду тянут из неё на холст (или щёлкают — встанет в центр). */
+/* Границы панелей тянутся мышью (двойной щелчок — размер по умолчанию). */
+.split { background: var(--panel-2); position: relative; z-index: 4; touch-action: none; }
+.split::after { content: ''; position: absolute; inset: 0; background: var(--accent); opacity: 0; transition: opacity .12s; }
+.split:hover::after, .split.active::after { opacity: .55; }
+.split-v { grid-area: vsplit; cursor: col-resize; border-left: 1px solid var(--line); }
+.split-h { grid-area: hsplit; cursor: row-resize; border-top: 1px solid var(--line); }
+body.resizing, body.resizing * { user-select: none !important; }
+body.resizing-v, body.resizing-v * { cursor: col-resize !important; }
+body.resizing-h, body.resizing-h * { cursor: row-resize !important; }
+/* Палитра — полоса под холстом: ноду тянут из неё на холст. Высокая полоса — карточки с описаниями в несколько рядов. */
 .palette {
-  grid-area: pal; background: var(--panel); border-top: 1px solid var(--line); padding: 8px 12px;
-  display: flex; align-items: center; gap: 12px; min-width: 0;
+  grid-area: pal; background: var(--panel); padding: 8px 12px;
+  display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 0; overflow: hidden;
 }
+.palette.tall { align-items: flex-start; }
+.palette.tall #palItems { flex-wrap: wrap; overflow-x: hidden; overflow-y: auto; align-self: stretch; align-content: flex-start; }
+.palette.tall .pal-item { width: 150px; }
+.palette.tall .pal-item small { display: block; }
 .palette h2 { margin: 0; flex: none; }
 .palette h2, .inspector h2 {
   margin: 0 0 4px; font: 600 13px/1.2 var(--font-head); letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
@@ -119,7 +134,7 @@ button { cursor: pointer; }
 }
 .pal-item:hover { border-color: var(--muted); }
 .pal-item:active { cursor: grabbing; }
-.palette .pal-item small { display: none; } /* описание — во всплывающей подсказке */
+.palette .pal-item small { display: none; } /* в низкой полосе описание — во всплывающей подсказке */
 .pal-help {
   flex: none; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line); color: var(--muted);
   display: grid; place-items: center; font: 600 12px var(--font-ui); cursor: help;
@@ -202,7 +217,7 @@ button { cursor: pointer; }
 
 /* ── Инспектор ── */
 .inspector {
-  background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; padding: 12px 14px 24px;
+  background: var(--panel); overflow-y: auto; padding: 12px 14px 24px;
   display: flex; flex-direction: column; gap: 12px;
 }
 .insp-empty { color: var(--muted); font-size: 13px; line-height: 1.5; }
@@ -274,7 +289,11 @@ button { cursor: pointer; }
 
 /* ── Узкий экран ── */
 @media (max-width: 860px) {
-  .work { grid-template-columns: minmax(0, 1fr); grid-template-areas: "canvas" "pal"; }
+  .work { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; grid-template-areas: "canvas" "pal"; }
+  .split { display: none; }
+  .palette.tall { align-items: center; }
+  .palette.tall #palItems { flex-wrap: nowrap; overflow-x: auto; }
+  .palette.tall .pal-item small { display: none; }
   .palette .pal-help, .palette h2 { display: none; }
   .inspector {
     position: absolute; left: 0; right: 0; bottom: 0; max-height: 55%; z-index: 6; border-left: 0; border-top: 1px solid var(--line);
@@ -307,7 +326,7 @@ button { cursor: pointer; }
       <h2>Добавить</h2>
       <div id="palItems"></div>
       <span class="pal-help" tabindex="0" role="note" aria-label="Подсказка"
-        title="Перетащите ноду на холст (или щёлкните — встанет в центр).&#10;Нитка — от правого кружка ноды к левому кружку другой: следующая нода включится, когда эта завершится.&#10;Del — удалить · Ctrl+D — копия · Ctrl+Z — отмена · колесо — масштаб, фон — сдвиг.">?</span>
+        title="Перетащите ноду из полосы на холст.&#10;Нитка — от правого кружка ноды к левому кружку другой: следующая нода включится, когда эта завершится.&#10;Del — удалить · Ctrl+D — копия · Ctrl+Z — отмена · колесо — масштаб, фон — сдвиг.">?</span>
     </aside>
 
     <main class="canvas" id="canvas" aria-label="Граф сюжета">
@@ -445,6 +464,8 @@ button { cursor: pointer; }
       <input class="hidden-file" type="file" id="fileCatalog" accept=".json,application/json">
     </main>
 
+    <div class="split split-v" id="splitV" role="separator" aria-orientation="vertical" aria-label="Ширина панели свойств" title="Потяните, чтобы изменить ширину. Двойной щелчок — как было."></div>
+    <div class="split split-h" id="splitH" role="separator" aria-orientation="horizontal" aria-label="Высота панели нод" title="Потяните, чтобы изменить высоту. Двойной щелчок — как было."></div>
     <aside class="inspector" id="inspector" aria-label="Свойства ноды"></aside>
   </div>
 </div>
@@ -926,7 +947,7 @@ function renderInspector() {
   }
   if (!n) {
     insp.append(el('h2', { text: 'Свойства' }),
-      el('div', { class: 'insp-empty', text: 'Выберите ноду, чтобы изменить её. Новую ноду перетащите на холст из полосы внизу (или щёлкните — встанет в центр).' }));
+      el('div', { class: 'insp-empty', text: 'Выберите ноду, чтобы изменить её. Новую ноду перетащите на холст из полосы внизу.' }));
     insp.classList.add('closed');
     return;
   }
@@ -1392,20 +1413,11 @@ function duplicateSelection() {
   changed(true);
 }
 
-// Щелчок по палитре — нода в центре холста; перетаскивание — туда, где отпустили (at — точка на экране).
+// Новая нода — только перетаскиванием из палитры: встаёт туда, где отпустили (at — точка на экране).
 function addNode(type, at) {
-  let x, y;
-  if (at) {
-    const w = toWorld(at.x, at.y);
-    x = w.x - 40; y = w.y - 12; // курсор — на заголовке новой ноды
-  } else {
-    const r = canvas.getBoundingClientRect();
-    const c = toWorld(r.left + r.width / 2, r.top + r.height / 2);
-    const offset = (state.graph.nodes.size % 5) * 24;
-    x = c.x - 115 + offset; y = c.y - 40 + offset;
-  }
+  const w = toWorld(at.x, at.y);
   beginEdit(false);
-  const n = newNode(type, x, y);
+  const n = newNode(type, w.x - 40, w.y - 12); // курсор — на заголовке новой ноды
   state.graph.nodes.set(n.id, n);
   state.sel = { node: n.id, link: null };
   changed(true);
@@ -1443,8 +1455,7 @@ function palPointerUp(e, cancelled) {
   palDrag = null;
   canvas.classList.remove('drop');
   if (d.ghost) d.ghost.remove();
-  if (cancelled) return;
-  if (!d.moved) { addNode(d.type); return; }
+  if (cancelled || !d.moved) return; // щелчок без перетаскивания ничего не добавляет
   if (overCanvas(e.clientX, e.clientY)) addNode(d.type, { x: e.clientX, y: e.clientY });
 }
 
@@ -2296,16 +2307,79 @@ function exampleGraph() {
   return g;
 }
 
+// ───────────────────────── Размеры панелей ─────────────────────────
+// Ширина свойств и высота палитры тянутся за границы; размеры запоминаются в этом браузере/приложении.
+
+const LAYOUT_KEY = 'wk-story-layout-v1';
+const LAYOUT_DEFAULT = { inspW: 320, palH: 56 };
+const layout = { ...LAYOUT_DEFAULT };
+const work = document.querySelector('.work');
+
+function clampLayout() {
+  const r = work.getBoundingClientRect();
+  layout.inspW = Math.round(Math.min(Math.max(layout.inspW, 240), Math.max(240, r.width * 0.6)));
+  layout.palH = Math.round(Math.min(Math.max(layout.palH, 44), Math.max(44, r.height * 0.5)));
+}
+function applyLayout() {
+  clampLayout();
+  work.style.setProperty('--insp-w', layout.inspW + 'px');
+  work.style.setProperty('--pal-h', layout.palH + 'px');
+  $('palette').classList.toggle('tall', layout.palH >= 84);
+}
+function saveLayout() { try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout)); } catch { /* только на сеанс */ } }
+function loadLayout() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LAYOUT_KEY) || 'null');
+    if (saved && Number.isFinite(saved.inspW)) layout.inspW = saved.inspW;
+    if (saved && Number.isFinite(saved.palH)) layout.palH = saved.palH;
+  } catch { /* по умолчанию */ }
+  applyLayout();
+}
+
+function makeSplitter(elm, axis) {
+  let start = null;
+  elm.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    elm.setPointerCapture(e.pointerId);
+    start = { x: e.clientX, y: e.clientY, inspW: layout.inspW, palH: layout.palH };
+    elm.classList.add('active');
+    document.body.classList.add('resizing', axis === 'v' ? 'resizing-v' : 'resizing-h');
+  });
+  elm.addEventListener('pointermove', (e) => {
+    if (!start) return;
+    if (axis === 'v') layout.inspW = start.inspW - (e.clientX - start.x); // тянем влево — панель шире
+    else layout.palH = start.palH - (e.clientY - start.y);               // тянем вверх — полоса выше
+    applyLayout();
+    renderWires();
+  });
+  const end = () => {
+    if (!start) return;
+    start = null;
+    elm.classList.remove('active');
+    document.body.classList.remove('resizing', 'resizing-v', 'resizing-h');
+    saveLayout();
+  };
+  elm.addEventListener('pointerup', end);
+  elm.addEventListener('pointercancel', end);
+  elm.addEventListener('dblclick', () => {
+    if (axis === 'v') layout.inspW = LAYOUT_DEFAULT.inspW; else layout.palH = LAYOUT_DEFAULT.palH;
+    applyLayout();
+    saveLayout();
+  });
+}
+makeSplitter($('splitV'), 'v');
+makeSplitter($('splitH'), 'h');
+window.addEventListener('resize', applyLayout);
+
 // ───────────────────────── Запуск ─────────────────────────
 
 function buildPalette() {
   const box = $('palItems');
   for (const [type, t] of Object.entries(TYPES)) {
-    // Мышь/палец — через pointer-события (щелчок или перетаскивание), клавиатура (Enter/пробел) — через click.
-    const item = el('button', { class: 'pal-item', type: 'button', title: `${t.label} — ${t.desc}. Перетащите на холст или щёлкните.`,
+    const item = el('button', { class: 'pal-item', type: 'button', title: `${t.label} — ${t.desc}. Перетащите на холст.`,
       onpointerdown: (e) => palPointerDown(e, type), onpointermove: palPointerMove,
-      onpointerup: (e) => palPointerUp(e, false), onpointercancel: (e) => palPointerUp(e, true),
-      onclick: (e) => { if (e.detail === 0) addNode(type); } },
+      onpointerup: (e) => palPointerUp(e, false), onpointercancel: (e) => palPointerUp(e, true) },
     el('span', { class: 'sw', style: `background:${typeColor(type)}` }),
     el('span', {}, t.label, el('small', { text: t.desc })));
     box.append(item);
@@ -2314,6 +2388,7 @@ function buildPalette() {
 
 async function init() {
   buildPalette();
+  loadLayout();
   applyView();
 
   let loaded = false;
