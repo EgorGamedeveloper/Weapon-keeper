@@ -375,3 +375,7 @@ order.pistolpair.customer,Семья Уокер,The Walker family
 order.pistolpair.message,Два пистолета для защиты дома.,Two pistols for home defense.
 order.rifle.customer,Наёмники «Ворон»,"""Raven"" mercenaries"
 order.rifle.message,Одна M16 и боезапас. Платим щедро.,One M16 and ammo. We pay well.
+# Рация (сюжет),,
+radio.incoming,Входящий вызов по рации,Incoming radio call
+radio.answer,[{0}] Ответить,[{0}] Answer
+radio.skip,[{0}] Дальше,[{0}] Next

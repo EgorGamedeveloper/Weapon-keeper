@@ -46,6 +46,9 @@ public class ShippingService : MonoBehaviour
     /// <summary>Входящие, активный заказ или коробка изменились.</summary>
     public event Action OnChanged;
 
+    /// <summary>Заказ отправлен (коробка ушла с дроном) — передаёт выполненный заказ. Для сюжетных триггеров.</summary>
+    public event Action<ShippingOrderData> OnShipmentCompleted;
+
     public ShippingOrderData ActiveOrder { get; private set; }
 
     /// <summary>Заказ отменён, но в коробке остался товар — игрок должен его разобрать.</summary>
@@ -223,10 +226,12 @@ public class ShippingService : MonoBehaviour
         if (wallet != null) wallet.Add(GetReward(ActiveOrder));
         if (progression != null) progression.AddXP(ActiveOrder.xpReward);
 
+        ShippingOrderData shipped = ActiveOrder;
         ActiveOrder = null;
         boxContents.Clear();
         box = null; // коробку уносит дрон — её уничтожит ShippingPad
         OnChanged?.Invoke();
+        OnShipmentCompleted?.Invoke(shipped);
     }
 
     private void SpawnBox()

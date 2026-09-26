@@ -49,6 +49,9 @@ public class SaveGameData
     public string[] activeQuestIds = Array.Empty<string>();
     public DeliverQuestSave[] activeDeliverCounts = Array.Empty<DeliverQuestSave>();
 
+    // — сюжет — (пройденные ноды сюжетного графа; в старых сейвах поля нет → пусто, сюжет идёт с начала)
+    public string[] storyDoneNodes = Array.Empty<string>();
+
     // — прогрессия —
     public int playerLevel = 1;
     public int playerXP;

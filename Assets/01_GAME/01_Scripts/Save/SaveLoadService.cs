@@ -76,6 +76,9 @@ public class SaveLoadService : MonoBehaviour
     [Tooltip("Заказы на отправку (входящие, активный заказ, содержимое коробки).")]
     public ShippingService shippingService;
 
+    [Tooltip("Сюжетный граф: пройденные ноды (рации, триггеры, события). Пусто — сюжет не сохраняется.")]
+    public StoryDirector storyDirector;
+
     [Header("Куда спавнить восстановленные предметы")]
     [Tooltip("Родитель для заново заспавненных WorldItem (свободные предметы мира). Предметы, " +
              "уходящие на полку/в руки, сразу же переродительствуются — им это поле не важно. " +
@@ -314,6 +317,8 @@ public class SaveLoadService : MonoBehaviour
             data.activeDeliverCounts = deliverList.ToArray();
         }
 
+        if (storyDirector != null) data.storyDoneNodes = storyDirector.CaptureDoneNodes();
+
         if (playerProgression != null)
         {
             data.playerLevel = playerProgression.CurrentLevel;
@@ -499,6 +504,10 @@ public class SaveLoadService : MonoBehaviour
                 questManager.RestoreActive(questData, count);
             }
         }
+
+        // Сюжет — после квестов (StoryDirector проснулся раньше и уже зарегистрировал квесты графа):
+        // только запоминает пройденные ноды, сам граф пойдёт в своём Start.
+        if (storyDirector != null) storyDirector.RestoreDoneNodes(data.storyDoneNodes);
     }
 
     private void ApplyPhaseB(SaveGameData data)

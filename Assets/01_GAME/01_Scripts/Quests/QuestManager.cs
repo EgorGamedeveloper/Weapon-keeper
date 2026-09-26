@@ -46,6 +46,11 @@ public class QuestManager : MonoBehaviour
     private readonly HashSet<QuestData> startedQuests = new HashSet<QuestData>();
     private readonly HashSet<QuestData> completedQuests = new HashSet<QuestData>();
 
+    // Квесты сюжетного графа (StoryDirector): их запускает граф, а не условия открытия, но сейв должен
+    // находить их по id так же, как квесты autoStartQuests.
+    private readonly List<QuestData> storyQuests = new List<QuestData>();
+    private readonly HashSet<QuestData> storyQuestSet = new HashSet<QuestData>();
+
     // Активные квесты из сейва: RestoreActive вызывается из SaveLoadService.Awake, когда полки ещё
     // не собрали свои ячейки (Shelf.Awake), а PlayerProgression/HUD ещё не подписались на события.
     // Подписка на цели и пересчёт прогресса для них откладываются до Start.
@@ -66,15 +71,34 @@ public class QuestManager : MonoBehaviour
 
     private int PlayerLevel => playerProgression != null ? playerProgression.CurrentLevel : 1;
 
-    /// <summary>Найти квест по id из сейва. Ищет только в autoStartQuests — пока квесты не
-    /// стартуют откуда-то ещё (диалоги, триггеры), отдельный каталог по образцу ItemCatalog избыточен.</summary>
+    /// <summary>Найти квест по id из сейва: в autoStartQuests и среди квестов сюжетного графа.</summary>
     public QuestData FindByQuestId(string questId)
     {
         if (string.IsNullOrEmpty(questId)) return null;
         foreach (var data in autoStartQuests)
             if (data != null && data.questId == questId) return data;
+        foreach (var data in storyQuests)
+            if (data != null && data.questId == questId) return data;
         return null;
     }
+
+    /// <summary>
+    /// Квесты сюжетного графа (зовёт StoryDirector в Awake — раньше загрузки сейва). Их запускает граф:
+    /// автоматика условий открытия их пропускает, даже если они остались в autoStartQuests, а сейв находит
+    /// их по id через FindByQuestId.
+    /// </summary>
+    public void RegisterStoryQuests(IEnumerable<QuestData> quests)
+    {
+        if (quests == null) return;
+        foreach (var data in quests)
+            if (data != null && storyQuestSet.Add(data)) storyQuests.Add(data);
+    }
+
+    /// <summary>Квест уже завершён (в этой сессии или восстановлен из сейва).</summary>
+    public bool IsCompleted(QuestData data) => data != null && completedQuests.Contains(data);
+
+    /// <summary>Квест уже запускался (активен или завершён).</summary>
+    public bool IsStarted(QuestData data) => data != null && startedQuests.Contains(data);
 
     private void OnEnable()
     {
@@ -121,7 +145,7 @@ public class QuestManager : MonoBehaviour
         {
             needsReevaluate = false;
             foreach (var data in autoStartQuests)
-                if (data != null && !startedQuests.Contains(data) && IsUnlocked(data))
+                if (data != null && !storyQuestSet.Contains(data) && !startedQuests.Contains(data) && IsUnlocked(data))
                     StartQuest(data);
         }
         while (needsReevaluate);
@@ -138,11 +162,12 @@ public class QuestManager : MonoBehaviour
         return true;
     }
 
-    /// <summary>Запустить квест. Публичная точка расширения — сюда могут стартовать квесты диалоги,
-    /// триггеры уровня и т.п. Ручной запуск обходит условия открытия (prerequisiteQuests/requiredLevel).</summary>
+    /// <summary>Запустить квест. Публичная точка расширения — сюда стартуют квесты сюжетного графа
+    /// (StoryDirector). Ручной запуск обходит условия открытия (prerequisiteQuests/requiredLevel).
+    /// Уже запущенный или завершённый квест повторно не стартует.</summary>
     public void StartQuest(QuestData data)
     {
-        if (data == null) return;
+        if (data == null || startedQuests.Contains(data)) return;
 
         startedQuests.Add(data);
         var progress = new QuestProgress { data = data };

@@ -48,6 +48,12 @@ public class SupplyService : MonoBehaviour
     /// <summary>Что-то изменилось: заказ оформлен, ящик приехал или вскрыт.</summary>
     public event Action OnChanged;
 
+    /// <summary>Заказанный ящик приехал (не при загрузке сейва). Для сюжетных триггеров.</summary>
+    public event Action<LootBoxData> OnCrateArrived;
+
+    /// <summary>Ящик вскрыт игроком. Для сюжетных триггеров.</summary>
+    public event Action<LootBoxData> OnCrateOpened;
+
     private readonly List<SupplyDelivery> deliveries = new List<SupplyDelivery>();
     private readonly List<LootCrate> crates = new List<LootCrate>();
 
@@ -80,17 +86,20 @@ public class SupplyService : MonoBehaviour
 
     private void Update()
     {
-        bool arrived = false;
+        List<LootBoxData> arrived = null;
         for (int i = deliveries.Count - 1; i >= 0; i--)
         {
             deliveries[i].remaining -= Time.deltaTime;
             if (deliveries[i].remaining > 0f) continue;
 
-            SpawnCrate(deliveries[i].box, DropPosition(), Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f));
+            LootBoxData box = deliveries[i].box;
+            SpawnCrate(box, DropPosition(), Quaternion.Euler(0f, UnityEngine.Random.Range(0f, 360f), 0f));
             deliveries.RemoveAt(i);
-            arrived = true;
+            (arrived ??= new List<LootBoxData>()).Add(box);
         }
-        if (arrived) OnChanged?.Invoke();
+        if (arrived == null) return;
+        OnChanged?.Invoke();
+        foreach (LootBoxData box in arrived) OnCrateArrived?.Invoke(box);
     }
 
     private float Skill(SkillStat stat) => skills != null ? skills.GetValue(stat, 1f) : 1f;
@@ -114,6 +123,7 @@ public class SupplyService : MonoBehaviour
     public void HandleCrateOpened(LootCrate crate, List<WorldItem> spawned)
     {
         crates.Remove(crate);
+        LootBoxData openedBox = crate != null ? crate.Box : null;
 
         if (shelvingTracker != null)
         {
@@ -125,6 +135,7 @@ public class SupplyService : MonoBehaviour
         }
 
         OnChanged?.Invoke();
+        if (openedBox != null) OnCrateOpened?.Invoke(openedBox);
     }
 
     // ───────── сейв ─────────
