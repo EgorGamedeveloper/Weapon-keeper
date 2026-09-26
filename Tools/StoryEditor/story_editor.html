@@ -239,6 +239,18 @@ body.rotating, body.rotating * { cursor: grabbing !important; }
 .wires path { fill: none; stroke: var(--wire); stroke-width: 2.2; pointer-events: stroke; cursor: pointer; }
 .wires path.hit { stroke: transparent; stroke-width: 14; }
 .wires path.sel { stroke: var(--wire-sel); stroke-width: 3; }
+.wires path.anno { stroke: var(--muted); stroke-width: 1.8; stroke-dasharray: 6 5; }
+.wires path.anno.sel { stroke: var(--wire-sel); stroke-width: 2.6; }
+.wires path.anno-temp { stroke: var(--muted); stroke-width: 1.8; stroke-dasharray: 6 5; pointer-events: none; }
+/* Точки пунктирных связей: у заметок и оформления справа; занятые залиты, последняя — свободная. */
+.aport {
+  position: absolute; right: -7px; width: 12px; height: 12px; border-radius: 50%; box-sizing: border-box; z-index: 2;
+  border: 2px dashed var(--muted); background: var(--panel); cursor: crosshair; pointer-events: auto;
+}
+.aport.used { border-style: solid; background: var(--muted); }
+.aport:hover { border-color: var(--accent); }
+.bi .aport { opacity: 0; }
+.bi.sel .aport, .bi:hover .aport, .bi .aport.used { opacity: 1; }
 .wires path.split { stroke: var(--accent); stroke-width: 4; stroke-dasharray: 8 5; }
 .wires path.temp { stroke: var(--accent); stroke-dasharray: 6 5; pointer-events: none; }
 
@@ -679,7 +691,7 @@ const state = {
   views: {},      // положение и масштаб холста у каждой линии
   catalog: {},
   view: { x: 60, y: 60, k: 1 },
-  sel: { node: null, link: null, group: null, decor: null },
+  sel: { node: null, link: null, group: null, decor: null, anno: null },
   isExample: false,
   issues: [],
   storage: 'none', // db | local | file (приложение для Mac) | none
@@ -724,6 +736,10 @@ function normalizeGraph(g) {
   });
   g.groups = keep(g.groups);
   g.decor = keep(g.decor);
+  // Пунктирные связи «заметка/оформление → нода»: только для глаз, в игре не участвуют.
+  g.annotations = (Array.isArray(g.annotations) ? g.annotations : [])
+    .filter((a) => a && a.id && a.from && (a.from.kind === 'node' || a.from.kind === 'decor') && a.from.id && a.to)
+    .map((a) => ({ id: String(a.id), from: { kind: a.from.kind, id: String(a.from.id) }, to: String(a.to) }));
   g.images = g.images && typeof g.images === 'object' && !Array.isArray(g.images) ? { ...g.images } : {};
   return g;
 }
@@ -763,7 +779,7 @@ const history = { undo: [], redo: [], pendingTimer: 0, pending: false };
 
 function snapshot() {
   const g = state.graph;
-  return JSON.stringify({ languages: langs(), nodes: [...g.nodes.values()], links: g.links, storylines: g.storylines, groups: g.groups, decor: g.decor });
+  return JSON.stringify({ languages: langs(), nodes: [...g.nodes.values()], links: g.links, storylines: g.storylines, groups: g.groups, decor: g.decor, annotations: g.annotations });
 }
 // Картинки (images) в историю не входят: это библиотека, из неё ничего не удаляется само.
 function restore(json) {
@@ -774,6 +790,7 @@ function restore(json) {
   state.graph.storylines = s.storylines;
   state.graph.groups = s.groups;
   state.graph.decor = s.decor;
+  state.graph.annotations = s.annotations;
   setGraph(state.graph);
   if (state.sel.node && !state.graph.nodes.has(state.sel.node)) state.sel.node = null;
   if (state.sel.group && !state.graph.groups.some((x) => x.id === state.sel.group)) state.sel.group = null;
@@ -918,6 +935,7 @@ function buildNodeEl(n) {
   const div = el('div', { class: 'node', 'data-id': n.id, 'data-type': n.type }, head, nodeSummary(n));
   if (t.inPort) div.append(el('div', { class: 'port in', 'data-port': 'in', title: 'Вход' }));
   if (t.outPort) div.append(el('div', { class: 'port out', 'data-port': 'out', title: 'Выход: тяните к следующей ноде' }));
+  if (n.type === 'note') appendAnnoPorts(div, 'node', n.id);
   return div;
 }
 
@@ -964,8 +982,70 @@ function wirePath(a, b) {
   const dx = Math.max(40, Math.abs(b.x - a.x) * 0.5);
   return `M${a.x},${a.y} C${a.x + dx},${a.y} ${b.x - dx},${b.y} ${b.x},${b.y}`;
 }
+// ── Пунктирные связи (annotations) ──
+const ANNO_TOP = 18, ANNO_STEP = 16;
+const annosFrom = (kind, id) => state.graph.annotations.filter((a) => a.from.kind === kind && a.from.id === id);
+function appendAnnoPorts(div, kind, id) {
+  const used = annosFrom(kind, id).length;
+  for (let i = 0; i <= used; i++) {
+    div.append(el('div', { class: 'aport' + (i < used ? ' used' : ''), 'data-akind': kind, 'data-aid': id, 'data-slot': i,
+      style: `top:${ANNO_TOP + i * ANNO_STEP - 6}px`, title: i < used ? 'Пунктирная связь' : 'Тяните к ноде — пунктирная связь (только для глаз)' }));
+  }
+}
+// Точка источника связи номер slot в координатах холста (у повёрнутого оформления — с учётом поворота).
+function annoSource(from, slot) {
+  if (from.kind === 'node') {
+    const n = state.graph.nodes.get(from.id), div = nodeEls.get(from.id);
+    if (!n || !div) return null;
+    return { x: n.x + div.offsetWidth + 1, y: n.y + ANNO_TOP + slot * ANNO_STEP };
+  }
+  const d = state.graph.decor.find((x) => x.id === from.id);
+  if (!d || !inLine(d)) return null;
+  const px = d.x + d.w + 1, py = d.y + ANNO_TOP + slot * ANNO_STEP;
+  const a = (Number(d.rot) || 0) * Math.PI / 180, cx = d.x + d.w / 2, cy = d.y + d.h / 2;
+  return { x: cx + (px - cx) * Math.cos(a) - (py - cy) * Math.sin(a), y: cy + (px - cx) * Math.sin(a) + (py - cy) * Math.cos(a) };
+}
+function annoTarget(nodeId) {
+  const n = state.graph.nodes.get(nodeId), div = nodeEls.get(nodeId);
+  if (!n || !div) return null;
+  return { x: n.x - 1, y: n.y + 16 };
+}
+function renderAnnos() {
+  const slots = new Map();
+  for (const a of state.graph.annotations) {
+    const key = a.from.kind + ':' + a.from.id;
+    const slot = slots.get(key) || 0;
+    slots.set(key, slot + 1);
+    const p = annoSource(a.from, slot), q = annoTarget(a.to);
+    if (!p || !q) continue;
+    const d = wirePath(p, q);
+    const vis = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    vis.setAttribute('d', d);
+    vis.setAttribute('class', 'anno' + (state.sel.anno === a.id ? ' sel' : ''));
+    const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    hit.setAttribute('d', d);
+    hit.setAttribute('class', 'hit');
+    hit.dataset.anno = a.id;
+    wiresSvg.append(vis, hit);
+  }
+  if (drag && drag.kind === 'anno' && drag.to) {
+    const temp = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    temp.setAttribute('d', wirePath(drag.fromPt, drag.to));
+    temp.setAttribute('class', 'anno-temp');
+    wiresSvg.append(temp);
+  }
+}
+function addAnnotation(from, to) {
+  if (from.kind === 'node' && from.id === to) return;
+  if (state.graph.annotations.some((a) => a.from.kind === from.kind && a.from.id === from.id && a.to === to)) return;
+  beginEdit(false);
+  state.graph.annotations.push({ id: uid('a'), from: { ...from }, to });
+  changed(true);
+}
+
 function renderWires() {
   wiresSvg.textContent = '';
+  renderAnnos();
   state.graph.links.forEach((l, i) => {
     const a = portPos(l.from, 'out'), b = portPos(l.to, 'in');
     if (!a || !b) return;
@@ -1133,6 +1213,15 @@ function locInput(owner, key, label, multiline, requiredFirst) {
 
 function renderInspector() {
   insp.textContent = '';
+  const selAnno = state.sel.anno && state.graph.annotations.find((a) => a.id === state.sel.anno);
+  if (selAnno) {
+    insp.classList.remove('closed');
+    const src = selAnno.from.kind === 'node' ? nodeTitle(selAnno.from.id) : 'Оформление';
+    insp.append(el('h2', { text: 'Пунктирная связь' }),
+      el('div', { class: 'insp-empty', text: `${src} ⇢ ${nodeTitle(selAnno.to)}. Только для глаз: в игре связь не участвует.` }),
+      el('button', { class: 'btn danger-btn', type: 'button', text: 'Удалить связь (Del)', onclick: deleteSelection }));
+    return;
+  }
   const selGroup = state.sel.group && findItem('group', state.sel.group);
   const selDecor = state.sel.decor && findItem('decor', state.sel.decor);
   if (selGroup || selDecor) {
@@ -1548,6 +1637,7 @@ function buildDecorEl(d) {
   } else div.append(shapeSvg(d));
   div.append(el('div', { class: 'rz', title: 'Размер (Shift — с пропорциями)' }),
     el('div', { class: 'rt', title: 'Поворот: тяните по кругу (Shift — шагами по 15°)' }));
+  appendAnnoPorts(div, 'decor', d.id);
   placeItem(div, d);
   boardEls.set('decor:' + d.id, div);
   return div;
@@ -1606,6 +1696,7 @@ function boardPointerMove(e) {
     drag.item.rot = rot;
     const div = boardEls.get('decor:' + drag.item.id);
     if (div) div.style.transform = `rotate(${rot}deg)`;
+    renderWires();
     return;
   }
   const dx = (e.clientX - drag.startX) / state.view.k, dy = (e.clientY - drag.startY) / state.view.k;
@@ -1632,7 +1723,7 @@ function boardPointerMove(e) {
     const fresh = drag.itemKind === 'group' ? buildGroupEl(o) : buildDecorEl(o);
     div.replaceWith(fresh);
   }
-  if (drag.kind === 'item-move' && drag.carried.length) renderWires();
+  renderWires(); // нитки нод внутри рамки и пунктирные связи оформления
 }
 
 function addGroup(at) {
@@ -2023,6 +2114,24 @@ canvas.addEventListener('pointerdown', (e) => {
   const bodyHit = e.target.classList && e.target.classList.contains('n-body') ? e.target : null;
   if (bodyHit && e.offsetX >= bodyHit.clientWidth) return;
 
+  // Точки связей оформления лежат под слоем ниток — ищем их во всей стопке под курсором, а не только сверху.
+  const aport = e.target.closest('.aport') || document.elementsFromPoint(e.clientX, e.clientY).find((x) => x.classList && x.classList.contains('aport'));
+  if (aport) {
+    const from = { kind: aport.dataset.akind, id: aport.dataset.aid };
+    const fromPt = annoSource(from, Number(aport.dataset.slot));
+    if (fromPt) {
+      drag = { kind: 'anno', from, fromPt, to: toWorld(e.clientX, e.clientY) };
+      canvas.setPointerCapture(e.pointerId);
+      return;
+    }
+  }
+  const annoHit = e.target.closest('path.hit[data-anno]');
+  if (annoHit) {
+    state.sel = { node: null, link: null, group: null, decor: null, anno: annoHit.dataset.anno };
+    renderAll();
+    drag = null;
+    return;
+  }
   const port = e.target.closest('.port.out');
   const nodeDiv = e.target.closest('.node');
   const hit = e.target.closest('path.hit');
@@ -2072,6 +2181,13 @@ canvas.addEventListener('pointermove', (e) => {
     // Свободную ноду (без ниток) можно бросить на нитку — встанет в разрыв.
     splitHover = canSplice(n) ? wireAt(e.clientX, e.clientY, n.id) : null;
     renderWires();
+  } else if (drag.kind === 'anno') {
+    drag.to = toWorld(e.clientX, e.clientY);
+    clearDropHighlight();
+    const over = document.elementFromPoint(e.clientX, e.clientY);
+    const target = over && over.closest('.node');
+    if (target && !(drag.from.kind === 'node' && target.dataset.id === drag.from.id)) target.classList.add('drop');
+    renderWires();
   } else if (drag.kind === 'wire') {
     drag.to = toWorld(e.clientX, e.clientY);
     clearDropHighlight();
@@ -2097,6 +2213,15 @@ function endPointer(e) {
   pointers.delete(e.pointerId);
   if (pinch && pointers.size < 2) { pinch = null; return; }
   if (!drag) return;
+  if (drag.kind === 'anno') {
+    clearDropHighlight();
+    const over = document.elementFromPoint(e.clientX, e.clientY);
+    const target = over && over.closest('.node');
+    const from = drag.from;
+    drag = null;
+    if (target) addAnnotation(from, target.dataset.id); else renderWires();
+    return;
+  }
   if (drag.kind === 'wire') {
     clearDropHighlight();
     const nodeDiv = dropTarget(e.clientX, e.clientY);
@@ -2210,13 +2335,21 @@ function connect(from, to) {
 }
 
 function deleteSelection() {
+  if (state.sel.anno) {
+    beginEdit(false);
+    state.graph.annotations = state.graph.annotations.filter((a) => a.id !== state.sel.anno);
+    state.sel = { node: null, link: null, group: null, decor: null, anno: null };
+    changed(true);
+    return;
+  }
   if (state.sel.group || state.sel.decor) {
     const kind = state.sel.group ? 'group' : 'decor';
     const list = kind === 'group' ? state.graph.groups : state.graph.decor;
     const i = list.findIndex((x) => x.id === (state.sel.group || state.sel.decor));
     if (i < 0) return;
     beginEdit(false);
-    list.splice(i, 1);
+    const [gone] = list.splice(i, 1);
+    if (kind === 'decor') state.graph.annotations = state.graph.annotations.filter((a) => !(a.from.kind === 'decor' && a.from.id === gone.id));
     state.sel = { node: null, link: null, group: null, decor: null };
     changed(true);
     return;
@@ -2233,6 +2366,7 @@ function deleteSelection() {
   beginEdit(false);
   state.graph.nodes.delete(id);
   state.graph.links = state.graph.links.filter((l) => l.from !== id && l.to !== id);
+  state.graph.annotations = state.graph.annotations.filter((a) => a.to !== id && !(a.from.kind === 'node' && a.from.id === id));
   state.sel.node = null;
   changed(true);
 }
@@ -2284,7 +2418,7 @@ function canSpliceType(type) { const t = TYPES[type]; return !!(t && t.inPort &&
 function wireAt(clientX, clientY, excludeId) {
   const w = toWorld(clientX, clientY);
   const pt = new DOMPoint(w.x, w.y);
-  for (const hit of wiresSvg.querySelectorAll('path.hit')) {
+  for (const hit of wiresSvg.querySelectorAll('path.hit[data-link]')) {
     const i = Number(hit.dataset.link);
     const l = state.graph.links[i];
     if (!l || l.from === excludeId || l.to === excludeId) continue;
@@ -2603,7 +2737,8 @@ function toFileFormat() {
   });
   const g = state.graph;
   return { ...(g.extra || {}), version: FILE_VERSION, languages: langs(), nodes, links: g.links.map((l) => ({ ...l })),
-    storylines: g.storylines.map((l) => ({ ...l })), groups: g.groups.map((x) => ({ ...x })), decor: g.decor.map((x) => ({ ...x })), images: { ...g.images } };
+    storylines: g.storylines.map((l) => ({ ...l })), groups: g.groups.map((x) => ({ ...x })), decor: g.decor.map((x) => ({ ...x })),
+    annotations: g.annotations.map((a) => ({ id: a.id, from: { ...a.from }, to: a.to })), images: { ...g.images } };
 }
 
 // Миграции формата: MIGRATIONS[n] переводит файл версии n в n+1. Новые версии редактора открывают старые файлы;
@@ -2629,7 +2764,7 @@ function migrateGraph(data) {
 }
 
 // Поля верхнего уровня, которых этот редактор не знает, сохраняются как есть — чтобы не потерять данные новых версий.
-const KNOWN_TOP = new Set(['version', 'languages', 'nodes', 'links', 'storylines', 'groups', 'decor', 'images']);
+const KNOWN_TOP = new Set(['version', 'languages', 'nodes', 'links', 'storylines', 'groups', 'decor', 'images', 'annotations']);
 
 function fromFileFormat(data) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('не объект JSON');
@@ -2649,7 +2784,7 @@ function fromFileFormat(data) {
   const languages = Array.isArray(data.languages) && data.languages.length ? data.languages.map(String) : ['ru', 'en'];
   const extra = {};
   for (const [k, v] of Object.entries(data)) if (!KNOWN_TOP.has(k)) extra[k] = v;
-  return normalizeGraph({ languages, nodes, links, extra, storylines: data.storylines, groups: data.groups, decor: data.decor, images: data.images });
+  return normalizeGraph({ languages, nodes, links, extra, storylines: data.storylines, groups: data.groups, decor: data.decor, images: data.images, annotations: data.annotations });
 }
 
 // ───────────────────────── Хранение ─────────────────────────
@@ -2657,7 +2792,7 @@ function fromFileFormat(data) {
 // graph/links — все нитки, graph/meta — языки, graph/catalog — каталог сцены.
 
 const caps = { db: null, downloads: null };
-const saved = { nodes: new Map(), links: null, meta: null, groups: null, decor: null, images: new Set() };
+const saved = { nodes: new Map(), links: null, meta: null, groups: null, decor: null, annotations: null, images: new Set() };
 let syncTimer = 0, syncing = false, syncAgain = false;
 
 function setStatus(stateName, text) { const s = $('status'); s.dataset.state = stateName; s.textContent = text; }
@@ -2711,6 +2846,8 @@ async function syncDb() {
   if (saved.groups !== groups) { await db.doc('graph/groups').set({ groups: state.graph.groups }); saved.groups = groups; }
   const decor = JSON.stringify(state.graph.decor);
   if (saved.decor !== decor) { await db.doc('graph/decor').set({ decor: state.graph.decor }); saved.decor = decor; }
+  const annos = JSON.stringify(state.graph.annotations);
+  if (saved.annotations !== annos) { await db.doc('graph/annotations').set({ annotations: state.graph.annotations }); saved.annotations = annos; }
   // Картинки — по документу на штуку (лимит документа 256 КБ; картинка ужата до 512 px).
   for (const [id, data] of Object.entries(state.graph.images)) {
     if (saved.images.has(id)) continue;
@@ -2745,9 +2882,9 @@ function adoptExample() {
 }
 
 async function loadFromDb(db) {
-  const [nodesSnap, linksDoc, metaDoc, catalogDoc, groupsDoc, decorDoc, imagesSnap] = await Promise.all([
+  const [nodesSnap, linksDoc, metaDoc, catalogDoc, groupsDoc, decorDoc, imagesSnap, annosDoc] = await Promise.all([
     db.collection('nodes').get(), db.doc('graph/links').get(), db.doc('graph/meta').get(), db.doc('graph/catalog').get(),
-    db.doc('graph/groups').get(), db.doc('graph/decor').get(), db.collection('images').get(),
+    db.doc('graph/groups').get(), db.doc('graph/decor').get(), db.collection('images').get(), db.doc('graph/annotations').get(),
   ]);
   const images = {};
   for (const d of imagesSnap.docs) { const v = d.data() || {}; if (v.id && v.data) { images[v.id] = v.data; saved.images.add(v.id); } }
@@ -2767,11 +2904,13 @@ async function loadFromDb(db) {
   const links = linksDoc.exists ? ((linksDoc.data() || {}).links || []).filter((l) => nodes.has(l.from) && nodes.has(l.to)) : [];
   const meta = metaDoc.exists ? metaDoc.data() || {} : {};
   setGraph({ languages: Array.isArray(meta.languages) && meta.languages.length ? [...meta.languages] : ['ru', 'en'], nodes, links: links.map((l) => ({ ...l })),
-    storylines: meta.storylines, groups: groupsDoc.exists ? (groupsDoc.data() || {}).groups : [], decor: decorDoc.exists ? (decorDoc.data() || {}).decor : [], images });
+    storylines: meta.storylines, groups: groupsDoc.exists ? (groupsDoc.data() || {}).groups : [], decor: decorDoc.exists ? (decorDoc.data() || {}).decor : [], images,
+    annotations: annosDoc.exists ? (annosDoc.data() || {}).annotations : [] });
   saved.links = JSON.stringify(state.graph.links);
   saved.meta = JSON.stringify({ languages: langs(), storylines: state.graph.storylines });
   saved.groups = JSON.stringify(state.graph.groups);
   saved.decor = JSON.stringify(state.graph.decor);
+  saved.annotations = JSON.stringify(state.graph.annotations);
   // Ноды, которым нормализация дописала storyline, уйдут в db при первой правке.
   return true;
 }

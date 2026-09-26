@@ -284,6 +284,39 @@ async function dragPal(page, label, dx = 420, dy = 240) {
   ok(await page.locator('.bi.decor svg').count() >= 1, 'иконка на холсте');
   await page.locator('.inspector .swatches button').nth(2).click();
   {
+    // Пунктирные связи от иконки к двум нодам
+    const iconId = await page.locator('.bi.decor.sel').getAttribute('data-id');
+    const icon0 = page.locator(`.bi.decor[data-id="${iconId}"]`);
+    const targets = page.locator('.node');
+    const t1 = await targets.nth(0).boundingBox(), t2 = await targets.nth(1).boundingBox();
+    const ap = await icon0.locator('.aport').last().boundingBox();
+    await page.mouse.move(ap.x + 6, ap.y + 6); await page.mouse.down();
+    await page.mouse.move(t1.x + 60, t1.y + 30, { steps: 8 }); await page.mouse.up();
+    ok(await page.locator('#wires path.anno').count() === 1, 'от иконки протянута пунктирная связь');
+    ok(await icon0.locator('.aport').count() === 2 && await icon0.locator('.aport.used').count() === 1, 'появилась вторая, свободная точка');
+    await icon0.click({ position: { x: 5, y: 5 } }).catch(() => {});
+    const ap2 = await page.locator('.bi.decor.sel .aport:not(.used)').boundingBox();
+    await page.mouse.move(ap2.x + 6, ap2.y + 6); await page.mouse.down();
+    await page.mouse.move(t2.x + 60, t2.y + 30, { steps: 8 }); await page.mouse.up();
+    ok(await page.locator('#wires path.anno').count() === 2, 'вторая связь к другой ноде');
+    await page.click('#btnExport');
+    const aj = JSON.parse(await page.locator('#exportText').inputValue());
+    await page.click('#sheetExport [data-close]');
+    ok(aj.annotations.length === 2 && aj.annotations.every((a) => a.from.kind === 'decor') && !aj.links.some((l) => aj.annotations.some((a) => a.to === l.to && l.from === a.from.id)), 'связи в JSON отдельно от логических ниток');
+    // выбрать связь и удалить
+    const annoHit = await page.evaluate(() => { const h = document.querySelector('#wires path.hit[data-anno]'); const p = h.getPointAtLength(h.getTotalLength() / 2); const m = h.getScreenCTM(); return { x: p.x * m.a + m.e, y: p.y * m.d + m.f }; });
+    await page.mouse.click(annoHit.x, annoHit.y);
+    ok((await page.locator('.inspector h2').textContent()) === 'Пунктирная связь', 'щелчок выделяет пунктирную связь');
+    await page.keyboard.press('Delete');
+    ok(await page.locator('#wires path.anno').count() === 1, 'Del удаляет связь');
+    // оставшуюся связь тоже убрать (она проходит над иконкой), затем снова выбрать иконку
+    const hit2 = await page.evaluate(() => { const h = document.querySelector('#wires path.hit[data-anno]'); const p = h.getPointAtLength(h.getTotalLength() * 0.7); const m = h.getScreenCTM(); return { x: p.x * m.a + m.e, y: p.y * m.d + m.f }; });
+    await page.mouse.click(hit2.x, hit2.y);
+    await page.keyboard.press('Delete');
+    ok(await page.locator('#wires path.anno').count() === 0 && await icon0.locator('.aport').count() === 1, 'связей нет — снова одна свободная точка');
+    await icon0.click({ position: { x: 20, y: 40 } });
+  }
+  {
     const icon = page.locator('.bi.decor.sel');
     const rt = await icon.locator('.rt').boundingBox();
     const ib2 = await icon.boundingBox();
