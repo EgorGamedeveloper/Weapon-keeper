@@ -21,6 +21,18 @@ public class MouseRotator : MonoBehaviour {
 	public bool autoZeroVerticalOnMobile = true;
 	public bool autoZeroHorizontalOnMobile = false;
 	public bool relative = true;
+
+	// ПАТЧ Weapon Keeper: настройки управления игрока (SettingsService → ControlsSettingsApplier) применяются
+	// множителями поверх значений из инспектора — rotationSpeed и dampingTime не затираются.
+	[Tooltip("Множитель чувствительности по горизонтали из настроек игры (к rotationSpeed).")]
+	public float sensitivityMultiplier = 1f;
+	[Tooltip("Множитель чувствительности по вертикали из настроек игры (к rotationSpeed).")]
+	public float verticalSensitivityMultiplier = 1f;
+	[Tooltip("Инвертировать вертикальную ось мыши (настройки игры).")]
+	public bool invertY = false;
+	[Tooltip("Сглаживание мыши из настроек игры, с. Меньше 0 — используется dampingTime из инспектора.")]
+	public float dampingTimeOverride = -1f;
+
 	Vector3 targetAngles;
 	Vector3 followAngles;
 	Vector3 followVelocity;
@@ -54,8 +66,9 @@ public class MouseRotator : MonoBehaviour {
 			if (targetAngles.x < -180) { targetAngles.x += 360; followAngles.x += 360; }
 	
 			// with mouse input, we have direct control with no springback required.
-			targetAngles.y += inputH * rotationSpeed;
-			targetAngles.x += inputV * rotationSpeed;
+			// ПАТЧ Weapon Keeper: чувствительность и инверсия Y из настроек игры.
+			targetAngles.y += inputH * rotationSpeed * sensitivityMultiplier;
+			targetAngles.x += (invertY ? -inputV : inputV) * rotationSpeed * verticalSensitivityMultiplier;
 	
 			// clamp values to allowed range
 			targetAngles.y = Mathf.Clamp ( targetAngles.y, -rotationRange.y * 0.5f, rotationRange.y * 0.5f );
@@ -79,7 +92,8 @@ public class MouseRotator : MonoBehaviour {
 	
 	
 		// smoothly interpolate current values to target angles
-		followAngles = Vector3.SmoothDamp( followAngles, targetAngles, ref followVelocity, dampingTime );
+		// ПАТЧ Weapon Keeper: сглаживание из настроек игры, если задано.
+		followAngles = Vector3.SmoothDamp( followAngles, targetAngles, ref followVelocity, dampingTimeOverride >= 0f ? dampingTimeOverride : dampingTime );
 	
 		// update the actual gameobject's rotation
 		transform.localRotation = originalRotation * Quaternion.Euler( -followAngles.x, followAngles.y, 0 );
