@@ -76,6 +76,38 @@ public static class SettingsSceneSetup
             if (menu.settingsButton != null) report.AppendLine("✔ В главное меню добавлена кнопка «Настройки» — проверьте её место.");
         }
         SceneSetupUtility.MarkModified(menu);
+
+        LocalizeButton(menu.newGameButton, "menu.new_game", report);
+        LocalizeButton(menu.continueButton, "menu.continue", report);
+        LocalizeButton(menu.quitButton, "menu.quit", report);
+        LocalizeButton(menu.confirmYesButton, "menu.confirm_yes", report);
+        LocalizeButton(menu.confirmNoButton, "menu.confirm_no", report);
+    }
+
+    /// <summary>
+    /// Перевод подписи существующей кнопки меню: LocalizedText вешается, только если текст кнопки совпадает
+    /// с русской строкой таблицы (без учёта регистра) — иначе игра заменила бы задуманную надпись нашей.
+    /// Несовпавшие подписи переводятся через Localization/Extract Texts From Open Scene.
+    /// </summary>
+    private static void LocalizeButton(Button button, string key, StringBuilder report)
+    {
+        if (button == null) return;
+
+        Component label = button.GetComponentInChildren<TMP_Text>(true);
+        if (label == null) label = button.GetComponentInChildren<Text>(true);
+        if (label == null || label.GetComponent<LocalizedText>() != null) return;
+
+        string current = label is TMP_Text tmp ? tmp.text : ((Text)label).text;
+        if (string.Compare(current?.Trim(), UIBuilderKit.Ru(key), System.StringComparison.OrdinalIgnoreCase) != 0)
+        {
+            report.AppendLine($"• Подпись «{current}» не совпала с «{UIBuilderKit.Ru(key)}» ({key}) — переведите её через Extract Texts.");
+            return;
+        }
+
+        var localized = Undo.AddComponent<LocalizedText>(label.gameObject);
+        localized.key = key;
+        SceneSetupUtility.MarkModified(localized);
+        report.AppendLine($"✔ Подпись «{current}» переводится ({key}).");
     }
 
     /// <summary>Копия кнопки «Выход» (того же вида) перед ней. Обработчики из инспектора не копируются.</summary>

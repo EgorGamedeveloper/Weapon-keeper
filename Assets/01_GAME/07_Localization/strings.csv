@@ -12,6 +12,11 @@ common.on,Вкл,On
 common.off,Выкл,Off
 # Главное меню,,
 menu.settings,Настройки,Settings
+menu.new_game,Новая игра,New Game
+menu.continue,Продолжить,Continue
+menu.quit,Выход,Quit
+menu.confirm_yes,"Да, начать заново","Yes, start over"
+menu.confirm_no,Отмена,Cancel
 # Окно настроек,,
 settings.title,Настройки,Settings
 settings.tab.graphics,Графика,Graphics
