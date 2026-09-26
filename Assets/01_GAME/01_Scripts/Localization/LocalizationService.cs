@@ -215,11 +215,16 @@ public class LocalizationService : MonoBehaviour
     }
 
     /// <summary>
-    /// Язык по умолчанию для первого запуска: язык системы → fallbackLanguage — из тех, что есть в таблице.
+    /// Язык по умолчанию для первого запуска: язык игры в Steam → язык системы → fallbackLanguage —
+    /// из тех, что есть в таблице.
     /// </summary>
     public string DetectDefaultLanguage()
     {
         EnsureLoaded();
+
+        // SteamManager инициализируется раньше (DefaultExecutionOrder -2000), язык Steam уже известен.
+        string steamLanguage = SteamManager.Instance != null ? SteamManager.Instance.GetCurrentGameLanguage() : null;
+        if (IsSupported(steamLanguage)) return steamLanguage;
 
         if (GameLanguages.TryFromSystemLanguage(Application.systemLanguage, out GameLanguages.Info system)
             && IsSupported(system.steamCode))
