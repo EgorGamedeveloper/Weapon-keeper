@@ -211,8 +211,29 @@ body.resizing-h, body.resizing-h * { cursor: row-resize !important; }
 .zoom button { border: 0; background: transparent; border-radius: 5px; padding: 3px 8px; }
 .zoom button:hover { background: var(--panel-2); }
 .zoom span { font: 12px var(--font-mono); color: var(--muted); align-self: center; min-width: 44px; text-align: center; }
+.line-tabs {
+  position: absolute; left: 12px; top: 10px; right: 12px; z-index: 3; display: flex; align-items: center; gap: 4px;
+  overflow-x: auto; pointer-events: none; padding-bottom: 2px;
+}
+.line-tabs > * { pointer-events: auto; }
+.line-tab {
+  display: inline-flex; align-items: center; gap: 6px; flex: none; border: 1px solid var(--line); background: var(--panel);
+  border-radius: 6px; padding: 4px 10px; font: 600 13px var(--font-head); letter-spacing: .04em; color: var(--muted); max-width: 240px;
+}
+.line-tab .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.line-tab .c { font: 500 10.5px var(--font-mono); color: var(--muted); }
+.line-tab.on { color: var(--ink); border-color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
+.line-tab .x { border: 0; background: transparent; color: var(--muted); padding: 0 2px; font-size: 13px; line-height: 1; }
+.line-tab .x:hover { color: var(--danger); }
+.line-tab input { font: 600 13px var(--font-head); width: 160px; border: 0; background: transparent; color: var(--ink); outline: none; }
+.line-add { flex: none; border: 1px dashed var(--line); background: var(--panel); border-radius: 6px; padding: 4px 10px; color: var(--muted); }
+.line-add:hover { color: var(--ink); border-color: var(--muted); }
+.toast {
+  position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%); z-index: 8; background: var(--ink); color: var(--panel);
+  border-radius: 6px; padding: 8px 14px; font-size: 13px; box-shadow: var(--node-shadow); pointer-events: none; transition: opacity .3s;
+}
 .banner {
-  position: absolute; left: 12px; top: 12px; right: 12px; max-width: 560px; background: var(--panel); border: 1px solid var(--line);
+  position: absolute; left: 12px; top: 52px; right: 12px; max-width: 560px; background: var(--panel); border: 1px solid var(--line);
   border-left: 3px solid var(--accent); border-radius: 6px; padding: 8px 12px; font-size: 12.5px; color: var(--ink);
 }
 
@@ -337,6 +358,7 @@ body.resizing-h, body.resizing-h * { cursor: row-resize !important; }
         <svg class="wires" id="wires" aria-hidden="true"></svg>
         <div id="nodes"></div>
       </div>
+      <nav class="line-tabs" id="lineTabs" aria-label="Сюжетные линии"></nav>
       <div class="banner" id="banner" hidden></div>
       <div class="zoom">
         <button type="button" id="zoomOut" aria-label="Уменьшить">−</button>
@@ -561,10 +583,12 @@ const LOCAL_KEY = 'wk-story-graph-v1';
 // ───────────────────────── Состояние ─────────────────────────
 
 const state = {
-  graph: { languages: ['ru', 'en'], nodes: new Map(), links: [] },
+  graph: { languages: ['ru', 'en'], nodes: new Map(), links: [], storylines: [{ id: 'main', title: 'Основная линия' }], groups: [], decor: [], images: {} },
+  line: 'main',   // открытая сюжетная линия
+  views: {},      // положение и масштаб холста у каждой линии
   catalog: {},
   view: { x: 60, y: 60, k: 1 },
-  sel: { node: null, link: null },
+  sel: { node: null, link: null, group: null, decor: null },
   isExample: false,
   issues: [],
   storage: 'none', // db | local | file (приложение для Mac) | none
@@ -589,8 +613,39 @@ const langs = () => state.graph.languages;
 const firstLang = () => langs()[0] || 'ru';
 const locText = (obj) => (obj && (obj[firstLang()] || Object.values(obj).find(Boolean))) || '';
 
+// ── Сюжетные линии, рамки, оформление ──
+// storylines — вкладки над холстом: у ноды, рамки и элемента оформления поле storyline. В игре линии идут
+// параллельно (Unity эти поля не читает). groups — рамки-группы, decor — формы/иконки/картинки, images — библиотека
+// картинок (dataURL) для decor. Всё это — только редактор: в «Проверке» и импорте в Unity не участвует.
+const DEFAULT_LINE = () => ({ id: 'main', title: 'Основная линия' });
+function normalizeGraph(g) {
+  let lines = Array.isArray(g.storylines) ? g.storylines.filter((l) => l && l.id).map((l) => ({ id: String(l.id), title: String(l.title || l.id) })) : [];
+  if (!lines.length) lines = [DEFAULT_LINE()];
+  g.storylines = lines;
+  const ids = new Set(lines.map((l) => l.id));
+  const first = lines[0].id;
+  for (const n of g.nodes.values()) if (!ids.has(n.storyline)) n.storyline = first;
+  const keep = (list) => (Array.isArray(list) ? list : []).filter((x) => x && x.id).map((x) => {
+    const o = { ...x };
+    if (!ids.has(o.storyline)) o.storyline = first;
+    for (const k of ['x', 'y', 'w', 'h']) o[k] = Number(o[k]) || 0;
+    return o;
+  });
+  g.groups = keep(g.groups);
+  g.decor = keep(g.decor);
+  g.images = g.images && typeof g.images === 'object' && !Array.isArray(g.images) ? { ...g.images } : {};
+  return g;
+}
+function setGraph(g) {
+  state.graph = normalizeGraph(g);
+  if (!state.graph.storylines.some((l) => l.id === state.line)) state.line = state.graph.storylines[0].id;
+}
+const curLine = () => state.line;
+const inLine = (o) => o.storyline === state.line;
+const lineTitle = (id) => { const l = state.graph.storylines.find((x) => x.id === id); return l ? l.title : id; };
+
 function newNode(type, x, y) {
-  const n = { id: uid(type === 'quest' ? 'q' : 'n'), type, x: Math.round(x), y: Math.round(y) };
+  const n = { id: uid(type === 'quest' ? 'q' : 'n'), type, x: Math.round(x), y: Math.round(y), storyline: curLine() };
   switch (type) {
     case 'quest':
       Object.assign(n, { questId: '', title: {}, description: {}, questType: 'RepairPoints', targetCount: 1,
@@ -616,14 +671,22 @@ function newNode(type, x, y) {
 const history = { undo: [], redo: [], pendingTimer: 0, pending: false };
 
 function snapshot() {
-  return JSON.stringify({ languages: langs(), nodes: [...state.graph.nodes.values()], links: state.graph.links });
+  const g = state.graph;
+  return JSON.stringify({ languages: langs(), nodes: [...g.nodes.values()], links: g.links, storylines: g.storylines, groups: g.groups, decor: g.decor });
 }
+// Картинки (images) в историю не входят: это библиотека, из неё ничего не удаляется само.
 function restore(json) {
   const s = JSON.parse(json);
   state.graph.languages = s.languages;
   state.graph.nodes = new Map(s.nodes.map((n) => [n.id, n]));
   state.graph.links = s.links;
+  state.graph.storylines = s.storylines;
+  state.graph.groups = s.groups;
+  state.graph.decor = s.decor;
+  setGraph(state.graph);
   if (state.sel.node && !state.graph.nodes.has(state.sel.node)) state.sel.node = null;
+  if (state.sel.group && !state.graph.groups.some((x) => x.id === state.sel.group)) state.sel.group = null;
+  if (state.sel.decor && !state.graph.decor.some((x) => x.id === state.sel.decor)) state.sel.decor = null;
   state.sel.link = null;
 }
 // Запомнить состояние ДО правки. coalesce — набор текста: одна запись на серию правок.
@@ -768,6 +831,7 @@ function renderNodes() {
   nodesLayer.textContent = '';
   nodeEls.clear();
   for (const n of state.graph.nodes.values()) {
+    if (!inLine(n)) continue;
     const div = buildNodeEl(n);
     placeNodeEl(div, n);
     nodesLayer.append(div);
@@ -777,6 +841,7 @@ function renderNodes() {
 // Правка полей без изменения структуры: обновить содержимое нод на месте.
 function renderNodesLight() {
   for (const n of state.graph.nodes.values()) {
+    if (!inLine(n)) continue;
     const old = nodeEls.get(n.id);
     if (!old) { renderNodes(); return; }
     const fresh = buildNodeEl(n);
@@ -820,6 +885,7 @@ function renderWires() {
 }
 
 function renderAll() {
+  renderTabs();
   renderNodes();
   renderWires();
   renderInspector();
@@ -1237,6 +1303,12 @@ function locFields(n) {
   return out;
 }
 
+function issueWhere(id) {
+  const n = state.graph.nodes.get(id);
+  const multi = state.graph.storylines.length > 1;
+  return (multi && n ? `[${lineTitle(n.storyline)}] ` : '') + nodeTitle(id);
+}
+
 function renderIssues() {
   const ul = $('issueList');
   ul.textContent = '';
@@ -1245,8 +1317,98 @@ function renderIssues() {
   for (const i of [...state.issues].sort((a, b) => order[a.sev] - order[b.sev])) {
     ul.append(el('li', {}, el('button', { type: 'button', onclick: () => { if (i.node) focusNode(i.node); } },
       el('span', { class: 'sev ' + i.sev, text: sevLabel(i.sev) }),
-      el('span', { text: (i.node ? nodeTitle(i.node) + ': ' : '') + i.text }))));
+      el('span', { text: (i.node ? issueWhere(i.node) + ': ' : '') + i.text }))));
   }
+}
+
+// ───────────────────────── Сюжетные линии (вкладки) ─────────────────────────
+
+function renderTabs() {
+  const bar = $('lineTabs');
+  bar.textContent = '';
+  const counts = new Map();
+  for (const n of state.graph.nodes.values()) counts.set(n.storyline, (counts.get(n.storyline) || 0) + 1);
+  const many = state.graph.storylines.length > 1;
+  for (const line of state.graph.storylines) {
+    const on = line.id === state.line;
+    const tab = el('div', { class: 'line-tab' + (on ? ' on' : ''), 'data-line': line.id, role: 'tab', 'aria-selected': String(on),
+      title: 'Щелчок — открыть, двойной щелчок — переименовать' },
+      el('span', { class: 't', text: line.title }), el('span', { class: 'c', text: String(counts.get(line.id) || 0) }));
+    tab.addEventListener('click', (e) => { if (!e.target.closest('.x, input')) switchLine(line.id); });
+    tab.addEventListener('dblclick', (e) => { if (!e.target.closest('.x')) renameLine(tab, line); });
+    if (on && many) tab.append(el('button', { class: 'x', type: 'button', title: 'Удалить пустую линию', 'aria-label': 'Удалить линию', text: '×', onclick: () => deleteLine(line.id) }));
+    bar.append(tab);
+  }
+  bar.append(el('button', { class: 'line-add', type: 'button', title: 'Новая сюжетная линия', text: '+ Линия', onclick: addLine }));
+}
+
+function switchLine(id, keepView) {
+  if (id === state.line) return;
+  state.views[state.line] = { ...state.view };
+  state.line = id;
+  state.sel = { node: null, link: null, group: null, decor: null };
+  renderAll();
+  if (keepView) return;
+  if (state.views[id]) { state.view = { ...state.views[id] }; applyView(); }
+  else requestAnimationFrame(() => { fitAll(); renderWires(); });
+}
+
+function addLine() {
+  beginEdit(false);
+  let n = state.graph.storylines.length + 1;
+  while (state.graph.storylines.some((l) => l.title === `Линия ${n}`)) n++;
+  const line = { id: uid('line'), title: `Линия ${n}` };
+  state.graph.storylines.push(line);
+  state.views[state.line] = { ...state.view };
+  state.line = line.id;
+  state.sel = { node: null, link: null, group: null, decor: null };
+  state.view = { x: 60, y: 60, k: 1 };
+  applyView();
+  changed(true);
+  const tab = document.querySelector(`.line-tab[data-line="${line.id}"]`);
+  if (tab) renameLine(tab, line);
+}
+
+function renameLine(tab, line) {
+  const input = el('input', { type: 'text', 'aria-label': 'Название линии' });
+  input.value = line.title;
+  tab.querySelector('.t').replaceWith(input);
+  input.focus();
+  input.select();
+  let done = false;
+  const finish = (save) => {
+    if (done) return;
+    done = true;
+    const title = input.value.trim();
+    if (save && title && title !== line.title) { beginEdit(false); line.title = title; changed(true); }
+    else renderTabs();
+  };
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') finish(true); if (e.key === 'Escape') finish(false); e.stopPropagation(); });
+  input.addEventListener('blur', () => finish(true));
+}
+
+function deleteLine(id) {
+  const g = state.graph;
+  const used = [...g.nodes.values()].some((n) => n.storyline === id) || g.groups.some((x) => x.storyline === id) || g.decor.some((x) => x.storyline === id);
+  if (used) { toast('В линии есть ноды или оформление — сначала удалите или перенесите их.'); return; }
+  if (g.storylines.length < 2) return;
+  beginEdit(false);
+  const i = g.storylines.findIndex((l) => l.id === id);
+  g.storylines.splice(i, 1);
+  delete state.views[id];
+  state.line = g.storylines[Math.max(0, i - 1)].id;
+  if (state.views[state.line]) { state.view = { ...state.views[state.line] }; applyView(); }
+  changed(true);
+}
+
+let toastTimer = 0;
+function toast(text) {
+  let t = document.querySelector('.toast');
+  if (!t) { t = el('div', { class: 'toast', role: 'status' }); canvas.append(t); }
+  t.textContent = text;
+  t.style.opacity = '1';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.style.opacity = '0'; }, 2600);
 }
 
 // ───────────────────────── Мышь, касания, клавиатура ─────────────────────────
@@ -1260,7 +1422,7 @@ function toWorld(clientX, clientY) {
 }
 
 canvas.addEventListener('pointerdown', (e) => {
-  if (e.target.closest('.sheet, .zoom, .banner')) return;
+  if (e.target.closest('.sheet, .zoom, .banner, .line-tabs')) return;
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pointers.size === 2) { startPinch(); return; }
   if (e.button === 2) return;
@@ -1385,7 +1547,7 @@ $('zoomOut').addEventListener('click', () => { const r = canvas.getBoundingClien
 $('zoomFit').addEventListener('click', fitAll);
 
 function fitAll() {
-  const nodes = [...state.graph.nodes.values()];
+  const nodes = [...state.graph.nodes.values()].filter(inLine);
   if (!nodes.length) { state.view = { x: 60, y: 60, k: 1 }; applyView(); return; }
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const n of nodes) {
@@ -1402,6 +1564,7 @@ function fitAll() {
 function focusNode(id) {
   const n = state.graph.nodes.get(id);
   if (!n) return;
+  if (!inLine(n)) switchLine(n.storyline, true);
   const r = canvas.getBoundingClientRect();
   state.view.x = r.width / 2 - (n.x + 115) * state.view.k;
   state.view.y = r.height / 2 - (n.y + 40) * state.view.k;
@@ -1471,7 +1634,7 @@ function addNode(type, at) {
 let palDrag = null;
 function overCanvas(x, y) {
   const hit = document.elementFromPoint(x, y);
-  return !!(hit && hit.closest('#canvas') && !hit.closest('.sheet, .zoom, .banner'));
+  return !!(hit && hit.closest('#canvas') && !hit.closest('.sheet, .zoom, .banner, .line-tabs'));
 }
 function palPointerDown(e, type) {
   if (e.button !== 0) return;
@@ -1596,7 +1759,7 @@ function importText(text) {
   try {
     const g = fromFileFormat(JSON.parse(text.replace(/^﻿/, '')));
     beginEdit(false);
-    state.graph = g;
+    setGraph(g);
     state.sel = { node: null, link: null };
     changed(true);
     fitAll();
@@ -1753,7 +1916,9 @@ function toFileFormat() {
     if (out.lines) out.lines = out.lines.map((l) => ({ seconds: Number(l.seconds) || 0, text: toLocArray(l.text) }));
     return out;
   });
-  return { ...(state.graph.extra || {}), version: FILE_VERSION, languages: langs(), nodes, links: state.graph.links.map((l) => ({ ...l })) };
+  const g = state.graph;
+  return { ...(g.extra || {}), version: FILE_VERSION, languages: langs(), nodes, links: g.links.map((l) => ({ ...l })),
+    storylines: g.storylines.map((l) => ({ ...l })), groups: g.groups.map((x) => ({ ...x })), decor: g.decor.map((x) => ({ ...x })), images: { ...g.images } };
 }
 
 // Миграции формата: MIGRATIONS[n] переводит файл версии n в n+1. Новые версии редактора открывают старые файлы;
@@ -1779,7 +1944,7 @@ function migrateGraph(data) {
 }
 
 // Поля верхнего уровня, которых этот редактор не знает, сохраняются как есть — чтобы не потерять данные новых версий.
-const KNOWN_TOP = new Set(['version', 'languages', 'nodes', 'links']);
+const KNOWN_TOP = new Set(['version', 'languages', 'nodes', 'links', 'storylines', 'groups', 'decor', 'images']);
 
 function fromFileFormat(data) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('не объект JSON');
@@ -1799,7 +1964,7 @@ function fromFileFormat(data) {
   const languages = Array.isArray(data.languages) && data.languages.length ? data.languages.map(String) : ['ru', 'en'];
   const extra = {};
   for (const [k, v] of Object.entries(data)) if (!KNOWN_TOP.has(k)) extra[k] = v;
-  return { languages, nodes, links, extra };
+  return normalizeGraph({ languages, nodes, links, extra, storylines: data.storylines, groups: data.groups, decor: data.decor, images: data.images });
 }
 
 // ───────────────────────── Хранение ─────────────────────────
@@ -1807,7 +1972,7 @@ function fromFileFormat(data) {
 // graph/links — все нитки, graph/meta — языки, graph/catalog — каталог сцены.
 
 const caps = { db: null, downloads: null };
-const saved = { nodes: new Map(), links: null, meta: null };
+const saved = { nodes: new Map(), links: null, meta: null, groups: null, decor: null, images: new Set() };
 let syncTimer = 0, syncing = false, syncAgain = false;
 
 function setStatus(stateName, text) { const s = $('status'); s.dataset.state = stateName; s.textContent = text; }
@@ -1855,8 +2020,23 @@ async function syncDb() {
   }
   const links = JSON.stringify(state.graph.links);
   if (saved.links !== links) { await db.doc('graph/links').set({ links: state.graph.links }); saved.links = links; }
-  const meta = JSON.stringify({ languages: langs() });
-  if (saved.meta !== meta) { await db.doc('graph/meta').set({ languages: langs(), version: FILE_VERSION }); saved.meta = meta; }
+  const meta = JSON.stringify({ languages: langs(), storylines: state.graph.storylines });
+  if (saved.meta !== meta) { await db.doc('graph/meta').set({ languages: langs(), storylines: state.graph.storylines, version: FILE_VERSION }); saved.meta = meta; }
+  const groups = JSON.stringify(state.graph.groups);
+  if (saved.groups !== groups) { await db.doc('graph/groups').set({ groups: state.graph.groups }); saved.groups = groups; }
+  const decor = JSON.stringify(state.graph.decor);
+  if (saved.decor !== decor) { await db.doc('graph/decor').set({ decor: state.graph.decor }); saved.decor = decor; }
+  // Картинки — по документу на штуку (лимит документа 256 КБ; картинка ужата до 512 px).
+  for (const [id, data] of Object.entries(state.graph.images)) {
+    if (saved.images.has(id)) continue;
+    await db.doc('images/' + safeDocId(id)).set({ id, data });
+    saved.images.add(id);
+  }
+  for (const id of [...saved.images]) {
+    if (state.graph.images[id]) continue;
+    await db.doc('images/' + safeDocId(id)).delete();
+    saved.images.delete(id);
+  }
   setStatus('saved', 'Сохранено');
 }
 
@@ -1880,9 +2060,12 @@ function adoptExample() {
 }
 
 async function loadFromDb(db) {
-  const [nodesSnap, linksDoc, metaDoc, catalogDoc] = await Promise.all([
+  const [nodesSnap, linksDoc, metaDoc, catalogDoc, groupsDoc, decorDoc, imagesSnap] = await Promise.all([
     db.collection('nodes').get(), db.doc('graph/links').get(), db.doc('graph/meta').get(), db.doc('graph/catalog').get(),
+    db.doc('graph/groups').get(), db.doc('graph/decor').get(), db.collection('images').get(),
   ]);
+  const images = {};
+  for (const d of imagesSnap.docs) { const v = d.data() || {}; if (v.id && v.data) { images[v.id] = v.data; saved.images.add(v.id); } }
   if (catalogDoc.exists) state.catalog = (catalogDoc.data() || {}).lists || {};
   try {
     const look = await db.doc('graph/appearance').get();
@@ -1898,9 +2081,13 @@ async function loadFromDb(db) {
   }
   const links = linksDoc.exists ? ((linksDoc.data() || {}).links || []).filter((l) => nodes.has(l.from) && nodes.has(l.to)) : [];
   const meta = metaDoc.exists ? metaDoc.data() || {} : {};
-  state.graph = { languages: Array.isArray(meta.languages) && meta.languages.length ? [...meta.languages] : ['ru', 'en'], nodes, links: links.map((l) => ({ ...l })) };
+  setGraph({ languages: Array.isArray(meta.languages) && meta.languages.length ? [...meta.languages] : ['ru', 'en'], nodes, links: links.map((l) => ({ ...l })),
+    storylines: meta.storylines, groups: groupsDoc.exists ? (groupsDoc.data() || {}).groups : [], decor: decorDoc.exists ? (decorDoc.data() || {}).decor : [], images });
   saved.links = JSON.stringify(state.graph.links);
-  saved.meta = JSON.stringify({ languages: langs() });
+  saved.meta = JSON.stringify({ languages: langs(), storylines: state.graph.storylines });
+  saved.groups = JSON.stringify(state.graph.groups);
+  saved.decor = JSON.stringify(state.graph.decor);
+  // Ноды, которым нормализация дописала storyline, уйдут в db при первой правке.
   return true;
 }
 
@@ -2007,7 +2194,7 @@ async function flushFile() {
 }
 
 function loadGraphObject(g) {
-  state.graph = g;
+  setGraph(g);
   state.isExample = false;
   state.sel = { node: null, link: null };
 }
@@ -2036,7 +2223,7 @@ async function initFile(host) {
   if (project) $('brandSub').textContent = `${project.name} · 08_Story/story_graph.json`;
 
   if (!project) {
-    state.graph = exampleGraph(); state.isExample = true;
+    setGraph(exampleGraph()); state.isExample = true;
     setStatus('error', 'Проект не выбран');
     finishInit();
     showSticky('sheetWelcome');
@@ -2052,7 +2239,7 @@ async function initFile(host) {
     enterBroken('Файл не открылся: ' + disk.error);
   } else if (!disk.exists) {
     // Графа в проекте ещё нет — показываем пример; первая правка создаст файл.
-    state.graph = exampleGraph(); state.isExample = true;
+    setGraph(exampleGraph()); state.isExample = true;
     setStatus('saved', 'Новый граф');
   } else {
     const parsed = parseGraphText(disk.text);
@@ -2081,7 +2268,7 @@ function finishInit() {
 
 function enterBroken(reason) {
   file.blocked = 'corrupt';
-  state.graph = { languages: ['ru', 'en'], nodes: new Map(), links: [] };
+  setGraph({ languages: ['ru', 'en'], nodes: new Map(), links: [] });
   state.isExample = false;
   setStatus('error', 'Сохранение выключено');
   $('brokenText').textContent = reason;
@@ -2457,14 +2644,14 @@ async function init() {
     state.storage = 'local';
     try {
       const raw = localStorage.getItem(LOCAL_KEY);
-      if (raw) { state.graph = fromFileFormat(JSON.parse(raw)); loaded = true; }
+      if (raw) { setGraph(fromFileFormat(JSON.parse(raw))); loaded = true; }
       const cat = localStorage.getItem(LOCAL_KEY + '-catalog');
       if (cat) state.catalog = JSON.parse(cat);
     } catch { /* пусто — покажем пример */ }
     setStatus('local', 'Только в этом браузере');
   }
 
-  if (!loaded) { state.graph = exampleGraph(); state.isExample = true; }
+  if (!loaded) { setGraph(exampleGraph()); state.isExample = true; }
   renderAll();
   validate();
   requestAnimationFrame(() => { renderWires(); fitAll(); });
