@@ -1,0 +1,12 @@
+key,ru,en
+# Строки с ключом на # — комментарии. Перевод строки внутри ячейки — \n.,,
+# Общие,,
+common.ok,ОК,OK
+common.cancel,Отмена,Cancel
+common.yes,Да,Yes
+common.no,Нет,No
+common.back,Назад,Back
+common.close,Закрыть,Close
+common.apply,Применить,Apply
+common.on,Вкл,On
+common.off,Выкл,Off
