@@ -97,20 +97,55 @@ button { cursor: pointer; }
 .btn .count.warn { background: var(--warn); color: #1b1305; }
 
 /* ── Рабочая область ── */
-.work { position: relative; display: grid; grid-template-columns: 168px 1fr 320px; min-height: 0; }
-.palette {
-  background: var(--panel); border-right: 1px solid var(--line); padding: 12px; overflow-y: auto;
-  display: flex; flex-direction: column; gap: 6px;
+.work {
+  --insp-w: 320px; --pal-h: 56px;
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 6px var(--insp-w);
+  grid-template-rows: minmax(0, 1fr) 6px var(--pal-h);
+  grid-template-areas: "canvas vsplit insp" "hsplit vsplit insp" "pal vsplit insp"; min-height: 0;
 }
+.canvas { grid-area: canvas; }
+.inspector { grid-area: insp; }
+/* Границы панелей тянутся мышью (двойной щелчок — размер по умолчанию). */
+.split { background: var(--panel-2); position: relative; z-index: 4; touch-action: none; }
+.split::after { content: ''; position: absolute; inset: 0; background: var(--accent); opacity: 0; transition: opacity .12s; }
+.split:hover::after, .split.active::after { opacity: .55; }
+.split-v { grid-area: vsplit; cursor: col-resize; border-left: 1px solid var(--line); }
+.split-h { grid-area: hsplit; cursor: row-resize; border-top: 1px solid var(--line); }
+body.resizing, body.resizing * { user-select: none !important; }
+body.resizing-v, body.resizing-v * { cursor: col-resize !important; }
+body.resizing-h, body.resizing-h * { cursor: row-resize !important; }
+/* Палитра — полоса под холстом: ноду тянут из неё на холст. Высокая полоса — карточки с описаниями в несколько рядов. */
+.palette {
+  grid-area: pal; background: var(--panel); padding: 8px 12px;
+  display: flex; align-items: center; gap: 12px; min-width: 0; min-height: 0; overflow: hidden;
+}
+.palette.tall { align-items: flex-start; }
+.palette.tall #palItems { flex-wrap: wrap; overflow-x: hidden; overflow-y: auto; align-self: stretch; align-content: flex-start; }
+.palette.tall .pal-item { width: 150px; }
+.palette.tall .pal-item small { display: block; }
+.palette h2 { margin: 0; flex: none; }
 .palette h2, .inspector h2 {
   margin: 0 0 4px; font: 600 13px/1.2 var(--font-head); letter-spacing: .08em; text-transform: uppercase; color: var(--muted);
 }
-#palItems { display: flex; flex-direction: column; gap: 6px; }
+#palItems { display: flex; gap: 6px; overflow-x: auto; min-width: 0; flex: 1 1 auto; padding: 2px 0; }
 .pal-item {
   display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--node);
-  border-radius: 6px; padding: 6px 8px; text-align: left; width: 100%;
+  border-radius: 6px; padding: 7px 12px; text-align: left; flex: none; cursor: grab; touch-action: none; user-select: none;
 }
 .pal-item:hover { border-color: var(--muted); }
+.pal-item:active { cursor: grabbing; }
+.palette .pal-item small { display: none; } /* в низкой полосе описание — во всплывающей подсказке */
+.pal-help {
+  flex: none; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line); color: var(--muted);
+  display: grid; place-items: center; font: 600 12px var(--font-ui); cursor: help;
+}
+.pal-ghost {
+  position: fixed; z-index: 50; pointer-events: none; width: 180px; border-radius: 6px; overflow: hidden; opacity: .9;
+  background: var(--node); border: 1px solid var(--line); box-shadow: var(--node-shadow); font-size: 12px;
+}
+.pal-ghost .gh { padding: 4px 8px; color: #fff; font: 600 11px var(--font-head); letter-spacing: .06em; text-transform: uppercase; }
+.pal-ghost .gb { padding: 6px 8px; color: var(--muted); }
+.canvas.drop { box-shadow: inset 0 0 0 2px var(--accent); }
 .pal-item .sw { width: 10px; height: 10px; border-radius: 2px; flex: none; }
 .pal-item small { display: block; color: var(--muted); font-size: 11px; line-height: 1.25; }
 .hint { color: var(--muted); font-size: 12px; margin-top: 10px; line-height: 1.45; }
@@ -182,7 +217,7 @@ button { cursor: pointer; }
 
 /* ── Инспектор ── */
 .inspector {
-  background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; padding: 12px 14px 24px;
+  background: var(--panel); overflow-y: auto; padding: 12px 14px 24px;
   display: flex; flex-direction: column; gap: 12px;
 }
 .insp-empty { color: var(--muted); font-size: 13px; line-height: 1.5; }
@@ -196,6 +231,15 @@ button { cursor: pointer; }
 .field .help { font-size: 11.5px; color: var(--muted); line-height: 1.4; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .loc { display: grid; grid-template-columns: 28px 1fr; gap: 4px 6px; align-items: start; }
+.loc-head { display: flex; align-items: center; gap: 6px; }
+.loc-head .lbl { flex: 1; }
+.loc-toggle {
+  border: 1px solid var(--line); background: var(--node); border-radius: 4px; padding: 0 6px;
+  font: 500 10.5px/18px var(--font-mono); color: var(--muted); text-transform: uppercase;
+}
+.loc-toggle:hover { border-color: var(--muted); color: var(--ink); }
+.loc-toggle .ok { color: var(--ok); }
+.loc-toggle .miss { color: var(--warn); }
 .loc .lang { font: 500 11px/28px var(--font-mono); color: var(--muted); text-transform: uppercase; }
 .lines { display: flex; flex-direction: column; gap: 10px; }
 .line-card { border: 1px solid var(--line); border-radius: 6px; padding: 8px; background: var(--panel-2); display: flex; flex-direction: column; gap: 6px; }
@@ -244,24 +288,21 @@ button { cursor: pointer; }
 .hidden-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 
 /* ── Узкий экран ── */
-.mob-toggle { display: none; }
 @media (max-width: 860px) {
-  .work { grid-template-columns: 1fr; }
-  .palette {
-    position: absolute; left: 0; top: 0; bottom: 0; width: 180px; z-index: 6; transform: translateX(-100%);
-    transition: transform .2s; box-shadow: var(--node-shadow);
-  }
-  .palette.open { transform: none; }
+  .work { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; grid-template-areas: "canvas" "pal"; }
+  .split { display: none; }
+  .palette.tall { align-items: center; }
+  .palette.tall #palItems { flex-wrap: nowrap; overflow-x: auto; }
+  .palette.tall .pal-item small { display: none; }
+  .palette .pal-help, .palette h2 { display: none; }
   .inspector {
     position: absolute; left: 0; right: 0; bottom: 0; max-height: 55%; z-index: 6; border-left: 0; border-top: 1px solid var(--line);
     box-shadow: var(--node-shadow);
   }
   .inspector.closed { display: none; }
   .sheet { right: 12px; }
-  .mob-toggle { display: inline-flex; }
   .brand .sub { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { .palette { transition: none; } }
 </style>
 
 <div class="app">
@@ -270,7 +311,6 @@ button { cursor: pointer; }
       <h1>Сюжет</h1>
       <span class="sub" id="brandSub">Weapon Keeper · квесты, рация, триггеры</span>
     </div>
-    <button class="btn mob-toggle" id="btnPalette" type="button">+ Нода</button>
     <span class="status" id="status" data-state="idle">Загрузка…</span>
     <button class="btn" id="btnIssues" type="button" title="Проверка графа">Проверка <span class="count" id="issueCount">0</span></button>
     <button class="btn theme-btn" id="btnTheme" type="button" title="Светлая / тёмная тема" aria-label="Переключить тему">☾</button>
@@ -285,10 +325,8 @@ button { cursor: pointer; }
     <aside class="palette" id="palette" aria-label="Типы нод">
       <h2>Добавить</h2>
       <div id="palItems"></div>
-      <p class="hint">
-        Тяните от правого кружка ноды к левому кружку другой — это «нитка»: следующая нода включится, когда эта завершится.<br><br>
-        <kbd>Del</kbd> удалить · <kbd>Ctrl</kbd>+<kbd>D</kbd> копия · <kbd>Ctrl</kbd>+<kbd>Z</kbd> отмена · колесо — масштаб, фон — сдвиг.
-      </p>
+      <span class="pal-help" tabindex="0" role="note" aria-label="Подсказка"
+        title="Перетащите ноду из полосы на холст.&#10;Нитка — от правого кружка ноды к левому кружку другой: следующая нода включится, когда эта завершится.&#10;Del — удалить · Ctrl+D — копия · Ctrl+Z — отмена · колесо — масштаб, фон — сдвиг.">?</span>
     </aside>
 
     <main class="canvas" id="canvas" aria-label="Граф сюжета">
@@ -426,6 +464,8 @@ button { cursor: pointer; }
       <input class="hidden-file" type="file" id="fileCatalog" accept=".json,application/json">
     </main>
 
+    <div class="split split-v" id="splitV" role="separator" aria-orientation="vertical" aria-label="Ширина панели свойств" title="Потяните, чтобы изменить ширину. Двойной щелчок — как было."></div>
+    <div class="split split-h" id="splitH" role="separator" aria-orientation="horizontal" aria-label="Высота панели нод" title="Потяните, чтобы изменить высоту. Двойной щелчок — как было."></div>
     <aside class="inspector" id="inspector" aria-label="Свойства ноды"></aside>
   </div>
 </div>
@@ -842,19 +882,53 @@ function catalogInput(n, key, catalogKey, label, required) {
   return wrap;
 }
 
+// Переводы (все языки, кроме первого) по умолчанию свёрнуты; кнопка у подписи поля раскрывает их.
+// Раскрытость помнится для этого поля этой ноды, пока открыт редактор.
+const locOpen = new WeakMap(); // объект с текстами → Set раскрытых ключей
 function locInput(owner, key, label, multiline, requiredFirst) {
   if (!owner[key] || typeof owner[key] !== 'object') owner[key] = {};
-  const box = el('div', { class: 'field' }, el('div', { class: 'lbl', text: label }));
+  const others = langs().slice(1);
+  const opened = locOpen.get(owner) || new Set();
+  const isOpen = () => opened.has(key);
+  const head = el('div', { class: 'loc-head' }, el('div', { class: 'lbl', text: label }));
+  const box = el('div', { class: 'field' }, head);
   const grid = el('div', { class: 'loc' });
+  const extra = [];
+  let toggle = null;
+  const paintToggle = () => {
+    if (!toggle) return;
+    toggle.textContent = '';
+    toggle.append(isOpen() ? '▾ ' : '▸ ');
+    others.forEach((lang, i) => {
+      if (i) toggle.append(' ');
+      const filled = !!(owner[key][lang] || '').trim();
+      toggle.append(lang, el('span', { class: filled ? 'ok' : 'miss', text: filled ? '✓' : '·' }));
+    });
+    toggle.setAttribute('aria-expanded', String(isOpen()));
+    toggle.title = isOpen() ? 'Свернуть переводы' : 'Показать переводы';
+  };
+  if (others.length) {
+    toggle = el('button', { class: 'loc-toggle', type: 'button', onclick: () => {
+      if (isOpen()) opened.delete(key); else opened.add(key);
+      locOpen.set(owner, opened);
+      for (const e of extra) e.hidden = !isOpen();
+      paintToggle();
+      if (isOpen() && extra[1]) extra[1].focus();
+    } });
+    head.append(toggle);
+  }
   langs().forEach((lang, i) => {
     const control = multiline ? el('textarea', { rows: 2 }) : el('input', { type: 'text', autocomplete: 'off' });
     control.id = fid();
     control.value = owner[key][lang] || '';
     control.setAttribute('aria-label', `${label} (${lang})`);
     if (i === 0 && requiredFirst) control.setAttribute('placeholder', 'обязательно');
-    control.addEventListener('input', () => { beginEdit(true); owner[key][lang] = control.value; changed(false); });
-    grid.append(el('label', { class: 'lang', for: control.id, text: lang }), control);
+    control.addEventListener('input', () => { beginEdit(true); owner[key][lang] = control.value; changed(false); if (i) paintToggle(); });
+    const tag = el('label', { class: 'lang', for: control.id, text: lang });
+    if (i) { tag.hidden = !isOpen(); control.hidden = !isOpen(); extra.push(tag, control); }
+    grid.append(tag, control);
   });
+  paintToggle();
   box.append(grid);
   return box;
 }
@@ -873,7 +947,7 @@ function renderInspector() {
   }
   if (!n) {
     insp.append(el('h2', { text: 'Свойства' }),
-      el('div', { class: 'insp-empty', text: 'Выберите ноду, чтобы изменить её. Новую ноду добавьте слева — она появится в центре экрана.' }));
+      el('div', { class: 'insp-empty', text: 'Выберите ноду, чтобы изменить её. Новую ноду перетащите на холст из полосы внизу.' }));
     insp.classList.add('closed');
     return;
   }
@@ -1339,16 +1413,50 @@ function duplicateSelection() {
   changed(true);
 }
 
-function addNode(type) {
-  const r = canvas.getBoundingClientRect();
-  const c = toWorld(r.left + r.width / 2, r.top + r.height / 2);
-  const offset = (state.graph.nodes.size % 5) * 24;
+// Новая нода — только перетаскиванием из палитры: встаёт туда, где отпустили (at — точка на экране).
+function addNode(type, at) {
+  const w = toWorld(at.x, at.y);
   beginEdit(false);
-  const n = newNode(type, c.x - 115 + offset, c.y - 40 + offset);
+  const n = newNode(type, w.x - 40, w.y - 12); // курсор — на заголовке новой ноды
   state.graph.nodes.set(n.id, n);
   state.sel = { node: n.id, link: null };
-  $('palette').classList.remove('open');
   changed(true);
+}
+
+// Перетаскивание из палитры: призрак ноды идёт за курсором, на холсте — рамка «сюда можно».
+let palDrag = null;
+function overCanvas(x, y) {
+  const hit = document.elementFromPoint(x, y);
+  return !!(hit && hit.closest('#canvas') && !hit.closest('.sheet, .zoom, .banner'));
+}
+function palPointerDown(e, type) {
+  if (e.button !== 0) return;
+  palDrag = { type, id: e.pointerId, x0: e.clientX, y0: e.clientY, ghost: null, moved: false };
+  e.currentTarget.setPointerCapture(e.pointerId);
+}
+function palPointerMove(e) {
+  const d = palDrag;
+  if (!d || e.pointerId !== d.id) return;
+  if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 5) return;
+  if (!d.moved) {
+    d.moved = true;
+    d.ghost = el('div', { class: 'pal-ghost' },
+      el('div', { class: 'gh', style: `background:${typeColor(d.type)}`, text: TYPES[d.type].label }),
+      el('div', { class: 'gb', text: TYPES[d.type].desc }));
+    document.body.append(d.ghost);
+  }
+  d.ghost.style.left = (e.clientX - 40) + 'px';
+  d.ghost.style.top = (e.clientY - 12) + 'px';
+  canvas.classList.toggle('drop', overCanvas(e.clientX, e.clientY));
+}
+function palPointerUp(e, cancelled) {
+  const d = palDrag;
+  if (!d || e.pointerId !== d.id) return;
+  palDrag = null;
+  canvas.classList.remove('drop');
+  if (d.ghost) d.ghost.remove();
+  if (cancelled || !d.moved) return; // щелчок без перетаскивания ничего не добавляет
+  if (overCanvas(e.clientX, e.clientY)) addNode(d.type, { x: e.clientX, y: e.clientY });
 }
 
 document.addEventListener('keydown', (e) => {
@@ -1372,7 +1480,6 @@ function hideSticky(id) { $(id).hidden = true; }
 document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => closeSheets()));
 
 $('btnIssues').addEventListener('click', () => { if (openSheet('sheetIssues')) renderIssues(); });
-$('btnPalette').addEventListener('click', () => $('palette').classList.toggle('open'));
 
 $('btnLangs').addEventListener('click', () => {
   if (!openSheet('sheetLangs')) return;
@@ -2200,19 +2307,88 @@ function exampleGraph() {
   return g;
 }
 
+// ───────────────────────── Размеры панелей ─────────────────────────
+// Ширина свойств и высота палитры тянутся за границы; размеры запоминаются в этом браузере/приложении.
+
+const LAYOUT_KEY = 'wk-story-layout-v1';
+const LAYOUT_DEFAULT = { inspW: 320, palH: 56 };
+const layout = { ...LAYOUT_DEFAULT };
+const work = document.querySelector('.work');
+
+function clampLayout() {
+  const r = work.getBoundingClientRect();
+  layout.inspW = Math.round(Math.min(Math.max(layout.inspW, 240), Math.max(240, r.width * 0.6)));
+  layout.palH = Math.round(Math.min(Math.max(layout.palH, 44), Math.max(44, r.height * 0.5)));
+}
+function applyLayout() {
+  clampLayout();
+  work.style.setProperty('--insp-w', layout.inspW + 'px');
+  work.style.setProperty('--pal-h', layout.palH + 'px');
+  $('palette').classList.toggle('tall', layout.palH >= 84);
+}
+function saveLayout() { try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout)); } catch { /* только на сеанс */ } }
+function loadLayout() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(LAYOUT_KEY) || 'null');
+    if (saved && Number.isFinite(saved.inspW)) layout.inspW = saved.inspW;
+    if (saved && Number.isFinite(saved.palH)) layout.palH = saved.palH;
+  } catch { /* по умолчанию */ }
+  applyLayout();
+}
+
+function makeSplitter(elm, axis) {
+  let start = null;
+  elm.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    elm.setPointerCapture(e.pointerId);
+    start = { x: e.clientX, y: e.clientY, inspW: layout.inspW, palH: layout.palH };
+    elm.classList.add('active');
+    document.body.classList.add('resizing', axis === 'v' ? 'resizing-v' : 'resizing-h');
+  });
+  elm.addEventListener('pointermove', (e) => {
+    if (!start) return;
+    if (axis === 'v') layout.inspW = start.inspW - (e.clientX - start.x); // тянем влево — панель шире
+    else layout.palH = start.palH - (e.clientY - start.y);               // тянем вверх — полоса выше
+    applyLayout();
+    renderWires();
+  });
+  const end = () => {
+    if (!start) return;
+    start = null;
+    elm.classList.remove('active');
+    document.body.classList.remove('resizing', 'resizing-v', 'resizing-h');
+    saveLayout();
+  };
+  elm.addEventListener('pointerup', end);
+  elm.addEventListener('pointercancel', end);
+  elm.addEventListener('dblclick', () => {
+    if (axis === 'v') layout.inspW = LAYOUT_DEFAULT.inspW; else layout.palH = LAYOUT_DEFAULT.palH;
+    applyLayout();
+    saveLayout();
+  });
+}
+makeSplitter($('splitV'), 'v');
+makeSplitter($('splitH'), 'h');
+window.addEventListener('resize', applyLayout);
+
 // ───────────────────────── Запуск ─────────────────────────
 
 function buildPalette() {
   const box = $('palItems');
   for (const [type, t] of Object.entries(TYPES)) {
-    box.append(el('button', { class: 'pal-item', type: 'button', onclick: () => addNode(type) },
-      el('span', { class: 'sw', style: `background:${typeColor(type)}` }),
-      el('span', {}, t.label, el('small', { text: t.desc }))));
+    const item = el('button', { class: 'pal-item', type: 'button', title: `${t.label} — ${t.desc}. Перетащите на холст.`,
+      onpointerdown: (e) => palPointerDown(e, type), onpointermove: palPointerMove,
+      onpointerup: (e) => palPointerUp(e, false), onpointercancel: (e) => palPointerUp(e, true) },
+    el('span', { class: 'sw', style: `background:${typeColor(type)}` }),
+    el('span', {}, t.label, el('small', { text: t.desc })));
+    box.append(item);
   }
 }
 
 async function init() {
   buildPalette();
+  loadLayout();
   applyView();
 
   let loaded = false;
