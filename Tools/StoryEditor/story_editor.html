@@ -1,4 +1,5 @@
 <title>Сюжет Weapon Keeper</title>
+<!-- story-host-api: 1 — версия моста storyHost, которую ждёт этот редактор (приложение для Mac: Tools/StoryEditor/app/main.js, HOST_API) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -228,6 +229,11 @@ button { cursor: pointer; }
 .msg.err { color: var(--danger); }
 .msg.ok { color: var(--ok); }
 
+.backups { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.backups li { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; border: 1px solid var(--line); background: var(--node); border-radius: 6px; padding: 6px 8px; font-size: 12.5px; }
+.backups small { display: block; color: var(--muted); font-size: 11.5px; }
+.sheet[data-sticky] { border-left: 3px solid var(--accent); z-index: 6; }
+
 .colors { display: grid; grid-template-columns: 1fr auto auto; gap: 6px 10px; align-items: center; }
 .colors label { font-size: 13px; display: flex; align-items: center; gap: 8px; }
 .colors .sw { width: 10px; height: 10px; border-radius: 2px; }
@@ -262,7 +268,7 @@ button { cursor: pointer; }
   <header class="bar">
     <div class="brand">
       <h1>Сюжет</h1>
-      <span class="sub">Weapon Keeper · квесты, рация, триггеры</span>
+      <span class="sub" id="brandSub">Weapon Keeper · квесты, рация, триггеры</span>
     </div>
     <button class="btn mob-toggle" id="btnPalette" type="button">+ Нода</button>
     <span class="status" id="status" data-state="idle">Загрузка…</span>
@@ -337,6 +343,7 @@ button { cursor: pointer; }
           <textarea id="catalogText" aria-label="Текст каталога" placeholder="{ &quot;repairPoints&quot;: [ … ] }"></textarea>
           <div class="actions"><button class="btn" type="button" id="catalogApplyText">Применить</button></div>
         </div>
+        <div class="actions" id="catalogProjectRow" hidden><button class="btn" type="button" id="catalogReload">Перечитать из проекта</button></div>
         <div class="msg" id="catalogMsg"></div>
       </section>
 
@@ -355,10 +362,64 @@ button { cursor: pointer; }
       <section class="sheet" id="sheetExport" hidden aria-label="Экспорт">
         <button class="btn close" type="button" data-close>Закрыть</button>
         <h3>story_graph.json</h3>
-        <p class="hint" style="margin-top:0">Скачивание здесь недоступно — скопируйте текст и сохраните в Assets/01_GAME/08_Story/story_graph.json. Или просто напишите Claude «синхронизируй граф».</p>
+        <p class="hint" style="margin-top:0" id="exportHint">Скачивание здесь недоступно — скопируйте текст и сохраните в Assets/01_GAME/08_Story/story_graph.json. Или просто напишите Claude «синхронизируй граф».</p>
         <textarea id="exportText" aria-label="JSON графа" readonly></textarea>
         <div class="actions"><button class="btn primary" type="button" id="exportCopy">Копировать</button></div>
         <div class="msg" id="exportMsg"></div>
+      </section>
+
+      <!-- Приложение для Mac (режим «файлы проекта») -->
+      <section class="sheet" id="sheetWelcome" hidden data-sticky aria-label="Выбор проекта">
+        <h3>Папка проекта</h3>
+        <p class="hint" style="margin-top:0">Укажите папку Unity-проекта Weapon Keeper (ту, где лежит Assets). Граф будет храниться прямо в проекте — Assets/01_GAME/08_Story/story_graph.json, — а приложение само сохраняет правки и делает резервные копии.</p>
+        <div class="actions"><button class="btn primary" type="button" id="welcomeChoose">Выбрать папку…</button></div>
+        <div class="msg" id="welcomeMsg"></div>
+      </section>
+
+      <section class="sheet" id="sheetDraft" hidden data-sticky aria-label="Несохранённые правки">
+        <h3>Несохранённые правки</h3>
+        <p class="hint" style="margin-top:0" id="draftText"></p>
+        <div class="actions">
+          <button class="btn primary" type="button" id="draftRestore">Восстановить правки</button>
+          <button class="btn" type="button" id="draftDiscard">Оставить файл проекта</button>
+        </div>
+        <p class="hint">Что бы вы ни выбрали, вторая версия уйдёт в «Историю версий» — её можно будет вернуть.</p>
+        <div class="msg" id="draftMsg"></div>
+      </section>
+
+      <section class="sheet" id="sheetConflict" hidden data-sticky aria-label="Файл изменён снаружи">
+        <h3>Файл изменён снаружи</h3>
+        <p class="hint" style="margin-top:0">story_graph.json поменяли вне редактора (git pull, Unity или другая программа), а у вас есть несохранённые правки. Какую версию оставить?</p>
+        <div class="actions">
+          <button class="btn primary" type="button" id="conflictMine">Мои правки</button>
+          <button class="btn" type="button" id="conflictDisk">Версию с диска</button>
+        </div>
+        <p class="hint">Вторая версия не пропадёт — она уйдёт в «Историю версий».</p>
+        <div class="msg" id="conflictMsg"></div>
+      </section>
+
+      <section class="sheet" id="sheetBroken" hidden data-sticky aria-label="Файл графа не читается">
+        <h3>Файл графа не читается</h3>
+        <p class="hint" style="margin-top:0" id="brokenText"></p>
+        <p class="hint">Сохранение выключено, чтобы ничего не перезаписать. Восстановите одну из резервных копий ниже или почините файл вручную и перезагрузите окно (Вид → Перезагрузить).</p>
+        <div class="actions">
+          <button class="btn" type="button" id="brokenReveal">Показать файл в Finder</button>
+          <button class="btn" type="button" id="brokenFolder">Папка копий</button>
+        </div>
+        <ul class="backups" id="brokenList"></ul>
+        <div class="msg" id="brokenMsg"></div>
+      </section>
+
+      <section class="sheet" id="sheetHistory" hidden aria-label="История версий">
+        <button class="btn close" type="button" data-close>Закрыть</button>
+        <h3>История версий</h3>
+        <p class="hint" style="margin-top:0">Копии делаются при открытии, раз в 5 минут, пока идут правки, и перед любым восстановлением. Хранятся последние 100 и по одной за день за месяц. Восстановление тоже можно отменить — через <kbd>Ctrl</kbd>+<kbd>Z</kbd> или эту же историю.</p>
+        <div class="actions">
+          <button class="btn" type="button" id="historySnap">Сделать копию сейчас</button>
+          <button class="btn" type="button" id="historyFolder">Папка копий</button>
+        </div>
+        <ul class="backups" id="historyList"></ul>
+        <div class="msg" id="historyMsg"></div>
       </section>
 
       <input class="hidden-file" type="file" id="fileImport" accept=".json,application/json">
@@ -456,7 +517,7 @@ const state = {
   sel: { node: null, link: null },
   isExample: false,
   issues: [],
-  storage: 'none', // db | local | none
+  storage: 'none', // db | local | file (приложение для Mac) | none
 };
 
 const $ = (id) => document.getElementById(id);
@@ -528,6 +589,10 @@ function beginEdit(coalesce) {
   if (coalesce) history.pendingTimer = setTimeout(() => { history.pending = false; }, 900);
   if (state.isExample) adoptExample();
 }
+// В приложении для Mac Cmd+Z приходит и как нажатие, и как команда меню — второй вызов в пределах 150 мс пропускается.
+let lastUndoAt = 0;
+function undoOnce() { if (performance.now() - lastUndoAt < 150) return; lastUndoAt = performance.now(); undo(); }
+function redoOnce() { if (performance.now() - lastUndoAt < 150) return; lastUndoAt = performance.now(); redo(); }
 function undo() {
   if (!history.undo.length) return;
   history.redo.push(snapshot());
@@ -708,6 +773,14 @@ function renderBanner() {
   if (state.isExample) {
     b.hidden = false;
     b.textContent = 'Это пример сюжета. Любая правка сохранит его как ваш граф — правьте его или удалите ноды и начните с нуля.';
+  } else if (state.storage === 'file' && file.blocked) {
+    b.hidden = false;
+    b.textContent = file.blocked === 'newer'
+      ? 'Граф сохранён более новой версией редактора — открыт только для просмотра. Обновите проект (git pull) и перезагрузите окно.'
+      : 'Файл графа не читается — сохранение выключено, пока не восстановите копию.';
+  } else if (state.storage === 'file' && file.info && file.info.editorSource === 'bundled-newer-needed') {
+    b.hidden = false;
+    b.textContent = 'Редактор в проекте требует более новую версию приложения — открыта встроенная копия. Скачайте свежую сборку (Docs/Story/STORY_GRAPH.md, «Приложение для Mac»).';
   } else if (state.storage === 'local') {
     b.hidden = false;
     b.textContent = 'Общее хранилище недоступно — граф сохраняется только в этом браузере. Не забудьте скачать JSON.';
@@ -1281,8 +1354,8 @@ function addNode(type) {
 document.addEventListener('keydown', (e) => {
   const typing = e.target.closest && e.target.closest('input, textarea, select');
   const mod = e.ctrlKey || e.metaKey;
-  if (mod && e.key.toLowerCase() === 'z' && !typing) { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
-  if (mod && e.key.toLowerCase() === 'y' && !typing) { e.preventDefault(); redo(); return; }
+  if (mod && e.key.toLowerCase() === 'z' && !typing) { e.preventDefault(); if (e.shiftKey) redoOnce(); else undoOnce(); return; }
+  if (mod && e.key.toLowerCase() === 'y' && !typing) { e.preventDefault(); redoOnce(); return; }
   if (typing) return;
   if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicateSelection(); return; }
   if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSelection(); }
@@ -1291,9 +1364,12 @@ document.addEventListener('keydown', (e) => {
 
 // ───────────────────────── Панели ─────────────────────────
 
-function closeSheets() { document.querySelectorAll('.sheet').forEach((s) => { s.hidden = true; }); }
+// Окна с data-sticky (выбор проекта, конфликт, битый файл) закрываются только своими кнопками — не Esc и не другими окнами.
+function closeSheets(force) { document.querySelectorAll('.sheet').forEach((s) => { if (force || !s.hasAttribute('data-sticky')) s.hidden = true; }); }
 function openSheet(id) { const was = !$(id).hidden; closeSheets(); if (!was) $(id).hidden = false; return !was; }
-document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', closeSheets));
+function showSticky(id) { $(id).hidden = false; }
+function hideSticky(id) { $(id).hidden = true; }
+document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => closeSheets()));
 
 $('btnIssues').addEventListener('click', () => { if (openSheet('sheetIssues')) renderIssues(); });
 $('btnPalette').addEventListener('click', () => $('palette').classList.toggle('open'));
@@ -1381,7 +1457,7 @@ function importText(text) {
   }
 }
 
-$('btnExport').addEventListener('click', exportGraph);
+$('btnExport').addEventListener('click', () => { if (state.storage === 'file') { if (openSheet('sheetHistory')) renderHistory(); } else exportGraph(); });
 $('exportCopy').addEventListener('click', async () => {
   const ta = $('exportText');
   try { await navigator.clipboard.writeText(ta.value); $('exportMsg').className = 'msg ok'; $('exportMsg').textContent = 'Скопировано.'; }
@@ -1397,6 +1473,7 @@ async function exportGraph() {
   }
   openSheet('sheetExport');
   $('sheetExport').hidden = false;
+  if (state.storage === 'file') $('exportHint').textContent = 'Граф и так сохраняется в проект автоматически. Здесь — его текст, если нужно скопировать.';
   $('exportText').value = json;
   $('exportMsg').textContent = '';
 }
@@ -1525,11 +1602,37 @@ function toFileFormat() {
     if (out.lines) out.lines = out.lines.map((l) => ({ seconds: Number(l.seconds) || 0, text: toLocArray(l.text) }));
     return out;
   });
-  return { version: FILE_VERSION, languages: langs(), nodes, links: state.graph.links.map((l) => ({ ...l })) };
+  return { ...(state.graph.extra || {}), version: FILE_VERSION, languages: langs(), nodes, links: state.graph.links.map((l) => ({ ...l })) };
 }
 
+// Миграции формата: MIGRATIONS[n] переводит файл версии n в n+1. Новые версии редактора открывают старые файлы;
+// при смене формата — поднять FILE_VERSION и дописать сюда шаг (старые шаги не трогать).
+const MIGRATIONS = {
+  // 1: (data) => { /* переименования полей */ data.version = 2; return data; },
+};
+
+function migrateGraph(data) {
+  let version = Number(data.version) || 1;
+  if (version > FILE_VERSION) {
+    const err = new Error(`файл сохранён более новой версией редактора (формат ${version}, этот редактор знает до ${FILE_VERSION})`);
+    err.newer = true;
+    throw err;
+  }
+  while (version < FILE_VERSION) {
+    const step = MIGRATIONS[version];
+    if (!step) throw new Error(`нет миграции формата ${version} → ${version + 1}`);
+    data = step(JSON.parse(JSON.stringify(data)));
+    version = Number(data.version);
+  }
+  return data;
+}
+
+// Поля верхнего уровня, которых этот редактор не знает, сохраняются как есть — чтобы не потерять данные новых версий.
+const KNOWN_TOP = new Set(['version', 'languages', 'nodes', 'links']);
+
 function fromFileFormat(data) {
-  if (!data || typeof data !== 'object') throw new Error('не объект JSON');
+  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('не объект JSON');
+  data = migrateGraph(data);
   if (!Array.isArray(data.nodes) || !Array.isArray(data.links)) throw new Error('нет списков nodes и links');
   const nodes = new Map();
   for (const raw of data.nodes) {
@@ -1543,7 +1646,9 @@ function fromFileFormat(data) {
   const links = data.links.filter((l) => l && nodes.has(l.from) && nodes.has(l.to))
     .map((l) => ({ from: l.from, fromPort: l.fromPort || 'out', to: l.to, toPort: l.toPort || 'in' }));
   const languages = Array.isArray(data.languages) && data.languages.length ? data.languages.map(String) : ['ru', 'en'];
-  return { languages, nodes, links };
+  const extra = {};
+  for (const [k, v] of Object.entries(data)) if (!KNOWN_TOP.has(k)) extra[k] = v;
+  return { languages, nodes, links, extra };
 }
 
 // ───────────────────────── Хранение ─────────────────────────
@@ -1559,8 +1664,9 @@ function setStatus(stateName, text) { const s = $('status'); s.dataset.state = s
 function scheduleSync() {
   if (state.isExample) return;
   clearTimeout(syncTimer);
+  if (state.storage === 'file') { fileDirty(); if (file.blocked || file.conflict) return; }
   setStatus('saving', 'Сохраняется…');
-  syncTimer = setTimeout(sync, 700);
+  syncTimer = setTimeout(sync, state.storage === 'file' ? 1000 : 700);
 }
 
 async function sync() {
@@ -1568,6 +1674,7 @@ async function sync() {
   syncing = true;
   try {
     if (state.storage === 'db') await syncDb();
+    else if (state.storage === 'file') await syncFile();
     else if (state.storage === 'local') {
       try { localStorage.setItem(LOCAL_KEY, JSON.stringify(toFileFormat())); setStatus('local', 'Сохранено в браузере'); }
       catch { setStatus('error', 'Не сохранено — скачайте JSON'); }
@@ -1603,7 +1710,10 @@ async function syncDb() {
 }
 
 async function saveCatalog() {
-  if (state.storage === 'db') {
+  if (state.storage === 'file') {
+    if (!file.info || !file.info.project) return;
+    try { await file.host.writeCatalog(JSON.stringify(state.catalog, null, 2) + '\n'); } catch { setStatus('error', 'Каталог не сохранён'); }
+  } else if (state.storage === 'db') {
     try { await caps.db.doc('graph/catalog').set({ lists: state.catalog }); } catch { setStatus('error', 'Каталог не сохранён'); }
   } else {
     try { localStorage.setItem(LOCAL_KEY + '-catalog', JSON.stringify(state.catalog)); } catch { /* только в памяти */ }
@@ -1677,6 +1787,388 @@ function watchDb(db) {
   }, () => {});
 }
 
+// ───────────────────────── Приложение для Mac: файлы проекта ─────────────────────────
+// window.storyHost даёт Tools/StoryEditor/app (preload.js). Граф — Assets/01_GAME/08_Story/story_graph.json в проекте.
+// Правила: битый файл не перезаписывается; файл, изменённый снаружи, не затирается молча; любая вытесненная версия
+// сначала уходит в резервную копию; пока правки не записаны, они лежат в черновике (переживёт сбой приложения).
+
+const file = {
+  host: null,
+  info: null,
+  mtimeMs: 0,     // mtime файла, который мы последними прочитали или записали (0 — файла нет)
+  diskText: null, // точный текст файла на диске, каким мы его знаем
+  cleanText: '',  // graphText() последнего сохранённого состояния — с ним сравнивается «есть ли несохранённое»
+  blocked: '',    // '' | 'corrupt' | 'newer' — сохранение выключено
+  conflict: false,
+  draftTimer: 0,
+};
+
+const graphText = () => JSON.stringify(toFileFormat(), null, 2) + '\n';
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const isDirty = () => !state.isExample && graphText() !== file.cleanText;
+
+// Каждая правка: пометить окно «есть несохранённое» и через 250 мс записать черновик.
+function fileDirty() {
+  if (!file.info || !file.info.project) return;
+  file.host.setDirty(true);
+  clearTimeout(file.draftTimer);
+  file.draftTimer = setTimeout(writeDraft, 250);
+  if (file.blocked) setStatus('error', file.blocked === 'newer' ? 'Только просмотр' : 'Сохранение выключено');
+  else if (file.conflict) setStatus('error', 'Выберите версию');
+}
+
+async function writeDraft() {
+  clearTimeout(file.draftTimer);
+  if (!isDirty()) return;
+  try { await file.host.writeDraft(graphText(), file.mtimeMs); } catch { /* черновик — страховка, не критично */ }
+}
+
+function markClean() {
+  file.host.setDirty(false);
+  clearTimeout(file.draftTimer);
+  file.host.clearDraft().catch(() => {});
+}
+
+async function syncFile() {
+  if (!file.info || !file.info.project) { setStatus('error', 'Проект не выбран'); return; }
+  if (file.blocked || file.conflict) return;
+  const text = graphText();
+  if (text === file.cleanText) { markClean(); setStatus('saved', 'Сохранено в проект'); return; }
+  const res = await file.host.writeGraph(text, file.mtimeMs);
+  if (res.conflict) { await openConflict(); return; }
+  file.mtimeMs = res.mtimeMs;
+  file.diskText = text;
+  file.cleanText = text;
+  if (!isDirty()) markClean();
+  setStatus('saved', 'Сохранено в проект');
+}
+
+// Приложение закрывается / перезагружает окно / меняет проект: дописать всё. true — на диске то же, что на экране.
+async function flushFile() {
+  clearTimeout(syncTimer);
+  for (let i = 0; syncing && i < 80; i++) await sleep(50);
+  if (!isDirty()) return true;
+  try { await sync(); } catch { /* ниже проверим */ }
+  for (let i = 0; syncing && i < 80; i++) await sleep(50);
+  if (!isDirty()) return true;
+  await writeDraft();
+  return false;
+}
+
+function loadGraphObject(g) {
+  state.graph = g;
+  state.isExample = false;
+  state.sel = { node: null, link: null };
+}
+
+// Разбор текста файла: { graph } или { error, newer }.
+function parseGraphText(text) {
+  try {
+    return { graph: fromFileFormat(JSON.parse(String(text).replace(/^﻿/, ''))) };
+  } catch (err) {
+    return { error: err.message || String(err), newer: !!err.newer };
+  }
+}
+
+async function initFile(host) {
+  file.host = host;
+  state.storage = 'file';
+  $('btnExport').textContent = 'История';
+  $('btnExport').title = 'История версий графа';
+  $('catalogProjectRow').hidden = false;
+  host.onFlushRequest(flushFile);
+  host.onFileChanged(onFileChanged);
+  host.onMenu(onMenu);
+
+  try { file.info = await host.getInfo(); } catch { file.info = null; }
+  const project = file.info && file.info.project;
+  if (project) $('brandSub').textContent = `${project.name} · 08_Story/story_graph.json`;
+
+  if (!project) {
+    state.graph = exampleGraph(); state.isExample = true;
+    setStatus('error', 'Проект не выбран');
+    finishInit();
+    showSticky('sheetWelcome');
+    return;
+  }
+
+  await loadCatalogFromProject(false);
+  const disk = await host.readGraph();
+  file.mtimeMs = disk.mtimeMs || 0;
+  file.diskText = disk.exists ? disk.text : null;
+
+  if (disk.error) {
+    enterBroken('Файл не открылся: ' + disk.error);
+  } else if (!disk.exists) {
+    // Графа в проекте ещё нет — показываем пример; первая правка создаст файл.
+    state.graph = exampleGraph(); state.isExample = true;
+    setStatus('saved', 'Новый граф');
+  } else {
+    const parsed = parseGraphText(disk.text);
+    if (parsed.graph) {
+      loadGraphObject(parsed.graph);
+      setStatus('saved', 'Сохранено в проект');
+    } else if (parsed.newer) {
+      const view = parseGraphText(JSON.stringify({ ...JSON.parse(disk.text.replace(/^﻿/, '')), version: FILE_VERSION }));
+      if (view.graph) loadGraphObject(view.graph);
+      file.blocked = 'newer';
+      setStatus('error', 'Только просмотр');
+    } else {
+      enterBroken('Файл не похож на граф сюжета: ' + parsed.error);
+    }
+  }
+  file.cleanText = state.isExample ? '' : graphText();
+  finishInit();
+  if (!file.blocked) await offerDraft();
+}
+
+function finishInit() {
+  renderAll();
+  validate();
+  requestAnimationFrame(() => { renderWires(); fitAll(); });
+}
+
+function enterBroken(reason) {
+  file.blocked = 'corrupt';
+  state.graph = { languages: ['ru', 'en'], nodes: new Map(), links: [] };
+  state.isExample = false;
+  setStatus('error', 'Сохранение выключено');
+  $('brokenText').textContent = reason;
+  showSticky('sheetBroken');
+  renderBackupList($('brokenList'), $('brokenMsg'));
+}
+
+// Черновик остался после сбоя (или приложение закрыли, не дописав) — предложить.
+async function offerDraft() {
+  let draft = null;
+  try { draft = await file.host.readDraft(); } catch { return; }
+  if (!draft) return;
+  const current = file.diskText === null ? '' : file.diskText;
+  if (draft.text === current || draft.text === file.cleanText) { file.host.clearDraft().catch(() => {}); return; }
+  const parsed = parseGraphText(draft.text);
+  if (!parsed.graph) {
+    // Нечитаемый черновик не выбрасываем — кладём в историю.
+    await file.host.backupNow(draft.text, 'draft-unreadable').catch(() => {});
+    file.host.clearDraft().catch(() => {});
+    return;
+  }
+  const when = draft.savedAt ? new Date(draft.savedAt).toLocaleString('ru-RU') : 'неизвестно когда';
+  const newerDisk = draft.baseMtimeMs && file.mtimeMs && Math.abs(draft.baseMtimeMs - file.mtimeMs) > 1;
+  $('draftText').textContent = `Прошлый сеанс закончился, не записав последние правки (${when}, нод: ${parsed.graph.nodes.size}).`
+    + (newerDisk ? ' Файл проекта с тех пор тоже менялся (git pull или Unity).' : '');
+  $('draftMsg').textContent = '';
+  showSticky('sheetDraft');
+  file.pendingDraft = draft;
+}
+
+$('draftRestore').addEventListener('click', async () => {
+  const draft = file.pendingDraft;
+  if (!draft) return;
+  const parsed = parseGraphText(draft.text);
+  if (file.diskText) await file.host.backupNow(file.diskText, 'before-draft').catch(() => {});
+  beginEdit(false);
+  loadGraphObject(parsed.graph);
+  file.pendingDraft = null;
+  hideSticky('sheetDraft');
+  changed(true);
+  fitAll();
+});
+$('draftDiscard').addEventListener('click', async () => {
+  const draft = file.pendingDraft;
+  if (draft) await file.host.backupNow(draft.text, 'draft-discarded').catch(() => {});
+  file.pendingDraft = null;
+  file.host.clearDraft().catch(() => {});
+  hideSticky('sheetDraft');
+});
+
+// Файл поменялся на диске. Своя запись — пропускаем; своих правок нет — перечитываем; есть — спрашиваем.
+async function onFileChanged() {
+  if (!file.info || !file.info.project) return;
+  for (let i = 0; syncing && i < 80; i++) await sleep(50);
+  let disk;
+  try { disk = await file.host.readGraph(); } catch { return; }
+  if (!disk.exists) {
+    file.mtimeMs = 0; file.diskText = null;
+    setStatus('error', 'Файл удалён снаружи — следующая правка создаст его заново');
+    return;
+  }
+  if (disk.text === file.diskText) { file.mtimeMs = disk.mtimeMs; return; }
+  if (file.blocked === 'corrupt') {
+    // Файл починили вручную — пробуем открыть.
+    const parsed = parseGraphText(disk.text);
+    if (!parsed.graph) { $('brokenText').textContent = 'Файл всё ещё не читается: ' + parsed.error; return; }
+    file.blocked = '';
+    hideSticky('sheetBroken');
+    applyDisk(disk, parsed.graph);
+    return;
+  }
+  if (isDirty() || file.conflict) { await openConflict(disk); return; }
+  const parsed = parseGraphText(disk.text);
+  if (!parsed.graph) {
+    // Снаружи записали что-то нечитаемое. Наше состояние цело — показываем, но файл не трогаем.
+    file.mtimeMs = disk.mtimeMs; file.diskText = disk.text;
+    enterBrokenKeep('Файл изменён снаружи и не читается: ' + parsed.error);
+    return;
+  }
+  applyDisk(disk, parsed.graph);
+}
+
+function applyDisk(disk, graph) {
+  file.mtimeMs = disk.mtimeMs;
+  file.diskText = disk.text;
+  beginEdit(false);
+  loadGraphObject(graph);
+  file.cleanText = graphText();
+  history.pending = false;
+  renderAll();
+  validate();
+  markClean();
+  setStatus('saved', 'Обновлено с диска');
+}
+
+// Как enterBroken, но граф на экране не очищаем — его можно восстановить в файл из «Истории» или сделать копию.
+function enterBrokenKeep(reason) {
+  file.blocked = 'corrupt';
+  setStatus('error', 'Сохранение выключено');
+  $('brokenText').textContent = reason + ' Граф на экране — последняя целая версия; «Сделать копию сейчас» в «Истории» сохранит её.';
+  showSticky('sheetBroken');
+  renderBackupList($('brokenList'), $('brokenMsg'));
+  renderBanner();
+}
+
+async function openConflict(disk) {
+  file.conflict = true;
+  clearTimeout(syncTimer);
+  file.conflictDisk = disk || await file.host.readGraph();
+  writeDraft();
+  setStatus('error', 'Выберите версию');
+  $('conflictMsg').textContent = '';
+  showSticky('sheetConflict');
+}
+
+$('conflictMine').addEventListener('click', async () => {
+  const disk = file.conflictDisk;
+  try {
+    if (disk && disk.exists && disk.text) await file.host.backupNow(disk.text, 'conflict-disk');
+  } catch (err) { $('conflictMsg').className = 'msg err'; $('conflictMsg').textContent = 'Не удалось сохранить копию версии с диска: ' + err.message; return; }
+  file.mtimeMs = disk && disk.exists ? disk.mtimeMs : 0;
+  file.diskText = disk && disk.exists ? disk.text : null;
+  file.conflict = false;
+  file.conflictDisk = null;
+  hideSticky('sheetConflict');
+  file.cleanText = '';
+  scheduleSync();
+});
+$('conflictDisk').addEventListener('click', async () => {
+  const disk = file.conflictDisk;
+  const parsed = disk && disk.exists ? parseGraphText(disk.text) : null;
+  if (!parsed || !parsed.graph) {
+    $('conflictMsg').className = 'msg err';
+    $('conflictMsg').textContent = 'Версия с диска не читается' + (parsed ? ': ' + parsed.error : '') + ' — оставьте свои правки.';
+    return;
+  }
+  try { await file.host.backupNow(graphText(), 'conflict-mine'); }
+  catch (err) { $('conflictMsg').className = 'msg err'; $('conflictMsg').textContent = 'Не удалось сохранить копию ваших правок: ' + err.message; return; }
+  file.conflict = false;
+  file.conflictDisk = null;
+  hideSticky('sheetConflict');
+  applyDisk(disk, parsed.graph);
+});
+
+// ── История версий ──
+
+const REASONS = {
+  open: 'при открытии', auto: 'автоматически', manual: 'вручную', 'before-restore': 'перед восстановлением',
+  'before-draft': 'перед восстановлением черновика', 'draft-discarded': 'отброшенный черновик', 'draft-unreadable': 'нечитаемый черновик',
+  'conflict-disk': 'версия с диска при конфликте', 'conflict-mine': 'ваши правки при конфликте', corrupt: 'нечитаемый файл',
+};
+
+async function renderHistory() {
+  $('historyMsg').textContent = '';
+  await renderBackupList($('historyList'), $('historyMsg'));
+}
+
+async function renderBackupList(list, msg) {
+  list.replaceChildren();
+  let backups = [];
+  try { backups = await file.host.listBackups(); } catch (err) { msg.className = 'msg err'; msg.textContent = 'Список копий не открылся: ' + err.message; return; }
+  if (!backups.length) { list.append(el('li', {}, el('span', { text: 'Копий пока нет.' }))); return; }
+  for (const b of backups) {
+    const when = b.time ? new Date(b.time).toLocaleString('ru-RU') : b.id;
+    const info = [REASONS[b.reason] || b.reason, b.nodes === null ? 'не читается' : `нод: ${b.nodes}`].filter(Boolean).join(' · ');
+    list.append(el('li', {},
+      el('span', {}, when, el('small', { text: info })),
+      el('button', { class: 'btn', type: 'button', text: 'Восстановить', disabled: b.nodes === null, onclick: () => restoreBackup(b.id, msg) })));
+  }
+}
+
+async function restoreBackup(id, msg) {
+  try {
+    const text = await file.host.readBackup(id);
+    const parsed = parseGraphText(text);
+    if (!parsed.graph) throw new Error(parsed.error);
+    // Текущее состояние — в копию, чтобы восстановление можно было отменить.
+    if (file.blocked === 'corrupt') { if (file.diskText) await file.host.backupNow(file.diskText, 'corrupt'); }
+    else if (!state.isExample) await file.host.backupNow(graphText(), 'before-restore');
+    beginEdit(false);
+    loadGraphObject(parsed.graph);
+    if (file.blocked === 'corrupt') { file.blocked = ''; hideSticky('sheetBroken'); }
+    changed(true);
+    fitAll();
+    msg.className = 'msg ok';
+    msg.textContent = `Восстановлено: нод — ${parsed.graph.nodes.size}.`;
+    if (!$('sheetHistory').hidden) renderHistory();
+  } catch (err) {
+    msg.className = 'msg err';
+    msg.textContent = 'Не получилось восстановить: ' + err.message;
+  }
+}
+
+$('historySnap').addEventListener('click', async () => {
+  try {
+    await file.host.backupNow(graphText(), 'manual');
+    renderHistory();
+  } catch (err) { $('historyMsg').className = 'msg err'; $('historyMsg').textContent = err.message; }
+});
+$('historyFolder').addEventListener('click', () => file.host.showBackups());
+$('brokenFolder').addEventListener('click', () => file.host.showBackups());
+$('brokenReveal').addEventListener('click', () => file.host.revealGraph());
+
+$('welcomeChoose').addEventListener('click', async () => {
+  const msg = $('welcomeMsg');
+  msg.textContent = '';
+  const res = await file.host.chooseProject();
+  if (res && res.error) { msg.className = 'msg err'; msg.textContent = res.error; }
+  else if (res && res.ok) { msg.className = 'msg ok'; msg.textContent = 'Открываю проект…'; }
+});
+
+async function loadCatalogFromProject(report) {
+  const msg = $('catalogMsg');
+  try {
+    const res = await file.host.readCatalog();
+    if (!res.exists) { if (report) { msg.className = 'msg err'; msg.textContent = 'В проекте ещё нет scene_catalog.json — сделайте Export Scene Catalog в Unity.'; } return; }
+    const data = JSON.parse(res.text.replace(/^﻿/, ''));
+    const clean = {};
+    for (const key of Object.keys(CATALOG_LISTS)) {
+      if (Array.isArray(data[key])) clean[key] = data[key].filter((e) => e && typeof e.id === 'string' && e.id).map((e) => ({ id: e.id, name: String(e.name || e.id) }));
+    }
+    state.catalog = clean;
+    if (report) { msg.className = 'msg ok'; msg.textContent = 'Каталог перечитан.'; renderCatalogSummary(); renderAll(); validate(); }
+  } catch (err) {
+    if (report) { msg.className = 'msg err'; msg.textContent = 'Каталог не читается: ' + err.message; }
+  }
+}
+$('catalogReload').addEventListener('click', () => loadCatalogFromProject(true));
+
+// Команды меню приложения.
+function onMenu(command) {
+  const typing = document.activeElement && document.activeElement.closest && document.activeElement.closest('input, textarea, select');
+  if (command === 'undo') { if (typing) document.execCommand('undo'); else undoOnce(); }
+  else if (command === 'redo') { if (typing) document.execCommand('redo'); else redoOnce(); }
+  else if (command === 'history') { $('sheetHistory').hidden = true; if (openSheet('sheetHistory')) renderHistory(); }
+  else if (command === 'export') exportGraph();
+}
+
 // ───────────────────────── Пример для первого открытия ─────────────────────────
 
 function exampleGraph() {
@@ -1724,6 +2216,7 @@ async function init() {
   applyView();
 
   let loaded = false;
+  if (window.storyHost) { await initFile(window.storyHost); return; }
   const claude = window.claude;
   if (claude && typeof claude.use === 'function') {
     const [db, downloads] = await Promise.all([claude.use('db').catch(() => null), claude.use('downloads').catch(() => null)]);

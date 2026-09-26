@@ -1,0 +1,71 @@
+# Сборка приложения «Weapon Keeper Story» для Mac (.dmg, Apple Silicon + Intel).
+# Запускается при правке оболочки (Tools/StoryEditor/app) и вручную (Actions → Story Editor (Mac) → Run workflow).
+# Правки самого редактора (story_editor.html) пересборки не требуют: приложение берёт его из проекта.
+name: Story Editor (Mac)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Tools/StoryEditor/app/**'
+      - '.github/workflows/story-editor-mac.yml'
+  pull_request:
+    paths:
+      - 'Tools/StoryEditor/app/**'
+      - '.github/workflows/story-editor-mac.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: story-editor-mac-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: Tools/StoryEditor/app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Tools/StoryEditor/app/package-lock.json
+
+      - name: Установка
+        run: npm ci
+
+      - name: Тесты хранения
+        run: npm test
+
+      - name: Сборка .dmg
+        run: npm run dist
+        env:
+          # Подписи разработчика Apple нет — сборка подписывается ad-hoc (mac.identity "-" в package.json).
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WeaponKeeperStory-mac
+          path: Tools/StoryEditor/app/dist/*.dmg
+          retention-days: 30
+
+      - name: Релиз
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="story-editor-v$VERSION"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/*.dmg --clobber
+          else
+            gh release create "$TAG" dist/*.dmg --target "$GITHUB_SHA" --title "Story Editor $VERSION" \
+              --notes "Приложение для Mac «Weapon Keeper Story». Установка и первый запуск — Docs/Story/STORY_GRAPH.md, раздел «Приложение для Mac»."
+          fi
