@@ -5,14 +5,19 @@ using UnityEngine;
 /// Основная логика взаимодействия игрока с предметами:
 /// - луч из камеры подсвечивает предметы в радиусе pickupRange (по умолчанию 2 м);
 /// - показывает панель информации о предмете на канвасе;
-/// - ЛКМ на предмете на полу — подбирает его в инвентарь;
+/// - ЛКМ на предмете на полу — подбирает его: он летит в руку по небольшой дуге и ложится в инвентарь
+///   уборки, а инструмент (ItemData.IsTool) — сразу в экипировку;
 /// - E (takeKey) на предмете на полке или на голограмме над стопкой — снимает этот (верхний) предмет;
 /// - при наведении на свободное место (ячейка полки, место в кладке) или на стопку, куда подходит
 ///   предмет в руке, — яркий "призрак", ЛКМ — ставит туда активный предмет инвентаря. ЛКМ никогда
 ///   не забирает с полки, поэтому серия быстрых кликов по стопке только ставит;
 /// - все остальные свободные места в радиусе placementHintRadius, куда подходит предмет в руке,
 ///   подсвечиваются приглушёнными голограммами-подсказками, а при активном «видении» (PlacementVision)
-///   — вообще все такие места сцены, сквозь стены.
+///   — вообще все такие места сцены, сквозь стены;
+/// - ЛКМ по пятну (тряпка или швабра — по размеру пятна) или по доске с ломом в руках — режим работы с
+///   объектом (PlayerToolActions); пока он идёт, этот компонент выключен блокировкой ввода.
+/// С оружием, кувалдой, мойкой или катушкой провода в руках взаимодействия с миром нет: ЛКМ стреляет,
+/// бьёт, моет или ведёт провод (у этих инструментов свои компоненты и свои подсказки).
 /// Выполняется раньше EquipmentWeaponBridge/Weapon (см. DefaultExecutionOrder), чтобы
 /// IsAimingAtInteractable этого кадра успевал долететь до проверки блокировки стрельбы.
 /// </summary>
@@ -41,6 +46,11 @@ public class PlayerItemInteraction : MonoBehaviour
 
     [Tooltip("Режим работы с объектом (тряпка по пятну, лом-рычаг): его запускает ЛКМ по пятну или доске.")]
     public PlayerToolActions toolActions;
+
+    [Tooltip("Выносливость: вымотанный игрок не подбирает, не ставит и не снимает предметы, не чинит и не " +
+             "работает инструментами — только пользуется терминалом, лифтом и матрасом. Установка кирпича или " +
+             "детали утомляет. Пусто — без ограничений.")]
+    public PlayerStamina stamina;
 
     [Header("Конфиг")]
     [Tooltip("Если задан — значения ниже перекрываются из GameConfig при старте. Пусто — работаем на значениях инспектора.")]
@@ -253,10 +263,11 @@ public class PlayerItemInteraction : MonoBehaviour
     {
         if (playerCamera == null) return;
 
-        // ── Экипировано оружие или кувалда: только бой, никакого взаимодействия с миром — иначе прицел
-        // на предмете/полке блокировал бы выстрел (см. IsAimingAtInteractable), а ЛКМ кувалды и
-        // подбирала бы, и била. Подбор/установка — только без оружия (TidyUp) или с ломом (см. ниже).
-        if (IsCombatEquipped())
+        // ── Экипировано оружие или инструмент со своей ЛКМ (кувалда, мойка, катушка): никакого
+        // взаимодействия с миром — иначе прицел на предмете/полке блокировал бы выстрел (см.
+        // IsAimingAtInteractable), а ЛКМ кувалды и подбирала бы, и била. Подбор/установка — только без
+        // оружия (TidyUp) или с ломом/шваброй (см. ниже).
+        if (IsExclusiveToolEquipped())
         {
             if (infoUI != null) infoUI.Hide();
             return;
@@ -264,6 +275,13 @@ public class PlayerItemInteraction : MonoBehaviour
 
         Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
         currentAimRay = ray;
+
+        // ── Вымотан: работать нельзя — только объекты использования (терминал, лифт, матрас) ──
+        if (TooTiredToWork)
+        {
+            ResolveTiredHover(ray);
+            return;
+        }
 
         // ── Лом в руках: ищем, что можно поддеть, но НЕ прерываем обычную логику ниже — лом не
         // мешает подбирать предметы и расставлять их по полкам, это просто дополнительный инструмент.
@@ -335,12 +353,15 @@ public class PlayerItemInteraction : MonoBehaviour
             return;
         }
 
-        // ── Шаг 3.5. ПЯТНО: ЛКМ — режим тряпки (PlayerToolActions), предмет в руках не нужен ──
+        // ── Шаг 3.5. ПЯТНО: ЛКМ — режим тряпки или швабры (PlayerToolActions); если пятно этим не отмыть
+        // (размер), подсказка говорит, какой инструмент нужен, а клик ничего не делает ──
         CleanableStain stain = hit.collider.GetComponentInParent<CleanableStain>();
         if (stain != null && !stain.IsClean && hit.distance <= pickupRange)
         {
-            currentHoveredStain = stain;
-            if (infoUI != null) infoUI.ShowHint(Loc.Get("hud.stain.title"), Loc.Get("hud.action.scrub"));
+            ToolKind scrubTool = toolActions != null ? toolActions.CurrentScrubTool : ToolKind.None;
+            string missingKey = stain.MissingToolKey(scrubTool);
+            if (missingKey == null) currentHoveredStain = stain;
+            if (infoUI != null) infoUI.ShowHint(Loc.Get(stain.titleKey), Loc.Get(missingKey ?? "hud.action.scrub"));
             return;
         }
 
@@ -359,11 +380,56 @@ public class PlayerItemInteraction : MonoBehaviour
             infoUI.Hide();
     }
 
-    /// <summary>В руках оружие или кувалда: ЛКМ стреляет/бьёт, мир не трогаем.</summary>
-    private bool IsCombatEquipped()
+    /// <summary>Игрок вымотан (PlayerStamina.IsExhausted): подбор, установка и работа недоступны.</summary>
+    private bool TooTiredToWork => stamina != null && stamina.IsExhausted;
+
+    /// <summary>
+    /// Наведение, когда игрок вымотан: объект использования работает как обычно (терминал, лифт, матрас —
+    /// спать-то и надо), а на предмете, полке, месте ремонта или пятне — только подсказка, что сил нет.
+    /// </summary>
+    private void ResolveTiredHover(Ray ray)
     {
-        return modeController != null
-               && (modeController.IsWeaponEquipped() || modeController.ActiveToolKind == ToolKind.Sledgehammer);
+        float maxDist = Mathf.Max(pickupRange, shelfInteractRange);
+        if (!TryRaycastInteractable(ray, maxDist, out RaycastHit hit))
+        {
+            if (infoUI != null) infoUI.Hide();
+            return;
+        }
+
+        bool inShelfRange = hit.distance <= shelfInteractRange;
+        IInteractable interactable = hit.collider.GetComponentInParent<IInteractable>();
+        if (interactable != null && inShelfRange)
+        {
+            if (interactable.CanInteract) currentInteractable = interactable;
+            currentHoverPoint = hit.point;
+            if (infoUI != null) infoUI.ShowHint(interactable.InteractTitle, interactable.InteractHint);
+            return;
+        }
+
+        if (infoUI == null) return;
+        WorldItem hitItem = hit.collider.GetComponentInParent<WorldItem>();
+        CleanableStain stain = hit.collider.GetComponentInParent<CleanableStain>();
+        bool workTarget = hitItem != null || hit.collider.GetComponent<IPlaceableSlot>() != null
+                          || (stain != null && !stain.IsClean);
+        if (!workTarget)
+        {
+            infoUI.Hide();
+            return;
+        }
+
+        string tired = Loc.Get("hud.stamina.too_tired");
+        if (hitItem != null && hitItem.itemData != null) infoUI.ShowActions(hitItem.itemData, tired);
+        else if (stain != null) infoUI.ShowHint(Loc.Get(stain.titleKey), tired);
+        else infoUI.ShowHint(Loc.Get("hud.stamina.exhausted"), tired);
+    }
+
+    /// <summary>В руках оружие или инструмент со своей ЛКМ (кувалда, мойка, катушка): мир не трогаем.</summary>
+    private bool IsExclusiveToolEquipped()
+    {
+        if (modeController == null) return false;
+        if (modeController.IsWeaponEquipped()) return true;
+        ToolKind tool = modeController.ActiveToolKind;
+        return tool == ToolKind.Sledgehammer || tool == ToolKind.PressureWasher || tool == ToolKind.WireSpool;
     }
 
     /// <summary>Подпись у прицела для полки: «ЛКМ — поставить», «E — взять» или обе сразу.</summary>
@@ -393,7 +459,8 @@ public class PlayerItemInteraction : MonoBehaviour
         nearHints.Clear();
 
         ItemData active = inventory != null ? inventory.GetActiveItem() : null;
-        bool canHint = active != null && playerCamera != null && placementHintRadius > 0f && !IsCombatEquipped();
+        bool canHint = active != null && playerCamera != null && placementHintRadius > 0f && !IsExclusiveToolEquipped()
+                       && !TooTiredToWork;
         if (canHint)
         {
             int count = Physics.OverlapSphereNonAlloc(playerCamera.transform.position, placementHintRadius,
@@ -511,7 +578,9 @@ public class PlayerItemInteraction : MonoBehaviour
     private void PickUpWorldItem(WorldItem worldItem)
     {
         if (inventory == null || itemHolder == null || itemHolder.HeldItemTransform == null) return;
-        if (!inventory.CanAddWorldItem(worldItem)) return;
+        // Инструмент уходит в экипировку — вместимость инвентаря уборки на него не распространяется.
+        bool isTool = worldItem.itemData != null && worldItem.itemData.IsTool && modeController != null;
+        if (!isTool && !inventory.CanAddWorldItem(worldItem)) return;
 
         ShelfSlot source = worldItem.GetSourceSlot();
         if (source != null)
@@ -545,6 +614,13 @@ public class PlayerItemInteraction : MonoBehaviour
         WorldItem item = inventory.RemoveActiveWorldItem();
         if (item == null) return;
         slot.PlaceItem(item);
+
+        // Ремонт — тяжёлая работа: кирпич в кладку и деталь в точку ремонта утомляют (полки — нет).
+        if (stamina != null)
+        {
+            if (slot is RepairSlot) stamina.WorkBrick();
+            else if (slot is RepairPoint) stamina.WorkRepairPart();
+        }
 
         currentHoveredSlot = null;
         if (infoUI != null) infoUI.Hide();
@@ -585,6 +661,9 @@ public class PlayerItemInteraction : MonoBehaviour
         if (item.itemData != null) SoundPlayer.Play(item.itemData.pickupSound, item.transform.position);
         if (itemHolder != null) itemHolder.PlayCatchDip();
 
+        // Инструмент — сразу в экипировку (слот 2), без Q.
+        if (item.itemData != null && item.itemData.IsTool && modeController != null && modeController.AddToEquipment(item))
+            return;
         if (!inventory.AddWorldItem(item))
             DropInFront(item);
     }

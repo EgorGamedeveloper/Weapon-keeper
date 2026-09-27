@@ -26,7 +26,8 @@ public class ElevatorButton : MonoBehaviour, IInteractable
         get
         {
             if (elevator == null) return "";
-            if (!elevator.IsWorking) return Loc.Get("interact.elevator.broken");
+            if (!elevator.IsRepaired) return Loc.Get("interact.elevator.broken");
+            if (!elevator.IsPowered) return Loc.Get("interact.elevator.no_power");
             if (elevator.IsMoving) return Loc.Get("interact.elevator.moving");
             switch (kind)
             {

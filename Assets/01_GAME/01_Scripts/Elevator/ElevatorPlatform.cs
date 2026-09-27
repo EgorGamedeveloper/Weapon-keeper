@@ -3,7 +3,8 @@ using UnityEngine;
 
 /// <summary>
 /// Лифт на крышу: платформа ездит между нижней и верхней точкой. Работает, только когда починена
-/// его точка ремонта (состояние берётся из RepairPoint.IsRepaired, после загрузки сейва тоже).
+/// его точка ремонта (двигатель) и на двигатель подан ток: провод от генератора в разъёме powerSocket
+/// (WireSocket.HasPower). Оба состояния читаются напрямую, после загрузки сейва тоже.
 ///
 /// Игрок, стоящий на платформе, едет вместе с ней: на время поездки выключается контроллер движения,
 /// а CharacterController сдвигается на ту же дельту, что и платформа, каждый кадр. Перепривязка игрока
@@ -15,6 +16,10 @@ public class ElevatorPlatform : MonoBehaviour
     [Header("Ремонт")]
     [Tooltip("Точка ремонта лифта. Пусто — лифт работает всегда.")]
     public RepairPoint repairPoint;
+
+    [Tooltip("Разъём питания двигателя: лифт едет, только если в него протянут провод от работающего " +
+             "генератора. Пусто — питание не нужно.")]
+    public WireSocket powerSocket;
 
     [Header("Движение")]
     [Tooltip("Сама платформа (с коллайдером пола).")]
@@ -41,7 +46,13 @@ public class ElevatorPlatform : MonoBehaviour
     [Tooltip("Размер зоны над платформой, в которой игрок считается «на лифте» (X, высота, Z).")]
     public Vector3 rideArea = new Vector3(2.4f, 2.5f, 2.4f);
 
-    public bool IsWorking => repairPoint == null || repairPoint.IsRepaired;
+    /// <summary>Двигатель на месте (точка ремонта починена).</summary>
+    public bool IsRepaired => repairPoint == null || repairPoint.IsRepaired;
+
+    /// <summary>На двигатель подан ток.</summary>
+    public bool IsPowered => powerSocket == null || powerSocket.HasPower;
+
+    public bool IsWorking => IsRepaired && IsPowered;
     public bool IsMoving { get; private set; }
     public bool AtTop { get; private set; }
 

@@ -79,6 +79,19 @@ public class SaveLoadService : MonoBehaviour
     [Tooltip("Сюжетный граф: пройденные ноды (рации, триггеры, события). Пусто — сюжет не сохраняется.")]
     public StoryDirector storyDirector;
 
+    [Header("Время и выживание")]
+    [Tooltip("Игровые часы: день и час. Пусто — время не сохраняется (новая игра с утра).")]
+    public GameClock clock;
+
+    [Tooltip("Выносливость: сохраняется накопленная за день усталость.")]
+    public PlayerStamina stamina;
+
+    [Tooltip("Временные эффекты (стимуляторы, «Выспался»): что действует и до какого часа.")]
+    public PlayerStatusEffects statusEffects;
+
+    [Tooltip("Еда: сытость и отметки «раз в сутки».")]
+    public PlayerConsumption consumption;
+
     [Header("Куда спавнить восстановленные предметы")]
     [Tooltip("Родитель для заново заспавненных WorldItem (свободные предметы мира). Предметы, " +
              "уходящие на полку/в руки, сразу же переродительствуются — им это поле не важно. " +
@@ -209,6 +222,7 @@ public class SaveLoadService : MonoBehaviour
         var cleanedList = new List<string>();
         var brokenList = new List<string>();
         var brickWallList = new List<BrickWallSave>();
+        var wireList = new List<WireSave>();
         var slotList = new List<SlotSave>();
 
         foreach (var pid in FindObjectsByType<PersistentId>(FindObjectsInactive.Include, FindObjectsSortMode.None))
@@ -232,6 +246,23 @@ public class SaveLoadService : MonoBehaviour
             if (stain != null)
             {
                 if (stain.IsClean) cleanedList.Add(pid.Id);
+                continue;
+            }
+
+            // Провод пишем один раз — со стороны источника.
+            var socket = pid.GetComponent<WireSocket>();
+            if (socket != null)
+            {
+                if (socket.role == WireSocketRole.Source && socket.IsConnected)
+                {
+                    var consumerId = socket.ConnectedTo.GetComponent<PersistentId>();
+                    if (consumerId != null && !string.IsNullOrEmpty(consumerId.Id))
+                    {
+                        var points = new List<Vector3>();
+                        if (socket.Cable != null) points.AddRange(socket.Cable.ControlPoints);
+                        wireList.Add(new WireSave { sourceId = pid.Id, consumerId = consumerId.Id, points = points.ToArray() });
+                    }
+                }
                 continue;
             }
 
@@ -263,6 +294,7 @@ public class SaveLoadService : MonoBehaviour
         data.cleanedStainIds = cleanedList.ToArray();
         data.brokenBreakableIds = brokenList.ToArray();
         data.brickWalls = brickWallList.ToArray();
+        data.wires = wireList.ToArray();
         data.shelfSlots = slotList.ToArray();
     }
 
@@ -346,10 +378,13 @@ public class SaveLoadService : MonoBehaviour
         {
             data.supplyDeliveries = supplyService.CaptureDeliveries();
             data.deliveredCrates = supplyService.CaptureCrates();
+            data.purchasedOneTimeBoxIds = supplyService.CapturePurchasedOneTime();
         }
 
         if (shippingService != null)
             shippingService.Capture(data);
+
+        CaptureSurvival(data);
     }
 
     // ───────────────────────── Применение сейва ─────────────────────────
@@ -366,6 +401,21 @@ public class SaveLoadService : MonoBehaviour
             {
                 slot.placementRewarded = new bool[slot.itemIds.Length];
                 for (int i = 0; i < slot.placementRewarded.Length; i++) slot.placementRewarded[i] = true;
+            }
+        }
+
+        if (data.version < 4)
+        {
+            // Игрового времени раньше не было: часы и сытость остаются «не сохранены» (−1) — игра начнёт
+            // с утра первого дня, сил полно. Доставки считались в реальных секундах — переводим в игровые
+            // часы по умолчанию (TimeSettings.realSecondsPerHour = 75): ждать придётся столько же.
+            data.clockTotalHours = -1.0;
+            data.satiety = -1f;
+            foreach (var delivery in data.supplyDeliveries)
+            {
+                if (delivery == null) continue;
+                delivery.remainingHours = delivery.remainingSeconds / LegacySecondsPerHour;
+                delivery.totalHours = delivery.totalSeconds / LegacySecondsPerHour;
             }
         }
 
@@ -440,6 +490,12 @@ public class SaveLoadService : MonoBehaviour
             if (brickWall != null) brickWall.RestoreKnockedOut(wallSave.knockedOut);
         }
 
+        foreach (var wire in data.wires)
+        {
+            if (!byId.TryGetValue(wire.sourceId, out var sourcePid) || !byId.TryGetValue(wire.consumerId, out var consumerPid)) continue;
+            WireSocket.RestoreConnection(sourcePid.GetComponent<WireSocket>(), consumerPid.GetComponent<WireSocket>(), wire.points);
+        }
+
         // Сейв авторитетен: всё, что сейчас лежит в мире/на полках по разметке сцены — не в счёт,
         // уничтожаем и спавним заново строго по записям сейва. DestroyImmediate, а не Destroy —
         // иначе трекеры прогресса, которые считают объекты в своих Start() того же кадра,
@@ -485,10 +541,12 @@ public class SaveLoadService : MonoBehaviour
         if (wallet != null)
             wallet.RestoreBalance(data.walletBalance);
 
+        RestoreSurvival(data);
+
         // Терминал — тоже без событий. Коробку заказа ShippingService найдёт сам в своём Start:
         // она восстанавливается обычным предметом (на полу — здесь, в инвентаре — в фазе B).
         if (supplyService != null)
-            supplyService.RestoreState(data.supplyDeliveries, data.deliveredCrates);
+            supplyService.RestoreState(data.supplyDeliveries, data.deliveredCrates, data.purchasedOneTimeBoxIds);
         if (shippingService != null)
             shippingService.RestoreState(data, bootstrap != null ? bootstrap.itemCatalog : null);
 
@@ -563,6 +621,55 @@ public class SaveLoadService : MonoBehaviour
 
         if (modeController != null)
             modeController.SetMode((PlayerInventoryModeController.InventoryMode)data.inventoryMode);
+    }
+
+    // Сколько реальных секунд был игровой час, когда доставки терминала ещё считались в секундах (миграция 3 → 4).
+    private const float LegacySecondsPerHour = 75f;
+
+    /// <summary>Время и выживание: час, усталость, сытость, действующие эффекты. Бар выносливости не пишется —
+    /// после загрузки он полный.</summary>
+    private void CaptureSurvival(SaveGameData data)
+    {
+        if (clock != null) data.clockTotalHours = clock.TotalHours;
+        if (stamina != null) data.staminaFatigue = stamina.Fatigue;
+
+        if (consumption != null)
+        {
+            data.satiety = consumption.Satiety;
+            data.consumedTodayIds = new List<string>(consumption.UsedTodayIds).ToArray();
+        }
+
+        if (statusEffects != null)
+        {
+            data.stimulantsToday = statusEffects.StimulantsToday;
+            var effects = new List<StatusEffectSave>();
+            foreach (var effect in statusEffects.Active)
+            {
+                if (effect?.data == null || string.IsNullOrEmpty(effect.data.effectId)) continue;
+                effects.Add(new StatusEffectSave
+                {
+                    effectId = effect.data.effectId,
+                    expiresAtHours = effect.expiresAt,
+                    durationHours = effect.durationHours,
+                    strength = effect.strength,
+                });
+            }
+            data.statusEffects = effects.ToArray();
+        }
+    }
+
+    /// <summary>Фаза A: время и выживание — без событий. Сейв до версии 4 (clockTotalHours/satiety = −1)
+    /// оставляет часам и сытости значения новой игры.</summary>
+    private void RestoreSurvival(SaveGameData data)
+    {
+        if (clock != null && data.clockTotalHours >= 0.0) clock.RestoreState(data.clockTotalHours);
+        if (stamina != null) stamina.RestoreState(data.staminaFatigue);
+        if (consumption != null && data.satiety >= 0f) consumption.RestoreState(data.satiety, data.consumedTodayIds);
+
+        if (statusEffects == null) return;
+        statusEffects.RestoreStimulantsToday(data.stimulantsToday);
+        foreach (var effect in data.statusEffects)
+            if (effect != null) statusEffects.RestoreEffect(effect.effectId, effect.expiresAtHours, effect.durationHours, effect.strength);
     }
 
     /// <summary>

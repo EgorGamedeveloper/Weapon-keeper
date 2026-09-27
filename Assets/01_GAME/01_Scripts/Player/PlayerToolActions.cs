@@ -5,8 +5,9 @@ using UnityEngine;
 /// <summary>
 /// Режим работы с объектом: игрок «встаёт» к объекту и работает руками, а мышь управляет не камерой,
 /// а инструментом.
-/// - Тряпка по пятну (CleanableStain): тряпка вылетает из руки на пятно, мышь водит её по плоскости
-///   пятна, и оно стирается там, где тряпка прошла.
+/// - Тряпка или швабра по пятну (CleanableStain): тряпка (есть всегда) или головка швабры (если швабра —
+///   активный инструмент) переносится из руки на пятно, мышь водит её по плоскости пятна, и оно стирается
+///   там, где она прошла. Швабра шире тряпки и моет средние пятна (CleanableStain.CanCleanWith).
 /// - Лом-рычаг (Breakable.canPry, лом в руках): лом переносится из руки к концу доски, лапка — под
 ///   кромку; мышь вверх-вниз качает рычаг, доска приподнимается и в конце снимается.
 ///
@@ -41,6 +42,10 @@ public class PlayerToolActions : MonoBehaviour
              "сторона — локальная +Y.")]
     public Transform rag;
 
+    [Tooltip("Выносливость: рычаг и тряпка тратят бар по ходу мыши и утомляют по прогрессу; при одышке " +
+             "инструмент стоит, вымотанный игрок работу не начинает. Пусто — без ограничений.")]
+    public PlayerStamina stamina;
+
     [Header("Конфиг")]
     [Tooltip("Если задан — чувствительность и параметры рычага берутся из GameConfig.tools при старте.")]
     public GameConfig config;
@@ -51,6 +56,22 @@ public class PlayerToolActions : MonoBehaviour
 
     [Tooltip("Насколько тряпка приподнята над поверхностью пятна, м.")]
     [Min(0f)] public float ragLift = 0.012f;
+
+    [Tooltip("Радиус тряпки, м.")]
+    [Min(0.01f)] public float ragRadius = 0.09f;
+
+    [Tooltip("Сколько альфы пятна снимает один штамп тряпки в центре.")]
+    [Range(0.01f, 1f)] public float ragStrength = 0.08f;
+
+    [Header("Швабра")]
+    [Tooltip("Радиус головки швабры, м.")]
+    [Min(0.01f)] public float mopRadius = 0.2f;
+
+    [Tooltip("Сколько альфы пятна снимает один штамп швабры в центре.")]
+    [Range(0.01f, 1f)] public float mopStrength = 0.09f;
+
+    [Tooltip("Шорох швабры (у тряпки — звук самого пятна).")]
+    public SoundCue mopScrubSound;
 
     [Header("Лом")]
     [Tooltip("Насколько рычаг сдвигается на единицу движения мыши по вертикали (весь ход — от −1 до 1).")]
@@ -84,6 +105,9 @@ public class PlayerToolActions : MonoBehaviour
 
     private ActionMode mode;
     private CleanableStain stain;
+    private ToolKind scrubTool;
+    private float brushRadius;
+    private float brushStrength;
     private Breakable breakable;
     private Breakable.PryFrame pryFrame;
 
@@ -100,6 +124,8 @@ public class PlayerToolActions : MonoBehaviour
     private float travelSinceCreak;
     private Vector3 leverAxis;
     private float ragWobblePhase;
+    private string workHint;
+    private bool windedHintShown;
 
     private void Awake()
     {
@@ -107,6 +133,10 @@ public class PlayerToolActions : MonoBehaviour
         {
             ToolSettings s = config.tools;
             ragSensitivity = s.ragSensitivity;
+            ragRadius = s.ragRadius;
+            ragStrength = s.ragStrength;
+            mopRadius = s.mopRadius;
+            mopStrength = s.mopStrength;
             leverSensitivity = s.leverSensitivity;
             leverAngle = s.leverAngle;
             pryTravelToBreak = s.pryTravelToBreak;
@@ -126,17 +156,31 @@ public class PlayerToolActions : MonoBehaviour
 
     // ───────────────────────── Вход ─────────────────────────
 
-    /// <summary>Начать оттирать пятно: тряпка ложится туда, куда смотрит прицел.</summary>
+    /// <summary>Инструмент, которым сейчас трут пятна: швабра, если она в руках, иначе тряпка (None).</summary>
+    public ToolKind CurrentScrubTool =>
+        modeController != null && modeController.ActiveToolKind == ToolKind.Mop ? ToolKind.Mop : ToolKind.None;
+
+    /// <summary>Начать оттирать пятно: тряпка или головка швабры ложится туда, куда смотрит прицел.
+    /// false — пятно этим инструментом не отмыть (размер, CleanableStain.CanCleanWith).</summary>
     public bool TryBeginScrub(CleanableStain target, Ray aimRay)
     {
-        if (IsActive || target == null || target.IsClean || rag == null || playerCamera == null) return false;
+        if (IsActive || target == null || target.IsClean || playerCamera == null) return false;
+        if (stamina != null && stamina.IsExhausted) return false;
+
+        ToolKind tool = CurrentScrubTool;
+        if (!target.CanCleanWith(tool)) return false;
+        Transform visual = tool == ToolKind.Mop ? (toolPresenter != null ? toolPresenter.GetVisual(ToolKind.Mop) : null) : rag;
+        if (visual == null) return false;
 
         target.Raycast(aimRay, out Vector3 point);
         stain = target;
+        scrubTool = tool;
+        brushRadius = tool == ToolKind.Mop ? mopRadius : ragRadius;
+        brushStrength = tool == ToolKind.Mop ? mopStrength : ragStrength;
         mode = ActionMode.Scrub;
-        rag.gameObject.SetActive(true);
-        StartAction(rag, stain.ClampToStain(point, 0f), RagRotation(stain.SurfaceNormal));
-        ShowHint(Loc.Get("hud.stain.title"), Loc.Get("hud.mode.scrub"));
+        visual.gameObject.SetActive(true);
+        StartAction(visual, stain.ClampToStain(point, 0f), RagRotation(stain.SurfaceNormal));
+        ShowHint(Loc.Get(stain.titleKey), Loc.Get("hud.mode.scrub"));
         return true;
     }
 
@@ -144,6 +188,7 @@ public class PlayerToolActions : MonoBehaviour
     public bool TryBeginPry(Breakable target, Vector3 aimPoint)
     {
         if (IsActive || target == null || target.IsBroken || !target.canPry || playerCamera == null) return false;
+        if (stamina != null && stamina.IsExhausted) return false;
         Transform crowbar = toolPresenter != null ? toolPresenter.GetVisual(ToolKind.Crowbar) : null;
         if (crowbar == null) return false;
 
@@ -185,6 +230,9 @@ public class PlayerToolActions : MonoBehaviour
 
     private void ShowHint(string title, string hint)
     {
+        workHint = hint;
+        windedHintShown = false;
+
         // После Acquire: блокировка выключает PlayerItemInteraction, а тот в OnDisable прячет подсказку.
         if (infoUI != null) infoUI.ShowHint(title, hint);
         if (progressUI != null) progressUI.SetProgress(mode == ActionMode.Scrub ? stain.Progress : breakable.PryProgress);
@@ -203,13 +251,30 @@ public class PlayerToolActions : MonoBehaviour
         }
 
         flight = Mathf.MoveTowards(flight, 1f, Time.deltaTime / flightDuration);
+        UpdateWindedHint();
         if (mode == ActionMode.Scrub) UpdateScrub();
         else UpdatePry();
     }
 
+    /// <summary>Есть ли силы двигать инструмент: при одышке он стоит, пока бар не восстановится.</summary>
+    private bool CanMoveTool => stamina == null || stamina.CanExert;
+
+    /// <summary>Одышка посреди работы: подсказка «Отдышитесь», потом — снова обычная.</summary>
+    private void UpdateWindedHint()
+    {
+        if (infoUI == null || stamina == null) return;
+        bool winded = !stamina.CanExert;
+        if (winded == windedHintShown) return;
+        windedHintShown = winded;
+
+        string title = mode == ActionMode.Scrub ? Loc.Get(stain.titleKey) : Loc.Get(breakable.titleKey);
+        infoUI.ShowHint(title, winded ? Loc.Get("hud.mode.winded") : workHint);
+    }
+
     private bool IsTargetValid()
     {
-        if (mode == ActionMode.Scrub) return stain != null && !stain.IsClean && stain.isActiveAndEnabled;
+        if (mode == ActionMode.Scrub)
+            return stain != null && !stain.IsClean && stain.isActiveAndEnabled && CurrentScrubTool == scrubTool;
         return breakable != null && !breakable.IsBroken && breakable.isActiveAndEnabled
                && (modeController == null || modeController.ActiveToolKind == ToolKind.Crowbar);
     }
@@ -219,14 +284,18 @@ public class PlayerToolActions : MonoBehaviour
         Vector3 normal = stain.SurfaceNormal;
         Vector3 forward = PlaneForward(normal);
 
-        if (flight >= 1f)
+        if (flight >= 1f && CanMoveTool)
         {
             Vector3 right = Vector3.ProjectOnPlane(playerCamera.transform.right, normal).normalized;
             Vector2 mouse = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y")) * ragSensitivity;
-            Vector3 next = stain.ClampToStain(workPoint + right * mouse.x + forward * mouse.y, stain.brushRadius * 0.5f);
+            Vector3 next = stain.ClampToStain(workPoint + right * mouse.x + forward * mouse.y, brushRadius * 0.5f);
 
-            ragWobblePhase += Vector3.Distance(workPoint, next) * 60f;
-            bool cleaned = stain.ScrubSegment(workPoint, next);
+            float moved = Vector3.Distance(workPoint, next);
+            float progressBefore = stain.Progress;
+            ragWobblePhase += moved * 60f;
+            bool cleaned = stain.ScrubSegment(workPoint, next, brushRadius, brushStrength,
+                                              scrubTool == ToolKind.Mop ? mopScrubSound : null);
+            if (stamina != null) stamina.WorkScrub(moved, stain.Progress - progressBefore);
             workPoint = next;
             if (progressUI != null) progressUI.SetProgress(stain.Progress);
             if (cleaned)
@@ -243,7 +312,7 @@ public class PlayerToolActions : MonoBehaviour
 
     private void UpdatePry()
     {
-        if (flight >= 1f)
+        if (flight >= 1f && CanMoveTool)
         {
             float next = Mathf.Clamp(lever + Input.GetAxis("Mouse Y") * leverSensitivity, -1f, 1f);
             float travel = Mathf.Abs(next - lever);
@@ -259,7 +328,9 @@ public class PlayerToolActions : MonoBehaviour
                 lastLeverDirection = direction;
                 lever = next;
 
-                if (breakable.AddPryProgress(travel / pryTravelToBreak))
+                float boardFraction = travel / pryTravelToBreak;
+                if (stamina != null) stamina.WorkPry(boardFraction);
+                if (breakable.AddPryProgress(boardFraction))
                 {
                     EndAction();
                     return;
@@ -316,7 +387,8 @@ public class PlayerToolActions : MonoBehaviour
         if (progressUI != null) progressUI.Hide();
         if (infoUI != null) infoUI.Hide();
 
-        ReturnTool(ended == ActionMode.Scrub);
+        // Тряпка живёт в руке только на время оттирания; швабра и лом — инструменты, остаются видны.
+        ReturnTool(ended == ActionMode.Scrub && scrubTool != ToolKind.Mop);
         stain = null;
         breakable = null;
     }

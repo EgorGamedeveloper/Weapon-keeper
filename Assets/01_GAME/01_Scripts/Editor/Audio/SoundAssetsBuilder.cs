@@ -92,6 +92,13 @@ public static class SoundAssetsBuilder
         Add("Sledge_Swing", Rpg, new[] { "clothBelt", "clothBelt2" }, 0.5f, 0.7f, 0.8f, false);
         Add("Sledge_HitEnemy", Impact, Five("impactPunch_heavy"), 0.9f, 0.9f, 1.05f);
         Add("Sledge_HitSurface", Impact, Five("impactMining"), 0.85f, 0.75f, 0.85f);
+        Add("Mop_Scrub", Rpg, new[] { "cloth1", "cloth2", "cloth3", "cloth4" }, 0.55f, 0.7f, 0.85f, minInterval: 0.05f);
+        Add("Wire_Plug", Rpg, new[] { "metalClick" }, 0.6f, 1.15f, 1.25f);
+        Add("Wire_Cancel", Ui, new[] { "drop_002" }, 0.45f, 0.95f, 1.05f);
+        Add("Wire_Tension", Rpg, new[] { "creak1", "creak2", "creak3" }, 0.5f, 1.25f, 1.4f);
+        Add("Wire_Tick", Ui, new[] { "tick_004" }, 0.2f, 0.95f, 1.05f, false);
+        Add("Flashlight_On", Ui, new[] { "switch_006" }, 0.5f, 1f, 1.05f, false);
+        Add("Flashlight_Off", Ui, new[] { "switch_007" }, 0.45f, 0.95f, 1f, false);
 
         // Игрок: способности, инвентарь, клик по объекту.
         Add("Vision_On", Ui, new[] { "maximize_006" }, 0.5f, 1f, 1f, false);
@@ -124,6 +131,9 @@ public static class SoundAssetsBuilder
             { "Item_Gun", ("Pickup_Weapon", "Place_Weapon", "Impact_Weapon") },
             { "Item_M16", ("Pickup_Weapon", "Place_Weapon", "Impact_Weapon") },
             { "Item_ShippingBox", ("Pickup_Generic", "Place_Box", "Impact_Box") },
+            { "Item_Mop", ("Pickup_Wood", "Place_Wood", "Impact_Wood") },
+            { "Item_PressureWasher", ("Pickup_Metal", "Place_Metal", "Impact_MetalHeavy") },
+            { "Item_WireSpool", ("Pickup_Generic", "Place_Box", "Impact_Box") },
         };
 
     [MenuItem("Tools/Weapon Keeper/Audio/Create Sound Assets")]

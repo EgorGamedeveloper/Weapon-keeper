@@ -35,11 +35,6 @@ public class EnemyWaveSpawner : MonoBehaviour
 
     private NavMeshPath pathBuffer;
 
-    private void Awake()
-    {
-        pathBuffer = new NavMeshPath();
-    }
-
     private void Update()
     {
         if (Time.timeScale > 0f && Input.GetKeyDown(triggerKey)) SpawnWave();
@@ -55,6 +50,10 @@ public class EnemyWaveSpawner : MonoBehaviour
         PlayerHealth player = spawner != null ? spawner.player : null;
         if (player == null || player.IsDead || enemyData == null || count <= 0) return 0;
         if (!NavMesh.SamplePosition(player.transform.position, out NavMeshHit playerHit, 5f, NavMesh.AllAreas)) return 0;
+
+        // Создаём здесь, а не в Awake: волну зовут и сюжетные события — в том числе, когда объект волны
+        // неактивен (Awake не вызывался), а после перекомпиляции в Play Mode NavMeshPath обнуляется.
+        if (pathBuffer == null) pathBuffer = new NavMeshPath();
 
         Vector3 center = playerHit.position;
         int spawned = 0;

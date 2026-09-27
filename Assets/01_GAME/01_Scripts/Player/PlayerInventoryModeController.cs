@@ -116,6 +116,19 @@ public class PlayerInventoryModeController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Положить инструмент (лом, кувалда, швабра, мойка, катушка) прямо в экипировку — так подбирается
+    /// любой предмет с ItemData.toolKind: инструментам нечего делать в инвентаре уборки. Режим не
+    /// переключается: игрок сам берёт инструмент клавишей 2 и колесом.
+    /// </summary>
+    public bool AddToEquipment(WorldItem item)
+    {
+        if (item == null || equipmentInventory == null) return false;
+        item.SetCarriedHidden(equipmentStorage);
+        equipmentInventory.Add(item);
+        return true;
+    }
+
     /// <summary>Экипирует активный предмет tidy-up. Оружие может быть экипировано только одно —
     /// если уже есть экипированное оружие, оно возвращается в tidy-up (или роняется, если там нет места).</summary>
     private void MoveActiveItemToEquipment()

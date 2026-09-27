@@ -2,11 +2,15 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>Одна поставка в пути: какой ящик и сколько осталось ехать.</summary>
+/// <summary>Одна поставка в пути: какой ящик и сколько игровых часов осталось ехать.</summary>
 public class SupplyDelivery
 {
     public LootBoxData box;
+
+    /// <summary>Сколько игровых часов осталось ехать.</summary>
     public float remaining;
+
+    /// <summary>Полное время доставки, игровые часы.</summary>
     public float total;
 
     public float Progress => total > 0f ? 1f - Mathf.Clamp01(remaining / total) : 1f;
@@ -16,11 +20,12 @@ public class SupplyDelivery
 /// Заказ лутбоксов через терминал: проверка лицензии/уровня/денег, списание, таймеры доставки и
 /// появление ящика у точки доставки. Вскрытый ящик (LootCrate) сообщает сюда, сколько товара
 /// высыпалось, — сервис добавляет его в учёт ShelvingProgressTracker.
-/// Время — обычное Time.deltaTime: игровых суток пока нет.
+/// Время доставки — игровые часы (GameClock): ночь, пропущенная сном, тоже засчитывается, поэтому ящик,
+/// заказанный вечером, утром уже ждёт у точки доставки. Без часов в сцене час считается за 75 секунд.
 /// </summary>
 public class SupplyService : MonoBehaviour
 {
-    public enum Availability { Available, NoLicense, LowLevel, NoMoney }
+    public enum Availability { Available, NoLicense, LowLevel, NoMoney, AlreadyOwned }
 
     [Header("Ссылки")]
     [Tooltip("Реестр лутбоксов (для терминала и сейва).")]
@@ -31,6 +36,9 @@ public class SupplyService : MonoBehaviour
 
     [Tooltip("Учёт процента расстановки: привезённый товар увеличивает «всего».")]
     public ShelvingProgressTracker shelvingTracker;
+
+    [Tooltip("Игровые часы: доставка идёт в игровом времени, в том числе во сне. Пусто — час = 75 реальных секунд.")]
+    public GameClock clock;
 
     [Header("Доставка")]
     [Tooltip("Где появляются привезённые ящики.")]
@@ -64,7 +72,12 @@ public class SupplyService : MonoBehaviour
     /// задел под будущую покупку инструментов; сюжетный триггер «Куплен предмет» уже слушает его.</summary>
     public event Action<ItemData> OnItemPurchased;
 
+    // Без GameClock в сцене: столько реальных секунд считается игровым часом (как по умолчанию в TimeSettings).
+    private const float FallbackSecondsPerHour = 75f;
+
     private readonly List<SupplyDelivery> deliveries = new List<SupplyDelivery>();
+    // Разовые ящики (LootBoxData.oneTimePurchase), которые уже заказаны, — по lootBoxId.
+    private readonly HashSet<string> purchasedOneTime = new HashSet<string>();
     private readonly List<LootCrate> crates = new List<LootCrate>();
 
     public IReadOnlyList<SupplyDelivery> Deliveries => deliveries;
@@ -72,11 +85,15 @@ public class SupplyService : MonoBehaviour
     /// <summary>Цена с учётом навыков (множитель SkillStat.OrderPrice).</summary>
     public int GetPrice(LootBoxData box) => Mathf.Max(0, Mathf.RoundToInt(box.price * Skill(SkillStat.OrderPrice)));
 
-    /// <summary>Время доставки с учётом навыков (множитель SkillStat.DeliveryTime).</summary>
-    public float GetDeliveryTime(LootBoxData box) => Mathf.Max(1f, box.deliverySeconds * Skill(SkillStat.DeliveryTime));
+    /// <summary>Время доставки в игровых часах с учётом навыков (множитель SkillStat.DeliveryTime).</summary>
+    public float GetDeliveryTime(LootBoxData box) => Mathf.Max(0.1f, box.deliveryHours * Skill(SkillStat.DeliveryTime));
+
+    /// <summary>Когда поставка приедет — момент в игровых часах (GameClock.TotalHours); без часов — −1.</summary>
+    public double GetArrivalTime(SupplyDelivery delivery) => clock != null ? clock.TotalHours + delivery.remaining : -1.0;
 
     public Availability Check(LootBoxData box)
     {
+        if (box.oneTimePurchase && purchasedOneTime.Contains(box.lootBoxId)) return Availability.AlreadyOwned;
         if (box.requiredLicense != null && (skills == null || !skills.IsOwned(box.requiredLicense))) return Availability.NoLicense;
         if (progression != null && progression.CurrentLevel < box.requiredLevel) return Availability.LowLevel;
         if (wallet == null || !wallet.CanAfford(GetPrice(box))) return Availability.NoMoney;
@@ -88,6 +105,7 @@ public class SupplyService : MonoBehaviour
         if (box == null || Check(box) != Availability.Available) return false;
         if (!wallet.TrySpend(GetPrice(box))) return false;
 
+        if (box.oneTimePurchase) purchasedOneTime.Add(box.lootBoxId);
         float time = GetDeliveryTime(box);
         deliveries.Add(new SupplyDelivery { box = box, remaining = time, total = time });
         OnChanged?.Invoke();
@@ -101,12 +119,31 @@ public class SupplyService : MonoBehaviour
         if (item != null) OnItemPurchased?.Invoke(item);
     }
 
+    private void OnEnable()
+    {
+        if (clock != null) clock.OnTimeSkipped += HandleTimeSkipped;
+    }
+
+    private void OnDisable()
+    {
+        if (clock != null) clock.OnTimeSkipped -= HandleTimeSkipped;
+    }
+
+    // Ночь пропущена сном — поставки проехали её вместе со всеми. Ящики появятся в ближайшем Update.
+    private void HandleTimeSkipped(double from, double to)
+    {
+        float hours = (float)(to - from);
+        foreach (var delivery in deliveries) delivery.remaining -= hours;
+    }
+
     private void Update()
     {
+        float hours = clock != null ? clock.DeltaHours : Time.deltaTime / FallbackSecondsPerHour;
+
         List<LootBoxData> arrived = null;
         for (int i = deliveries.Count - 1; i >= 0; i--)
         {
-            deliveries[i].remaining -= Time.deltaTime;
+            deliveries[i].remaining -= hours;
             if (deliveries[i].remaining > 0f) continue;
 
             LootBoxData box = deliveries[i].box;
@@ -164,7 +201,7 @@ public class SupplyService : MonoBehaviour
     {
         var list = new List<SupplyDeliverySave>();
         foreach (var d in deliveries)
-            if (d.box != null) list.Add(new SupplyDeliverySave { lootBoxId = d.box.lootBoxId, remainingSeconds = d.remaining, totalSeconds = d.total });
+            if (d.box != null) list.Add(new SupplyDeliverySave { lootBoxId = d.box.lootBoxId, remainingHours = d.remaining, totalHours = d.total });
         return list.ToArray();
     }
 
@@ -181,15 +218,23 @@ public class SupplyService : MonoBehaviour
         return list.ToArray();
     }
 
-    /// <summary>Восстановление из сейва (без событий): поставки в пути и невскрытые ящики.</summary>
-    public void RestoreState(SupplyDeliverySave[] savedDeliveries, DeliveredCrateSave[] savedCrates)
+    /// <summary>Разовые ящики, которые уже заказаны (для сейва).</summary>
+    public string[] CapturePurchasedOneTime() => new List<string>(purchasedOneTime).ToArray();
+
+    /// <summary>Восстановление из сейва (без событий): поставки в пути, невскрытые ящики и уже купленные
+    /// разовые ящики.</summary>
+    public void RestoreState(SupplyDeliverySave[] savedDeliveries, DeliveredCrateSave[] savedCrates, string[] purchasedOneTimeIds = null)
     {
+        if (purchasedOneTimeIds != null)
+            foreach (string id in purchasedOneTimeIds)
+                if (!string.IsNullOrEmpty(id)) purchasedOneTime.Add(id);
+
         if (catalog == null) return;
 
         foreach (var d in savedDeliveries)
         {
             var box = catalog.GetLootBox(d.lootBoxId);
-            if (box != null) deliveries.Add(new SupplyDelivery { box = box, remaining = d.remainingSeconds, total = Mathf.Max(d.totalSeconds, d.remainingSeconds) });
+            if (box != null) deliveries.Add(new SupplyDelivery { box = box, remaining = d.remainingHours, total = Mathf.Max(d.totalHours, d.remainingHours) });
         }
 
         foreach (var c in savedCrates)

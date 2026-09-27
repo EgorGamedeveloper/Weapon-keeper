@@ -228,6 +228,7 @@ terminal.order.accept,[ ПРИНЯТЬ ],[ ACCEPT ]
 terminal.order.busy,[ ЗАНЯТО ],[ BUSY ]
 terminal.supply.buy,[ ЗАКАЗАТЬ ],[ ORDER ]
 terminal.supply.unavailable,[ НЕДОСТУПНО ],[ UNAVAILABLE ]
+terminal.block.owned,УЖЕ КУПЛЕНО,ALREADY OWNED
 # HUD и подсказки у прицела,,
 hud.level_short,Ур. {0},Lv. {0}
 hud.skill_points_hint,+{0} оч. навыков · Tab,+{0} skill pts · Tab
@@ -242,8 +243,24 @@ hud.mode.pry,Качайте мышью вверх-вниз · ПКМ — вый�
 hud.breakable.board,Прибитая доска,Nailed board
 hud.breakable.brickwall,Заложенный проём,Bricked-up doorway
 hud.xp_gain,+{0} XP,+{0} XP
+hud.action.wash,Держите ЛКМ — отмыть,Hold LMB — wash
+hud.stain.pool,Лужа крови,Pool of blood
+hud.stain.soot,Следы пожара,Fire soot
+hud.stain.graffiti,Граффити,Graffiti
+hud.stain.need_mop,Нужна швабра,A mop is needed
+hud.stain.need_washer,Нужна мойка высокого давления,A pressure washer is needed
+hud.socket.generator,Генератор: выход питания,Generator: power outlet
+hud.socket.elevator,Двигатель лифта: вход питания,Elevator motor: power input
+hud.wire.title,Провод,Cable
+hud.wire.plug,ЛКМ — подключить провод ({0} м),LMB — plug in the cable ({0} m)
+hud.wire.connected,Провод подключён,Cable connected
+hud.wire.incompatible,Этот разъём не подходит,This socket does not fit
+hud.wire.finish,ЛКМ — подключить второй конец,LMB — plug in the other end
+hud.wire.dragging,Осталось {0} м · ПКМ — смотать,{0} m left · RMB — reel in
+hud.wire.taut,Провод кончился · ПКМ — смотать,Out of cable · RMB — reel in
 interact.elevator.title,Лифт,Elevator
 interact.elevator.broken,Лифт не работает — нужен ремонт,The elevator is broken — needs repair
+interact.elevator.no_power,Нет питания — протяните провод от генератора к двигателю,No power — run a cable from the generator to the motor
 interact.elevator.moving,Лифт едет…,The elevator is moving…
 interact.elevator.go_down,ЛКМ — вниз,LMB — go down
 interact.elevator.go_roof,ЛКМ — на крышу,LMB — go to the roof
@@ -287,6 +304,12 @@ item.crowbar.name,Лом,Crowbar
 item.crowbar.desc,Поддевает и снимает прибитые доски: наведите на доску и качайте мышью вверх-вниз.,Pries off nailed boards: aim at a board and rock the mouse up and down.
 item.sledgehammer.name,Кувалда,Sledgehammer
 item.sledgehammer.desc,Тяжёлая кувалда: разбивает доски и кирпичную кладку. Зомби тоже не понравится.,A heavy sledgehammer: smashes boards and brickwork. Zombies won't like it either.
+item.mop.name,Швабра,Mop
+item.mop.desc,Отмывает лужи и средние пятна на полу (и маленькие — тоже).,Cleans pools and medium stains on the floor (small ones too).
+item.pressurewasher.name,Мойка высокого давления,Pressure washer
+item.pressurewasher.desc,Смывает струёй любые пятна — даже копоть и граффити на стенах. Держите ЛКМ.,Blasts off any stain — even soot and graffiti on walls. Hold LMB.
+item.wirespool.name,Катушка провода,Cable spool
+item.wirespool.desc,25 м провода: подключите к разъёму и протяните до другого. Одна катушка — одно соединение.,25 m of cable: plug into a socket and run it to another one. One spool — one connection.
 item.elevatormotor.name,Мотор лифта,Elevator motor
 item.elevatormotor.desc,"Установите в щиток лифта, чтобы он снова заработал.",Install it in the elevator control box to get it running again.
 item.generatorparts.name,Запчасти генератора,Generator parts
@@ -368,6 +391,10 @@ skill.survival_tough2.title,Крепкий II,Tough II
 skill.survival_tough2.desc,Ещё больше здоровья.,Even more health.
 skill.survival_walk.title,Лёгкий шаг,Light step
 skill.survival_walk.desc,Ходите быстрее по магазину.,Walk faster around the shop.
+skill.cleaner_mop.title,Лицензия: швабра,License: mop
+skill.cleaner_mop.desc,Открывает заказ швабры в терминале. Швабра отмывает лужи и средние пятна на полу.,Unlocks ordering a mop in the terminal. The mop cleans pools and medium stains on the floor.
+skill.cleaner_washer.title,Лицензия: мойка высокого давления,License: pressure washer
+skill.cleaner_washer.desc,Открывает заказ мойки высокого давления в терминале. Мойка смывает копоть и граффити со стен.,Unlocks ordering a pressure washer in the terminal. It blasts soot and graffiti off the walls.
 # Данные: ящики терминала,,
 lootbox.ammo.title,Амуниция,Ammo
 lootbox.ammo.desc,Патроны 5.56 — ходовой товар.,5.56 rounds — a bestseller.
@@ -375,6 +402,12 @@ lootbox.pistols.title,Пистолеты,Pistols
 lootbox.pistols.desc,Пара пистолетов и немного патронов.,A couple of pistols and some ammo.
 lootbox.rifles.title,Винтовки,Rifles
 lootbox.rifles.desc,Автоматические винтовки M16 с боезапасом.,M16 assault rifles with ammo.
+lootbox.mop.title,Швабра,Mop
+lootbox.mop.desc,Швабра в ящике. Вскройте ящик ломом — швабра сразу попадёт в экипировку.,A mop in a crate. Pry the crate open — the mop goes straight to your equipment.
+lootbox.pressurewasher.title,Мойка высокого давления,Pressure washer
+lootbox.pressurewasher.desc,Мойка в ящике: смывает копоть и граффити со стен струёй воды.,A pressure washer in a crate: blasts soot and graffiti off the walls with water.
+lootbox.wirespool.title,Катушка провода,Cable spool
+lootbox.wirespool.desc,25 м провода на катушке. Одна катушка — одно соединение между разъёмами.,25 m of cable on a spool. One spool — one connection between sockets.
 # Данные: заказы,,
 order.ammobig.customer,Блокпост №4,Checkpoint No. 4
 order.ammobig.message,Держим оборону третьи сутки. Шлите патроны.,We've been holding the line for three days. Send ammo.
@@ -391,3 +424,90 @@ radio.incoming,Входящий вызов по рации,Incoming radio call
 radio.answer,[{0}] Ответить,[{0}] Answer
 radio.skip,[{0}] Дальше,[{0}] Next
 cutscene.skip,Удерживайте [{0}] — пропустить,Hold [{0}] to skip
+"# Выживание: выносливость, усталость, еда (PlayerStamina, PlayerConsumption)",,
+hud.stamina.winded,Одышка,Out of breath
+hud.stamina.tired,Вы устали,Tired
+hud.stamina.heavy,Тяжёлый груз — без бега и прыжков,Heavy load — no running or jumping
+hud.stamina.exhausted,Вымотан — пора спать,Exhausted — time to sleep
+hud.stamina.too_tired,Сил нет: сон или кофе,Too tired: sleep first
+hud.stamina.tired_message,Вы устали: бар выносливости стал короче. Поешьте или готовьтесь ко сну.,You're getting tired: your stamina bar is shorter. Eat something or get ready for bed.
+hud.stamina.exhausted_message,Сил на работу нет — идите спать или выпейте кофе,Too exhausted to work — go to sleep or drink some coffee
+hud.stamina.recovered_message,Силы вернулись — можно работать,You've got your strength back — back to work
+hud.mode.winded,Отдышитесь… ПКМ — выйти,Out of breath · RMB exit
+hud.use.eat,{0} — съесть: {1},{0} — eat: {1}
+hud.use.drink,{0} — выпить: {1},{0} — drink: {1}
+hud.use.inject,{0} — уколоть: {1},{0} — inject: {1}
+hud.use.satiety,сытость {0}%,satiety {0}%
+hud.use.full,Не лезет — сытость {0}%,Can't eat any more — satiety {0}%
+hud.use.once_per_day,Больше нельзя — сердце не выдержит. Не чаще раза в сутки.,Not again — your heart won't take it. Once a day at most.
+"# Выживание: часы и сон (ClockUI, SleepService, SleepOverlayUI)",,
+hud.clock.day,День {0},Day {0}
+hud.clock.sleep_hint,Пора спать,Time to sleep
+hud.sleep.title,Матрас,Mattress
+hud.sleep.hint,ЛКМ — спать до {0},LMB — sleep till {0}
+hud.sleep.too_early,Спать можно с {0},Sleep from {0}
+hud.sleep.enemies,Сначала отбейтесь,Fight them off first
+hud.sleep.good_night,Спокойной ночи…,Good night…
+hud.sleep.passed_out,Вы отключились от усталости…,You passed out from exhaustion…
+hud.sleep.summary_title,День {0} — итоги,Day {0} — summary
+hud.sleep.summary_money,Заработано: ${0},Earned: ${0}
+hud.sleep.summary_xp,Опыт: +{0},XP: +{0}
+hud.sleep.summary_shelved,Расставлено предметов: {0},Items shelved: {0}
+hud.sleep.summary_killed,Убито зомби: {0},Zombies killed: {0}
+hud.sleep.summary_passed_out,"Отключились — отдых вполовину, с утра разбитость","Passed out — only half a night's rest, groggy this morning"
+hud.sleep.summary_well_rested,Выспались — с утра силы восстанавливаются быстрее,Well rested — stamina recovers faster this morning
+hud.sleep.summary_slept,Проспали {0} ч,Slept {0} h
+hud.sleep.summary_fatigue_left,Усталость не прошла до конца: {0},Fatigue left over: {0}
+hud.sleep.continue,ПРОСНУТЬСЯ,WAKE UP
+"# Выживание: терминал в игровом времени, навыки",,
+terminal.delivery_eta,ПРИБУДЕТ В {0},ARRIVES AT {0}
+terminal.duration_hours,{0} Ч,{0} H
+terminal.duration_minutes,{0} МИН,{0} MIN
+terminal.duration_hours_minutes,{0} Ч {1} МИН,{0} H {1} MIN
+skills.stat.max_stamina,Максимум выносливости,Max stamina
+skills.stat.stamina_regen,Восстановление выносливости,Stamina recovery
+skills.stat.stamina_move_cost,Расход на бег и прыжки,Sprint and jump cost
+skills.stat.work_fatigue,Усталость от работы,Work fatigue
+skills.stat.night_fatigue,Ночная сонливость,Night drowsiness
+skills.stat.stimulant_duration,Действие стимуляторов,Stimulant duration
+skills.stat.stimulant_crash,Откат стимуляторов,Stimulant crash
+skills.stat.sleep_hours,Нужно часов сна,Sleep needed
+"# Данные: еда и стимуляторы, эффекты",,
+item.chocolatebar.name,Шоколадный батончик,Chocolate bar
+item.chocolatebar.desc,Быстрый перекус: сразу добавляет сил и чуть-чуть снимает усталость. Сытость +15.,A quick snack: an instant boost of stamina and a little less fatigue. Satiety +15.
+item.cannedfood.name,Тушёнка,Canned stew
+item.cannedfood.desc,Банка тушёнки. Снимает немного дневной усталости. Сытость +35.,A can of stew. Takes the edge off the day's fatigue. Satiety +35.
+item.mre.name,Сухпаёк,Ration pack
+item.mre.desc,Армейский сухой паёк — сытно и надолго. Снимает заметную часть усталости. Сытость +60.,An army ration pack — filling and long-lasting. Removes a good chunk of fatigue. Satiety +60.
+item.coffee.name,Кофе,Coffee
+item.coffee.desc,"Банка холодного кофе: на 3 часа перекрывает 20 усталости, потом — небольшой откат.","A can of cold coffee: masks 20 fatigue for 3 hours, then a small crash."
+item.energydrink.name,Энергетик,Energy drink
+item.energydrink.desc,"На 2 часа перекрывает 35 усталости и ускоряет восстановление сил. Откат сильнее, чем у кофе.",Masks 35 fatigue for 2 hours and speeds up stamina recovery. The crash is harder than coffee's.
+item.stimulant.name,Шприц-стимулятор,Stimulant shot
+item.stimulant.desc,"На час снимает всю усталость, а бег и удары почти не утомляют. Потом — сильный откат и «Отходняк». Не чаще раза в сутки.",Removes all fatigue for an hour; running and swinging barely tire you. Then a heavy crash and a comedown. Once a day at most.
+effect.coffee.title,Кофе,Coffee
+effect.energydrink.title,Энергетик,Energy drink
+effect.stimulant.title,Стимулятор,Stimulant
+effect.comedown.title,Отходняк,Comedown
+effect.wellrested.title,Выспался,Well rested
+effect.groggy.title,Разбитость,Groggy
+lootbox.provisions.title,Провизия,Provisions
+lootbox.provisions.desc,"Батончики, тушёнка, сухпайки и кофе — чтобы было чем подкрепиться.","Chocolate bars, canned stew, ration packs and coffee — something to keep you going."
+lootbox.medical.title,Медикаменты,Medical supplies
+lootbox.medical.desc,"Энергетики и шприцы-стимуляторы — когда работы больше, чем сил.",Energy drinks and stimulant shots — for when there's more work than strength.
+skill.survival_wind.title,Дыхалка,Good Lungs
+skill.survival_wind.desc,Бег и прыжки тратят на 25% меньше выносливости.,Running and jumping cost 25% less stamina.
+skill.survival_hardening1.title,Закалка,Conditioning
+skill.survival_hardening1.desc,Максимум выносливости +15.,Max stamina +15.
+skill.survival_hardening2.title,Закалка II,Conditioning II
+skill.survival_hardening2.desc,Максимум выносливости ещё +25.,Max stamina +25 more.
+skill.survival_secondwind.title,Второе дыхание,Second Wind
+skill.survival_secondwind.desc,Выносливость восстанавливается на 30% быстрее.,Stamina recovers 30% faster.
+skill.survival_strongback.title,Крепкая спина,Strong Back
+skill.survival_strongback.desc,"Тяжёлая работа утомляет на 20% меньше: лом, кувалда, пятна, ремонт, груз.","Hard work tires you 20% less: crowbar, sledgehammer, stains, repairs, heavy loads."
+skill.survival_nightowl.title,Сова,Night Owl
+skill.survival_nightowl.desc,Ночная сонливость на 30% слабее — вечером можно поработать подольше.,Night drowsiness is 30% weaker — you can work a bit later in the evening.
+skill.survival_coffeeaddict.title,Кофеман,Caffeine Addict
+skill.survival_coffeeaddict.desc,"Кофе, энергетики и стимуляторы действуют на 50% дольше, а откат после них вдвое слабее.","Coffee, energy drinks and stimulants last 50% longer, and the crash is half as hard."
+skill.survival_soldiersleep.title,Солдатский сон,Soldier's Sleep
+skill.survival_soldiersleep.desc,Для полного отдыха хватает 6 часов сна вместо 8.,6 hours of sleep are enough for a full rest instead of 8.

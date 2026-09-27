@@ -88,6 +88,12 @@ public class PlayerInputKeys
 
     [Tooltip("Бег (удержание).")]
     public KeyCode sprintKey = KeyCode.LeftShift;
+
+    [Tooltip("Съесть, выпить или уколоть предмет в руке (еда, кофе, стимулятор — PlayerConsumption).")]
+    public KeyCode useKey = KeyCode.F;
+
+    [Tooltip("Включить/выключить налобный фонарик (PlayerFlashlight).")]
+    public KeyCode flashlightKey = KeyCode.G;
 }
 
 /// <summary>«Видение» предмета в руке — будущая способность игрока. См. PlacementVision.</summary>
@@ -195,14 +201,41 @@ public class ShelfSettings
     [Min(0f)] public float settleDuration = 0.25f;
 }
 
-/// <summary>Работа руками и инструментами: тряпка по пятну и лом-рычаг (PlayerToolActions), удар кувалдой
-/// (SledgehammerSwing). Прочность конкретного объекта (hitPoints) — на самом Breakable.</summary>
+/// <summary>Работа руками и инструментами: тряпка и швабра по пятну, лом-рычаг (PlayerToolActions), удар
+/// кувалдой (SledgehammerSwing), струя мойки (PressureWasherSpray). Прочность конкретного объекта
+/// (hitPoints) — на самом Breakable.</summary>
 [System.Serializable]
 public class ToolSettings
 {
     [Header("Тряпка")]
-    [Tooltip("Насколько тряпка сдвигается по пятну на единицу движения мыши (Input «Mouse X/Y»), м.")]
+    [Tooltip("Насколько тряпка (и швабра) сдвигается по пятну на единицу движения мыши (Input «Mouse X/Y»), м.")]
     [Min(0.0001f)] public float ragSensitivity = 0.012f;
+
+    [Tooltip("Радиус тряпки, м.")]
+    [Min(0.01f)] public float ragRadius = 0.09f;
+
+    [Tooltip("Сколько альфы пятна снимает один штамп тряпки в центре (штампы — каждые ¼ радиуса).")]
+    [Range(0.01f, 1f)] public float ragStrength = 0.08f;
+
+    [Header("Швабра")]
+    [Tooltip("Радиус головки швабры, м.")]
+    [Min(0.01f)] public float mopRadius = 0.2f;
+
+    [Tooltip("Сколько альфы снимает один штамп швабры в центре.")]
+    [Range(0.01f, 1f)] public float mopStrength = 0.09f;
+
+    [Header("Мойка высокого давления")]
+    [Tooltip("Дальность струи от камеры, м.")]
+    [Min(0.5f)] public float washerRange = 6f;
+
+    [Tooltip("Радиус пятна от струи, м.")]
+    [Min(0.01f)] public float washerRadius = 0.14f;
+
+    [Tooltip("Сколько альфы снимает штамп струи, когда прицел ведут по пятну.")]
+    [Range(0.01f, 1f)] public float washerStrength = 0.12f;
+
+    [Tooltip("Как быстро струя смывает пятно, если прицел стоит на месте (доля в секунду в центре струи).")]
+    [Min(0f)] public float washerHoldRate = 2.5f;
 
     [Header("Лом")]
     [Tooltip("Насколько рычаг сдвигается на единицу движения мыши по вертикали (весь ход — от −1 до 1).")]
@@ -220,6 +253,160 @@ public class ToolSettings
 
     [Tooltip("Дальность удара от камеры, м.")]
     [Min(0.5f)] public float sledgehammerRange = 2.2f;
+}
+
+/// <summary>Игровое время: длина часа, границы дня и ночи. См. GameClock.</summary>
+[System.Serializable]
+public class TimeSettings
+{
+    [Tooltip("Сколько реальных секунд длится игровой час. 75 — рабочий день 06:00–22:00 идёт 20 минут.")]
+    [Min(1f)] public float realSecondsPerHour = 75f;
+
+    [Tooltip("Во сколько начинается новая игра, часы (8 — 08:00 первого дня).")]
+    [Range(0f, 23.9f)] public float newGameStartHour = 8f;
+
+    [Tooltip("Утро: с этого часа идёт новый день (счётчик дней) и кончается ночь.")]
+    [Range(0, 23)] public int morningHour = 6;
+
+    [Tooltip("Вечер: с этого часа можно ложиться спать, часы в HUD показывают луну.")]
+    [Range(0, 23)] public int eveningHour = 20;
+
+    [Tooltip("Ночь: с этого часа до утра копится «сонливость» (StaminaSettings.nightFatiguePerHour).")]
+    [Range(0, 23)] public int nightHour = 22;
+}
+
+/// <summary>
+/// Выносливость в два слоя (PlayerStamina): бар тратится на рывки и сам восстанавливается, а усталость
+/// копится за день от тяжёлой работы и от времени, запирает правую часть бара и снимается только сном
+/// (еда возвращает немного, стимуляторы перекрывают временно). Числа — единицы бара при максимуме 100.
+/// </summary>
+[System.Serializable]
+public class StaminaSettings
+{
+    [Header("Бар")]
+    [Tooltip("Максимум выносливости без навыков.")]
+    [Min(1f)] public float maxStamina = 100f;
+
+    [Tooltip("Восстановление бара в секунду.")]
+    [Min(0f)] public float regenPerSecond = 25f;
+
+    [Tooltip("Через сколько секунд после последней траты начинается восстановление.")]
+    [Min(0f)] public float regenDelay = 1f;
+
+    [Tooltip("Одышка: бар опустел — бег, прыжок, удары и работа инструментом недоступны, пока он не " +
+             "восстановится до этой доли потолка.")]
+    [Range(0f, 1f)] public float windedRecoverFraction = 0.3f;
+
+    [Tooltip("Как бы игрок ни устал, потолок бара не опускается ниже этой доли максимума.")]
+    [Range(0.05f, 1f)] public float minCapFraction = 0.15f;
+
+    [Header("Расход бара")]
+    [Tooltip("Бег, в секунду (с полного бара — примерно 7 с бега).")]
+    [Min(0f)] public float sprintPerSecond = 14f;
+
+    [Tooltip("Прыжок.")]
+    [Min(0f)] public float jumpCost = 12f;
+
+    [Tooltip("Удар кувалдой (любой, в том числе мимо).")]
+    [Min(0f)] public float swingCost = 18f;
+
+    [Tooltip("Лом: за доску целиком, списывается по ходу рычага.")]
+    [Min(0f)] public float pryCostPerBoard = 40f;
+
+    [Tooltip("Тряпка и швабра: за метр пути по пятну.")]
+    [Min(0f)] public float scrubCostPerMeter = 6f;
+
+    [Tooltip("Удар зомби по игроку сбивает дыхание.")]
+    [Min(0f)] public float hitCost = 15f;
+
+    [Header("Усталость от работы")]
+    [Tooltip("Лом: за доску целиком, по прогрессу.")]
+    [Min(0f)] public float pryFatiguePerBoard = 3f;
+
+    [Tooltip("Удар кувалдой.")]
+    [Min(0f)] public float swingFatigue = 0.6f;
+
+    [Tooltip("Пятно целиком, по прогрессу.")]
+    [Min(0f)] public float scrubFatiguePerStain = 1.5f;
+
+    [Tooltip("Кирпич, уложенный в кладку.")]
+    [Min(0f)] public float brickFatigue = 1f;
+
+    [Tooltip("Деталь, установленная в точку ремонта (запчасти генератора, мотор лифта).")]
+    [Min(0f)] public float repairPartFatigue = 4f;
+
+    [Tooltip("Тяжёлый предмет в руках (ItemData.isHeavy): усталость за каждые 20 м пути.")]
+    [Min(0f)] public float heavyCarryFatiguePer20m = 1f;
+
+    [Tooltip("Скорость ходьбы с тяжёлым предметом (множитель). Бег и прыжок с ним недоступны.")]
+    [Range(0.1f, 1f)] public float heavyCarrySpeedMultiplier = 0.8f;
+
+    [Header("Усталость от времени")]
+    [Tooltip("Днём (с утра до ночи), в игровой час.")]
+    [Min(0f)] public float dayFatiguePerHour = 1.5f;
+
+    [Tooltip("Ночью — «сонливость», в игровой час. Из-за неё к полуночи вымотан любой игрок.")]
+    [Min(0f)] public float nightFatiguePerHour = 25f;
+
+    [Tooltip("Больше этого усталость не копится (по умолчанию — весь бар).")]
+    [Min(1f)] public float maxFatigue = 100f;
+
+    [Header("Пороги (по действующей усталости — за вычетом стимуляторов)")]
+    [Tooltip("Сообщение «Вы устали».")]
+    [Min(0f)] public float tiredThreshold = 50f;
+
+    [Tooltip("«Вымотан»: подбирать, ставить, чинить и работать инструментами нельзя — только ходить, " +
+             "стрелять, бить кувалдой врагов, есть, пить кофе и спать.")]
+    [Min(0f)] public float exhaustedThreshold = 70f;
+
+    [Header("Еда и стимуляторы")]
+    [Tooltip("Сытость (0–100) убывает на столько в игровой час, в том числе во сне. Сытость — только " +
+             "ограничитель: порция, которая не помещается, не съедается.")]
+    [Min(0f)] public float satietyDecayPerHour = 8f;
+
+    [Tooltip("Сытость в начале новой игры.")]
+    [Range(0f, 100f)] public float newGameSatiety = 50f;
+
+    [Tooltip("Каждый следующий стимулятор до сна слабее на эту долю.")]
+    [Range(0f, 1f)] public float stimulantTolerancePerDose = 0.25f;
+
+    [Tooltip("Слабее этой доли стимулятор не становится.")]
+    [Range(0f, 1f)] public float stimulantMinStrength = 0.25f;
+}
+
+/// <summary>Сон и отключка. См. SleepService.</summary>
+[System.Serializable]
+public class SleepSettings
+{
+    [Tooltip("С какого часа можно лечь спать. Раньше — только если игрок уже вымотан.")]
+    [Range(0, 23)] public int sleepFromHour = 20;
+
+    [Tooltip("Во сколько игрок просыпается.")]
+    [Range(0, 23)] public int wakeHour = 6;
+
+    [Tooltip("Сколько часов сна снимают всю усталость (меньше — пропорционально). Проспал столько — утром " +
+             "эффект «Выспался» (при подъёме в 06:00 это отбой до 22:00).")]
+    [Min(0.5f)] public float hoursForFullRest = 8f;
+
+    [Tooltip("До какого часа держатся утренние эффекты («Выспался», «Разбитость»).")]
+    [Range(0, 23)] public int morningEffectsUntilHour = 12;
+
+    [Header("Отключка")]
+    [Tooltip("Во сколько игрок, так и не легший спать, отключается от усталости.")]
+    [Range(0, 23)] public int passOutHour = 2;
+
+    [Tooltip("Во сколько он приходит в себя — на матрасе.")]
+    [Range(0, 23)] public int passOutWakeHour = 8;
+
+    [Tooltip("Какая доля обычного восстановления засчитывается после отключки.")]
+    [Range(0f, 1f)] public float passOutRestEfficiency = 0.5f;
+
+    [Header("Экран сна")]
+    [Tooltip("Затемнение и проявление экрана, с.")]
+    [Min(0f)] public float fadeDuration = 0.8f;
+
+    [Tooltip("Сколько секунд на экране крутятся часы до утра.")]
+    [Min(0f)] public float clockSpinDuration = 2.5f;
 }
 
 /// <summary>Валюта и терминал. См. PlayerWallet.</summary>
@@ -296,4 +483,16 @@ public class GameConfig : ScriptableObject
     [Header("Экономика")]
     [Tooltip("Стартовый баланс и символ валюты (PlayerWallet).")]
     public EconomySettings economy = new EconomySettings();
+
+    [Header("Время")]
+    [Tooltip("Длина игрового часа, границы дня и ночи (GameClock).")]
+    public TimeSettings time = new TimeSettings();
+
+    [Header("Выносливость")]
+    [Tooltip("Бар, расход, усталость, пороги, еда и стимуляторы (PlayerStamina, PlayerConsumption).")]
+    public StaminaSettings stamina = new StaminaSettings();
+
+    [Header("Сон")]
+    [Tooltip("Когда можно лечь, сколько сна нужно, отключка (SleepService).")]
+    public SleepSettings sleep = new SleepSettings();
 }

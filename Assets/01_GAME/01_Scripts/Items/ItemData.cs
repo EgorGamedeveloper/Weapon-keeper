@@ -1,6 +1,7 @@
 using UnityEngine;
 
-/// <summary>Чем предмет работает в слоте экипировки (см. ItemData.toolKind).</summary>
+/// <summary>Чем предмет работает в слоте экипировки (см. ItemData.toolKind). Сериализуется числом —
+/// новые значения только в конец.</summary>
 public enum ToolKind
 {
     /// <summary>Не инструмент.</summary>
@@ -9,6 +10,12 @@ public enum ToolKind
     Crowbar,
     /// <summary>Кувалда: бьёт замахом — ломает Breakable и наносит урон врагам (SledgehammerSwing).</summary>
     Sledgehammer,
+    /// <summary>Швабра: моет средние и маленькие пятна (режим работы, как тряпка, но кисть шире).</summary>
+    Mop,
+    /// <summary>Мойка высокого давления: струя по прицелу моет пятна любого размера (PressureWasherSpray).</summary>
+    PressureWasher,
+    /// <summary>Катушка провода: провод от разъёма к разъёму (WireSpoolTool), одна катушка — одно соединение.</summary>
+    WireSpool,
 }
 
 /// <summary>
@@ -76,6 +83,22 @@ public class ItemData : ScriptableObject
     [Tooltip("Чем предмет работает в слоте экипировки: лом поддевает и снимает доски, кувалда бьёт замахом " +
              "(ломает Breakable, наносит урон врагам). None — не инструмент. Не оружие — weaponPrefab не участвует.")]
     public ToolKind toolKind = ToolKind.None;
+
+    [Tooltip("Только у катушки провода: сколько метров провода в ней. Одна катушка — одно соединение, " +
+             "остаток пропадает.")]
+    [Min(0f)] public float wireLength;
+
+    /// <summary>Предмет — инструмент: при подборе сразу уходит в экипировку (слот 2).</summary>
+    public bool IsTool => toolKind != ToolKind.None;
+
+    [Header("Выживание")]
+    [Tooltip("Еда или стимулятор: что происходит, когда игрок употребляет предмет из рук (клавиша F, " +
+             "PlayerConsumption). Пусто — предмет не употребляется.")]
+    public ConsumableData consumable;
+
+    [Tooltip("Тяжёлый предмет (мотор, запчасти, коробка заказа): пока он в руках, бег и прыжок недоступны, " +
+             "ходьба медленнее, а перенос утомляет (GameConfig.stamina.heavyCarry…).")]
+    public bool isHeavy;
 
     [Header("Звуки")]
     [Tooltip("Предмет долетел до руки (подбор с пола или с полки). Не задан — тихо.")]

@@ -176,8 +176,11 @@
   декаль проецирует по +Z. Круглые текстуры `06_Materials/Textures/T_BloodStain_0N` (материалы
   `M_StainDecal_0N`) сгенерированы процедурно. Готовые «painter»-ассеты редактора (UV Mask Painter) для
   этого не годятся — они рисуют маски только в Scene view.
-- **Инструменты** (слот 2, листаются колесом): `ItemData.toolKind` (`Crowbar`/`Sledgehammer`, вместо
-  старого флага `canBreakObjects`), `PlayerInventoryModeController.ActiveToolKind`. Модели из примитивов —
+- **Инструменты** (слот 2, листаются колесом): `ItemData.toolKind` (`Crowbar`/`Sledgehammer`/`Mop`/
+  `PressureWasher`/`WireSpool`, новые — только в конец enum), `PlayerInventoryModeController.ActiveToolKind`.
+  Подобранный инструмент (`ItemData.IsTool`) сразу уходит в экипировку (`AddToEquipment`), лимит инвентаря
+  уборки на него не действует. «Свою ЛКМ» (мир не трогается, как с оружием) имеют кувалда, мойка и катушка
+  (`PlayerItemInteraction.IsExclusiveToolEquipped`); лом и швабра работают через клик по объекту. Модели из примитивов —
   `03_Prefabs/Tools/CrowbarModel` (пивот — кончик лапки, шест по +Z) и `SledgehammerModel` (пивот — хват);
   они же вложены в мировые префабы `Crowbar`/`Sledgehammer` и стоят под `HandPoint` (`ToolPresenter.GetVisual`).
   Лом снимает доску рычагом (`Breakable.canPry`, раскачивание мышью вверх-вниз, доска поднимается вокруг
@@ -199,3 +202,63 @@
   импорт в Unity `Tools → Weapon Keeper → Story`, рантайм `01_Scripts/Story/`): устройство, формат `story_graph.json`,
   рецепты «как добавить триггер/ноду/событие» и автотесты `Tools/StoryEditor/tests/run.sh` — в
   `Docs/Story/STORY_EDITOR_ARCHITECTURE.md`. Прочитать перед любой правкой сюжетной системы.
+- **Пятна трёх размеров** (`CleanableStain.size`): маленькое — тряпка (есть всегда), среднее — швабра,
+  большое (копоть, граффити) — только мойка; более сильный инструмент моет и меньшие (`CanCleanWith`,
+  подсказка «Нужна швабра/мойка» — `MissingToolKey`). Кисть (радиус, сила) даёт инструмент
+  (`GameConfig.tools`): тряпка и швабра — режим `PlayerToolActions` (у швабры на пятно ложится головка
+  модели), мойка — `Player/PressureWasherSpray`: держишь ЛКМ, струя бьёт по прицелу, камера свободна
+  (`ScrubSegment` по пути прицела + `SprayAt` на месте). Звук струи пока не назначен (`loopSource` пуст).
+  Пример больших пятен — бетонная стена `05_Gameplay/Interactables/BurntWall` (у тестовой площадки нет стен).
+- **Лицензии и разовые покупки**: инструменты открываются навыками-лицензиями без модификаторов (ветка
+  «Уборщик»: `Skill_Cleaner_Mop`, `Skill_Cleaner_Washer`) и заказываются в терминале ящиками
+  (`LootBox_Mop/PressureWasher/WireSpool`, один гарантированный предмет, вскрывается ломом).
+  `LootBoxData.oneTimePurchase` — второй раз не заказать («Уже куплено», `SupplyService.Availability.AlreadyOwned`,
+  сейв `purchasedOneTimeBoxIds`); катушки — многоразовые.
+- **Провода** (`01_Scripts/Wiring`): `WireSocket` — разъём `Source` (генератор: ток есть, когда починен его
+  `powerSource`) или `Consumer`; `HasPower` опрашивается (лифт: `ElevatorPlatform.powerSocket` —
+  работает, только если мотор починен и запитан). Катушка (`Player/WireSpoolTool`, одна катушка — одно
+  соединение, `ItemData.wireLength` = 25 м): ЛКМ по разъёму — вилка; провод ложится на пол по точкам под
+  ногами игрока (сквозь стены не идёт), при возврате сматывается, на пределе длины натягивается и не
+  пускает; ЛКМ по разъёму другой роли — провод закреплён, катушка израсходована; ПКМ — смотать. Провод —
+  `WireCable` (LineRenderer, сплайн по опорным точкам), сейв `SaveGameData.wires` (источник, потребитель,
+  точки); незаконченная протяжка не сохраняется. В `TestScene` — `Generator/PowerOutlet` →
+  `ElevatorPanel/PowerInput`, катушка лежит у генератора.
+- **Игровое время** (`01_Scripts/Time/GameClock`, секция `GameConfig.time`: 1 игровой час = 75 с, день
+  06:00–22:00 ≈ 20 минут): всё держится на `TotalHours` (часов с полуночи первого дня); день считается от утра.
+  Часы идут от `Time.deltaTime` — пауза их останавливает, окна терминала и навыков нет. **Все игровые таймеры —
+  в игровых часах**: сроки хранятся моментом в `TotalHours` (эффекты) или остатком, который уменьшается на
+  `DeltaHours` и на `OnTimeSkipped` (доставки `SupplyService`); расписания слушают `OnHourChanged` (почта
+  заказов `ShippingService` в 06:00 и 14:00) — при пропуске ночи сном он поднимается для каждого часа.
+  `DeltaHours` во время пропуска = 0: итоги сна считает сам `SleepService`. Отладка: F7 — «+1 час».
+  Свет — `DayNightLighting` (ведёт все Directional Light сцены от их исходных значений, ночью — «луна»).
+- **Выносливость** (`01_Scripts/Survival/PlayerStamina`, `GameConfig.stamina`): бар (`Current`) тратится на
+  бег/прыжок/удар/рычаг/тряпку и сам восстанавливается; опустел — одышка. Усталость (`Fatigue`) копится от
+  тяжёлой работы и времени (ночью «сонливость» 25/ч) и запирает правую часть бара
+  (`Cap = Max − (усталость − маска стимуляторов)`, не ниже 15%); снимает её только сон. **«Вымотан»**
+  (действующая усталость ≥ 70): `PlayerItemInteraction` не даёт подбирать/ставить/снимать и начинать работу
+  (терминал, лифт, матрас работают), `PlayerToolActions`/`PressureWasherSpray`/`WireSpoolTool` не начинают
+  работу, `SledgehammerSwing` не ломает объекты (врагов бьёт). Основной цикл «подобрал → поставил на полку»
+  бар не тратит. Тяжёлые предметы — `ItemData.isHeavy` (мотор, запчасти, коробка): без бега и прыжка.
+- **Еда и стимуляторы** (`ItemData.consumable` → `ConsumableData`, эффекты — `StatusEffectData`, ассеты в
+  `04_Data/Survival`): клавиша F (`GameConfig.input.useKey`) употребляет активный предмет инвентаря уборки
+  (`PlayerConsumption`). Еда насовсем (до сна) снимает немного усталости, сытость — только ограничитель («Не
+  лезет»). Стимулятор (`PlayerStatusEffects`) временно перекрывает усталость, по окончании — откат (настоящая
+  усталость), каждая следующая доза за день слабее; шприц — раз в сутки. Навыки ветки «Выживание»
+  (`SkillStat.MaxStamina`…`SleepHoursNeeded`) читаются через `PlayerSkills.GetValue`; там же теперь работают
+  старые узлы ходьбы/бега/прыжка/здоровья (`PlayerCharacterController`, `PlayerHealth`).
+- **Сон** (`SleepService` на игроке, матрас `SleepSpot` — `05_Gameplay/Survival/Mattress`): лечь можно с 20:00
+  (раньше — только вымотанным), нельзя, пока враг `Chasing/Attacking`. Сон снимает эффекты (с откатом),
+  усталость — по проспанным часам (8 ч — вся), проматывает часы до 06:00, вешает «Выспался», показывает
+  итоги дня (`SleepOverlayUI`) и **делает автосохранение**. На экране сна `timeScale = 0`. Не лёг до 02:00 —
+  отключка: утро в 08:00 у матраса, отдых вполовину, «Разбитость». HUD: `UI/Survival` (полоса выносливости с
+  иконками эффектов, часы под кошельком, подсказки, моргание/обесцвечивание `StaminaFeedbackFX`).
+- **Сейв версии 4**: `clockTotalHours`, `staminaFatigue`, `satiety`, `statusEffects`, `stimulantsToday`,
+  `consumedTodayIds`; доставки — `SupplyDeliverySave.remainingHours`. Миграция 3 → 4: часы и сытость «не
+  сохранены» (−1 → как в новой игре), секунды доставок ÷ 75. `LootBoxData.deliveryHours` — в игровых часах.
+- **Фонарик** (`Player/PlayerFlashlight` на `Regular_Character`, клавиша G — `GameConfig.input.flashlightKey`;
+  F занята «Использовать»): Spot-свет `Regular_Character/Flashlight` (cookie `06_Materials/Textures/
+  T_FlashlightCookie`, тёплый, дальность 22 м) догоняет взгляд камеры с инерцией (`followSharpness`),
+  включается/гаснет за `fadeDuration` со щелчком. Яркость включённого — `intensity` самого Light (35: у URP
+  Spot квадратичный спад, при 5 луча ночью не видно). Батареи нет, состояние не сохраняется. Тени у Light
+  стоят Soft, но в URP-ассете выключены тени дополнительных источников (`supportsAdditionalLightShadows`) —
+  пока фонарик теней не даёт.

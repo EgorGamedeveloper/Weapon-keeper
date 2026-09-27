@@ -69,6 +69,13 @@ public class PlayerCharacterController : MonoBehaviour
     [Tooltip("По чему игрок считает опору. Слой самого игрока обязательно исключить.")]
     public LayerMask groundLayers = ~0;
 
+    [Header("Выносливость и навыки")]
+    [Tooltip("Выносливость: бег и прыжок её тратят, при одышке и с тяжёлым грузом недоступны. Пусто — без ограничений.")]
+    public PlayerStamina stamina;
+
+    [Tooltip("Навыки ветки «Выживание»: скорость ходьбы и бега, высота прыжка. Пусто — значения выше как есть.")]
+    public PlayerSkills skills;
+
     /// <summary>Текущая скорость целиком (горизонталь + вертикаль). Читают покачивание камеры и предмета в руке.</summary>
     public Vector3 Velocity => horizontalVelocity + Vector3.up * verticalVelocity;
 
@@ -302,12 +309,21 @@ public class PlayerCharacterController : MonoBehaviour
         Vector2 input = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
         if (input.sqrMagnitude > 1f) input.Normalize();
 
-        float speed = Input.GetKey(sprintKey) ? sprintSpeed : walkSpeed;
+        float walk = SkillValue(SkillStat.WalkSpeed, walkSpeed);
+        bool sprinting = Input.GetKey(sprintKey) && input.sqrMagnitude > 0.01f && (stamina == null || stamina.CanSprint);
+        float speed = sprinting ? SkillValue(SkillStat.SprintSpeed, sprintSpeed) : walk;
+        if (stamina != null) speed *= stamina.MoveSpeedMultiplier;
         Vector3 target = (transform.forward * input.y + transform.right * input.x) * speed;
 
         float smoothTime = IsGrounded ? groundSmoothTime : airSmoothTime;
         horizontalVelocity = Vector3.SmoothDamp(horizontalVelocity, target, ref smoothVelocity, smoothTime, Mathf.Infinity, deltaTime);
+
+        // Бег тратит выносливость, только пока игрок реально бежит: упёрся в стену с зажатым Shift — не тратит.
+        if (sprinting && stamina != null && horizontalVelocity.magnitude > walk * 1.05f)
+            stamina.DrainSprint(deltaTime);
     }
+
+    private float SkillValue(SkillStat stat, float baseValue) => skills != null ? skills.GetValue(stat, baseValue) : baseValue;
 
     private void ApplyVertical(float deltaTime)
     {
@@ -316,14 +332,20 @@ public class PlayerCharacterController : MonoBehaviour
 
         if (canJump && wantsJump)
         {
-            // v = sqrt(2 * g * h) — высота прыжка задаётся в метрах и не зависит от gravityMultiplier.
-            verticalVelocity = Mathf.Sqrt(2f * Mathf.Abs(Physics.gravity.y) * gravityMultiplier * jumpHeight);
             lastJumpPressedTime = float.NegativeInfinity;
-            lastGroundedTime = float.NegativeInfinity;
-            IsGrounded = false;
-            jumpedThisFrame = true;
-            Jumped?.Invoke();
-            return;
+
+            // Нет сил (одышка) или в руках тяжёлое — нажатие просто гаснет, игрок остаётся на земле.
+            if (stamina == null || stamina.TryJump())
+            {
+                // v = sqrt(2 * g * h) — высота прыжка задаётся в метрах и не зависит от gravityMultiplier.
+                float height = SkillValue(SkillStat.JumpHeight, jumpHeight);
+                verticalVelocity = Mathf.Sqrt(2f * Mathf.Abs(Physics.gravity.y) * gravityMultiplier * height);
+                lastGroundedTime = float.NegativeInfinity;
+                IsGrounded = false;
+                jumpedThisFrame = true;
+                Jumped?.Invoke();
+                return;
+            }
         }
 
         if (IsGrounded && verticalVelocity <= 0f)

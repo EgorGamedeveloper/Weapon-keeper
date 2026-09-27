@@ -32,11 +32,24 @@ public class PlayerHealth : MonoBehaviour
     [Tooltip("Точка, в которую целятся и смотрят враги (голова/камера). Пусто — корень игрока + 1.6 м.")]
     public Transform aimPoint;
 
+    [Tooltip("Навыки: максимум здоровья («Закалка», SkillStat.MaxHealth) поверх maxHealth. Пусто — maxHealth как есть.")]
+    public PlayerSkills skills;
+
+    /// <summary>Максимум здоровья с навыками. База — maxHealth (из GameConfig).</summary>
+    public float MaxHealth => skills != null ? skills.GetValue(SkillStat.MaxHealth, maxHealth) : maxHealth;
+
     /// <summary>Текущее здоровье.</summary>
     public float CurrentHealth { get; private set; }
 
     /// <summary>Здоровье в долях от максимума, 0..1.</summary>
-    public float Normalized => maxHealth > 0f ? CurrentHealth / maxHealth : 0f;
+    public float Normalized
+    {
+        get
+        {
+            float max = MaxHealth;
+            return max > 0f ? CurrentHealth / max : 0f;
+        }
+    }
 
     /// <summary>Игрок мёртв.</summary>
     public bool IsDead { get; private set; }
@@ -51,11 +64,42 @@ public class PlayerHealth : MonoBehaviour
     public event Action OnDied;
 
     private float lastDamageTime = float.NegativeInfinity;
+    private float knownMaxHealth;
 
     private void Awake()
     {
         ApplyConfig();
-        CurrentHealth = maxHealth;
+        knownMaxHealth = MaxHealth;
+        CurrentHealth = knownMaxHealth;
+    }
+
+    private void Start()
+    {
+        // Стартовые навыки PlayerSkills выдаёт в своём Awake, а порядок Awake не гарантирован — сверяемся ещё раз.
+        float max = MaxHealth;
+        if (Mathf.Approximately(CurrentHealth, knownMaxHealth)) CurrentHealth = max;
+        knownMaxHealth = max;
+    }
+
+    private void OnEnable()
+    {
+        if (skills != null) skills.OnSkillsChanged += HandleSkillsChanged;
+    }
+
+    private void OnDisable()
+    {
+        if (skills != null) skills.OnSkillsChanged -= HandleSkillsChanged;
+    }
+
+    // Куплен навык на здоровье: максимум вырос — добавляем разницу; уменьшился — здоровье не выше максимума.
+    private void HandleSkillsChanged()
+    {
+        float max = MaxHealth;
+        float delta = max - knownMaxHealth;
+        knownMaxHealth = max;
+        if (IsDead) return;
+
+        CurrentHealth = delta > 0f ? Mathf.Min(max, CurrentHealth + delta) : Mathf.Min(CurrentHealth, max);
     }
 
     private void ApplyConfig()
@@ -69,10 +113,11 @@ public class PlayerHealth : MonoBehaviour
 
     private void Update()
     {
-        if (IsDead || CurrentHealth >= maxHealth) return;
+        float max = MaxHealth;
+        if (IsDead || CurrentHealth >= max) return;
         if (Time.time - lastDamageTime < regenDelay) return;
 
-        CurrentHealth = Mathf.Min(maxHealth, CurrentHealth + regenRate * Time.deltaTime);
+        CurrentHealth = Mathf.Min(max, CurrentHealth + regenRate * Time.deltaTime);
     }
 
     /// <summary>Нанести игроку урон (положительное число).</summary>

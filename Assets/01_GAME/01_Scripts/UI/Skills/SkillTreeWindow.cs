@@ -492,6 +492,14 @@ public class SkillTreeWindow : MonoBehaviour
             case SkillStat.OrderPrice: return Loc.Get("skills.stat.order_price");
             case SkillStat.DeliveryTime: return Loc.Get("skills.stat.delivery_time");
             case SkillStat.ShippingReward: return Loc.Get("skills.stat.shipping_reward");
+            case SkillStat.MaxStamina: return Loc.Get("skills.stat.max_stamina");
+            case SkillStat.StaminaRegen: return Loc.Get("skills.stat.stamina_regen");
+            case SkillStat.StaminaMoveCost: return Loc.Get("skills.stat.stamina_move_cost");
+            case SkillStat.WorkFatigue: return Loc.Get("skills.stat.work_fatigue");
+            case SkillStat.NightFatigue: return Loc.Get("skills.stat.night_fatigue");
+            case SkillStat.StimulantDuration: return Loc.Get("skills.stat.stimulant_duration");
+            case SkillStat.StimulantCrash: return Loc.Get("skills.stat.stimulant_crash");
+            case SkillStat.SleepHoursNeeded: return Loc.Get("skills.stat.sleep_hours");
             default: return stat.ToString();
         }
     }

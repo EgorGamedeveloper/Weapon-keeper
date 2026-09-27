@@ -3,15 +3,29 @@ using DG.Tweening;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 
+/// <summary>Размер пятна — от него зависит, каким инструментом его можно отмыть.</summary>
+public enum StainSize
+{
+    /// <summary>Маленькое: тряпка (есть всегда), швабра или мойка.</summary>
+    Small,
+    /// <summary>Среднее (лужа на полу): швабра или мойка.</summary>
+    Medium,
+    /// <summary>Большое (копоть, граффити на стене): только мойка высокого давления.</summary>
+    Large,
+}
+
 /// <summary>
-/// Пятно крови/грязи — декаль (URP DecalProjector), которое игрок стирает тряпкой: в режиме работы
-/// (PlayerToolActions) мышь водит тряпку по пятну, и оно стирается именно там, где тряпка прошла.
-/// Намеренно НЕ реализует IPlaceableSlot: там ничего не устанавливается.
+/// Пятно крови/грязи — декаль (URP DecalProjector), которое игрок отмывает инструментом: тряпкой или
+/// шваброй в режиме работы (PlayerToolActions — мышь водит инструмент по пятну) или струёй мойки
+/// (PressureWasherSpray — по прицелу). Стирается пятно именно там, где прошёл инструмент. Каким
+/// инструментом можно — решает размер (size, CanCleanWith). Намеренно НЕ реализует IPlaceableSlot:
+/// там ничего не устанавливается.
 ///
 /// Маска — альфа собственной копии текстуры пятна: при старте текстура копируется в Texture2D пятна,
-/// а материал декали получает её вместо исходной (у каждого пятна свой экземпляр). Тряпка уменьшает
-/// альфу штампами кисти вдоль пути (ScrubSegment); прогресс — доля стёртой альфы. Когда стёрто
-/// cleanThreshold, остаток тает, пятно считается очищенным (OnCleaned).
+/// а материал декали получает её вместо исходной (у каждого пятна свой экземпляр). Инструмент уменьшает
+/// альфу штампами своей кисти (ScrubSegment вдоль пути, SprayAt — в одну точку; радиус и силу даёт
+/// инструмент); прогресс — доля стёртой альфы. Когда стёрто cleanThreshold, остаток тает, пятно считается
+/// очищенным (OnCleaned).
 ///
 /// Раскладка: объект стоит НА поверхности, декаль проецирует вдоль своей оси +Z (для пола — вниз), её
 /// коробка — симметрично вокруг поверхности (pivot по Z = 0). Плоскость пятна — через позицию объекта
@@ -26,19 +40,19 @@ public class CleanableStain : MonoBehaviour
     [Tooltip("Текстура пятна (форма — в альфе). Пусто — Base_Map материала декали.")]
     public Texture2D stainTexture;
 
-    [Header("Тряпка")]
-    [Tooltip("Радиус тряпки, м.")]
-    [Min(0.01f)] public float brushRadius = 0.09f;
+    [Tooltip("Размер: маленькое — тряпкой, среднее — шваброй, большое — только мойкой высокого давления.")]
+    public StainSize size = StainSize.Small;
 
-    [Tooltip("Сколько альфы снимает один штамп кисти в центре тряпки. Штампы идут каждые ¼ радиуса, " +
-             "так что один проход снимает примерно половину пятна.")]
-    [Range(0.01f, 1f)] public float brushStrength = 0.08f;
+    [Tooltip("Ключ заголовка подсказки у прицела (strings.csv): hud.stain.title — «Пятно крови», " +
+             "hud.stain.pool, hud.stain.soot, hud.stain.graffiti.")]
+    public string titleKey = "hud.stain.title";
 
     [Tooltip("Какая доля пятна должна быть стёрта, чтобы остаток растаял сам и пятно засчиталось.")]
     [Range(0.5f, 1f)] public float cleanThreshold = 0.9f;
 
     [Header("Звуки")]
-    [Tooltip("Шорох тряпки: раз на scrubSoundDistance пройденного по пятну пути.")]
+    [Tooltip("Шорох по умолчанию (тряпка): раз на scrubSoundDistance пройденного по пятну пути. Инструмент " +
+             "может передать свой звук.")]
     public SoundCue scrubSound;
 
     [Tooltip("Сколько метров тряпки по пятну между звуками шороха.")]
@@ -195,35 +209,69 @@ public class CleanableStain : MonoBehaviour
 
     // ───────────────────────── Стирание ─────────────────────────
 
+    /// <summary>Можно ли отмыть это пятно инструментом (None — тряпка, она есть всегда).</summary>
+    public bool CanCleanWith(ToolKind tool)
+    {
+        switch (size)
+        {
+            case StainSize.Large: return tool == ToolKind.PressureWasher;
+            case StainSize.Medium: return tool == ToolKind.Mop || tool == ToolKind.PressureWasher;
+            default: return true;
+        }
+    }
+
+    /// <summary>Ключ подсказки «чем мыть», если текущим инструментом нельзя (null — можно).</summary>
+    public string MissingToolKey(ToolKind tool)
+    {
+        if (CanCleanWith(tool)) return null;
+        return size == StainSize.Large ? "hud.stain.need_washer" : "hud.stain.need_mop";
+    }
+
     /// <summary>
-    /// Тряпка прошла от from до to (мировые точки на плоскости пятна): штампы кисти каждые ¼ радиуса.
-    /// Неподвижная тряпка не стирает — пятно нужно именно тереть. Возвращает true, когда пятно очищено.
+    /// Инструмент прошёл от from до to (мировые точки на плоскости пятна): штампы кисти радиуса radius
+    /// каждые ¼ радиуса, каждый снимает strength альфы в центре. Неподвижный инструмент так не стирает —
+    /// пятно нужно именно тереть (для струи в одну точку — SprayAt). sound — шорох инструмента, null —
+    /// звук пятна по умолчанию. Возвращает true, когда пятно очищено.
     /// </summary>
-    public bool ScrubSegment(Vector3 from, Vector3 to)
+    public bool ScrubSegment(Vector3 from, Vector3 to, float radius, float strength, SoundCue sound = null)
     {
         if (IsClean || pixels == null) return IsClean;
 
         float distance = Vector3.Distance(from, to);
         if (distance < 0.0005f) return false;
 
-        float step = brushRadius * 0.25f;
+        float step = radius * 0.25f;
         int stamps = Mathf.Max(1, Mathf.CeilToInt(distance / step));
         for (int i = 1; i <= stamps; i++)
-            Stamp(WorldToUV(Vector3.Lerp(from, to, (float)i / stamps)));
+            Stamp(WorldToUV(Vector3.Lerp(from, to, (float)i / stamps)), radius, strength);
 
         scrubDistance += distance;
         if (scrubDistance >= scrubSoundDistance)
         {
             scrubDistance = 0f;
-            SoundPlayer.Play(scrubSound, to);
+            SoundPlayer.Play(sound != null ? sound : scrubSound, to);
         }
 
+        return UpdateProgress();
+    }
+
+    /// <summary>Один штамп в точку (струя мойки, прицел стоит на месте). Возвращает true, когда пятно очищено.</summary>
+    public bool SprayAt(Vector3 point, float radius, float strength)
+    {
+        if (IsClean || pixels == null) return IsClean;
+        if (strength <= 0f) return false;
+        Stamp(WorldToUV(point), radius, Mathf.Clamp01(strength));
+        return UpdateProgress();
+    }
+
+    private bool UpdateProgress()
+    {
         Progress = initialAlphaSum > 0 ? Mathf.Clamp01((float)(1.0 - alphaSum / initialAlphaSum)) : 1f;
         if (Progress >= cleanThreshold) Clean();
         return IsClean;
     }
 
-    private void Stamp(Vector2 uv)
+    private void Stamp(Vector2 uv, float brushRadius, float brushStrength)
     {
         int width = maskTexture.width, height = maskTexture.height;
         float radiusX = brushRadius / projector.size.x * width;

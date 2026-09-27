@@ -14,13 +14,16 @@ using System;
 /// установку на полку уже выдан» (placementRewarded/rewardedCount). Сейв версии 1 мигрируется в
 /// SaveLoadService.MigrateToCurrent, сейв новее CurrentVersion игра не загружает. 3 — у точки ремонта
 /// появились заполненные места кладки (RepairPointSave.filledSlots); в старых сейвах кладки не было,
-/// пустой массив и есть правильное значение.
+/// пустой массив и есть правильное значение. 4 — игровое время и выживание: часы (clockTotalHours),
+/// усталость, сытость, действующие эффекты; доставки терминала считаются в игровых часах
+/// (SupplyDeliverySave.remainingHours). Сейв версии 3 мигрирует: первый день с утра, сил полно,
+/// секунды доставок переводятся в часы.
 /// </summary>
 [Serializable]
 public class SaveGameData
 {
     /// <summary>Версия схемы, которую пишет текущая сборка.</summary>
-    public const int CurrentVersion = 3;
+    public const int CurrentVersion = 4;
 
     public int version = CurrentVersion;
     public string savedAtUtc;
@@ -35,6 +38,8 @@ public class SaveGameData
     public string[] brokenBreakableIds = Array.Empty<string>();
     /// <summary>Выбитые кирпичи ещё не обрушенных кладок (в старых сейвах поля нет → пусто: кладки целые).</summary>
     public BrickWallSave[] brickWalls = Array.Empty<BrickWallSave>();
+    /// <summary>Протянутые провода (в старых сейвах поля нет → пусто: проводов нет).</summary>
+    public WireSave[] wires = Array.Empty<WireSave>();
 
     public TidyUpEntrySave[] tidyUp = Array.Empty<TidyUpEntrySave>();
     public int tidyUpActiveIndex;
@@ -67,10 +72,42 @@ public class SaveGameData
     public SupplyDeliverySave[] supplyDeliveries = Array.Empty<SupplyDeliverySave>();
     public DeliveredCrateSave[] deliveredCrates = Array.Empty<DeliveredCrateSave>();
     public string[] shippingInboxIds = Array.Empty<string>();
+    /// <summary>Уже заказанные разовые ящики терминала (инструменты). В старых сейвах поля нет → пусто.</summary>
+    public string[] purchasedOneTimeBoxIds = Array.Empty<string>();
     public string shippingActiveOrderId = "";
     public string[] shippingBoxContentIds = Array.Empty<string>();
     public bool shippingBoxCancelled;
     public float shippingRefillTimer;
+
+    // — время и выживание — (версия 4+)
+    /// <summary>Игровое время: часов с полуночи первого дня (GameClock.TotalHours). −1 — не сохранялось
+    /// (сейв до версии 4): часы начинают новую игру.</summary>
+    public double clockTotalHours = -1.0;
+
+    /// <summary>Накопленная за день усталость (PlayerStamina). Бар не сохраняется — после загрузки он полный.</summary>
+    public float staminaFatigue;
+
+    /// <summary>Сытость 0–100 (PlayerConsumption). −1 — не сохранялась: как в новой игре.</summary>
+    public float satiety = -1f;
+
+    /// <summary>Действующие временные эффекты (кофе, «Выспался»…).</summary>
+    public StatusEffectSave[] statusEffects = Array.Empty<StatusEffectSave>();
+
+    /// <summary>Сколько стимуляторов принято с последнего сна (толерантность).</summary>
+    public int stimulantsToday;
+
+    /// <summary>Предметы «не чаще раза в сутки», уже употреблённые с последнего сна (itemId).</summary>
+    public string[] consumedTodayIds = Array.Empty<string>();
+}
+
+/// <summary>Действующий временный эффект: какой, до какого момента игрового времени и с какой силой.</summary>
+[Serializable]
+public class StatusEffectSave
+{
+    public string effectId;
+    public double expiresAtHours;
+    public float durationHours;
+    public float strength;
 }
 
 /// <summary>Лутбокс в пути: сколько секунд осталось ехать.</summary>
@@ -78,6 +115,12 @@ public class SaveGameData
 public class SupplyDeliverySave
 {
     public string lootBoxId;
+
+    /// <summary>Сколько игровых часов осталось ехать (версия 4+).</summary>
+    public float remainingHours;
+    public float totalHours;
+
+    /// <summary>Сейвы до версии 4: реальные секунды. Только для миграции.</summary>
     public float remainingSeconds;
     public float totalSeconds;
 }
@@ -119,6 +162,16 @@ public class SlotSave
     public string[] itemIds = Array.Empty<string>();
     /// <summary>Параллельно itemIds (версия 2+).</summary>
     public bool[] placementRewarded = Array.Empty<bool>();
+}
+
+/// <summary>Провод между разъёмами (WireSocket): кто источник, кто потребитель и где лежит провод.</summary>
+[Serializable]
+public class WireSave
+{
+    public string sourceId;
+    public string consumerId;
+    /// <summary>Опорные точки провода (WireCable.ControlPoints), от источника к потребителю.</summary>
+    public UnityEngine.Vector3[] points = Array.Empty<UnityEngine.Vector3>();
 }
 
 /// <summary>Кладка, которую разбивают по кирпичу (BrickWallSmash): какие кирпичи уже выбиты.</summary>

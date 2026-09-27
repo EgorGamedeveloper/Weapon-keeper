@@ -11,6 +11,10 @@ using UnityEngine;
 /// Коробка одна на всю игру: пока она существует (в работе или отменена и не разобрана), новый
 /// заказ не берётся. Её содержимое — данные (список ItemData), а не предметы в мире, поэтому
 /// коробку можно носить в инвентаре, а сейв хранит просто список id.
+///
+/// Новые заказы приходят по игровым часам (refillHours — «утренняя и дневная почта»): в каждый такой час
+/// входящие добиваются до лимита. Ночь, пропущенная сном, тоже приносит утреннюю почту — GameClock
+/// поднимает смену часа для каждого пройденного часа. Без часов в сцене — по-старому, раз в refillInterval секунд.
 /// </summary>
 public class ShippingService : MonoBehaviour
 {
@@ -26,6 +30,9 @@ public class ShippingService : MonoBehaviour
     [Tooltip("Учёт процента расстановки: уложенный в коробку товар уходит из «всего».")]
     public ShelvingProgressTracker shelvingTracker;
 
+    [Tooltip("Игровые часы: новые заказы приходят в refillHours. Пусто — раз в refillInterval секунд.")]
+    public GameClock clock;
+
     [Header("Коробка")]
     [Tooltip("Предмет «Коробка для отправки» (у его worldPrefab должен быть ShippingBox).")]
     public ItemData boxItem;
@@ -40,7 +47,10 @@ public class ShippingService : MonoBehaviour
     [Tooltip("Сколько заказов одновременно висит во входящих.")]
     [Min(1)] public int inboxLimit = 3;
 
-    [Tooltip("Раз во сколько секунд приходит новый заказ (если есть место).")]
+    [Tooltip("В какие игровые часы приходит почта: входящие добиваются до лимита.")]
+    public int[] refillHours = { 6, 14 };
+
+    [Tooltip("Без игровых часов в сцене: раз во сколько секунд приходит новый заказ (если есть место).")]
     [Min(1f)] public float refillInterval = 45f;
 
     /// <summary>Входящие, активный заказ или коробка изменились.</summary>
@@ -97,9 +107,25 @@ public class ShippingService : MonoBehaviour
         while (inbox.Count < Mathf.Min(1, inboxLimit) && TryAddToInbox()) { }
     }
 
+    private void OnEnable()
+    {
+        if (clock != null) clock.OnHourChanged += HandleHourChanged;
+    }
+
+    private void OnDisable()
+    {
+        if (clock != null) clock.OnHourChanged -= HandleHourChanged;
+    }
+
+    private void HandleHourChanged(int hour)
+    {
+        if (Array.IndexOf(refillHours, hour) < 0) return;
+        while (inbox.Count < inboxLimit && TryAddToInbox()) { }
+    }
+
     private void Update()
     {
-        if (inbox.Count >= inboxLimit) return;
+        if (clock != null || inbox.Count >= inboxLimit) return;
 
         refillTimer += Time.deltaTime;
         if (refillTimer < refillInterval) return;

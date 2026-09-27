@@ -32,6 +32,22 @@ public enum SkillStat
     DeliveryTime,
     /// <summary>Множитель денежной награды за заказы на отправку (база — 1).</summary>
     ShippingReward,
+    /// <summary>Максимум выносливости (PlayerStamina, база — StaminaSettings.maxStamina).</summary>
+    MaxStamina,
+    /// <summary>Множитель скорости восстановления бара выносливости (база — 1).</summary>
+    StaminaRegen,
+    /// <summary>Множитель расхода бара на бег и прыжки (база — 1).</summary>
+    StaminaMoveCost,
+    /// <summary>Множитель усталости от тяжёлой работы: лом, кувалда, пятна, ремонт, груз (база — 1).</summary>
+    WorkFatigue,
+    /// <summary>Множитель ночной «сонливости» (база — 1).</summary>
+    NightFatigue,
+    /// <summary>Множитель длительности стимуляторов (база — 1).</summary>
+    StimulantDuration,
+    /// <summary>Множитель отката после стимуляторов (база — 1).</summary>
+    StimulantCrash,
+    /// <summary>Множитель часов сна, нужных для полного отдыха (база — 1, т.е. SleepSettings.hoursForFullRest).</summary>
+    SleepHoursNeeded,
 }
 
 /// <summary>Как модификатор применяется к базовому значению.</summary>

@@ -111,7 +111,7 @@ public class TerminalWindow : MonoBehaviour
         // Обратный отсчёт доставок — каждый кадр, без пересборки списка.
         if (supply != null)
             for (int i = 0; i < deliveryRows.Count && i < supply.Deliveries.Count; i++)
-                deliveryRows[i].Bind(supply.Deliveries[i]);
+                deliveryRows[i].Bind(supply.Deliveries[i], supply.GetArrivalTime(supply.Deliveries[i]));
     }
 
     // ───────── открытие / закрытие ─────────
@@ -252,7 +252,7 @@ public class TerminalWindow : MonoBehaviour
         }
 
         EnsureCount(deliveryRows, supply.Deliveries.Count, deliveryRowPrefab, deliveriesRoot, null);
-        for (int i = 0; i < supply.Deliveries.Count; i++) deliveryRows[i].Bind(supply.Deliveries[i]);
+        for (int i = 0; i < supply.Deliveries.Count; i++) deliveryRows[i].Bind(supply.Deliveries[i], supply.GetArrivalTime(supply.Deliveries[i]));
         if (deliveriesEmpty != null) deliveriesEmpty.gameObject.SetActive(supply.Deliveries.Count == 0);
     }
 
@@ -321,6 +321,7 @@ public class TerminalWindow : MonoBehaviour
             case SupplyService.Availability.NoLicense: return Loc.Get("terminal.block.license", box.requiredLicense.DisplayTitle.ToUpperInvariant());
             case SupplyService.Availability.LowLevel: return Loc.Get("terminal.block.level", box.requiredLevel);
             case SupplyService.Availability.NoMoney: return Loc.Get("terminal.block.money");
+            case SupplyService.Availability.AlreadyOwned: return Loc.Get("terminal.block.owned");
             default: return "";
         }
     }
@@ -350,10 +351,14 @@ public class TerminalWindow : MonoBehaviour
         return sb.ToString();
     }
 
-    private static string FormatTime(float seconds)
+    /// <summary>Длительность в игровых часах: «3 Ч», «1 Ч 30 МИН».</summary>
+    private static string FormatTime(float hours)
     {
-        int s = Mathf.CeilToInt(seconds);
-        return (s / 60).ToString("00") + ":" + (s % 60).ToString("00");
+        int minutes = Mathf.Max(1, Mathf.RoundToInt(hours * 60f));
+        int h = minutes / 60;
+        int m = minutes % 60;
+        if (m == 0) return Loc.Get("terminal.duration_hours", h);
+        return h == 0 ? Loc.Get("terminal.duration_minutes", m) : Loc.Get("terminal.duration_hours_minutes", h, m);
     }
 
     private static void SetText(Text text, string value)

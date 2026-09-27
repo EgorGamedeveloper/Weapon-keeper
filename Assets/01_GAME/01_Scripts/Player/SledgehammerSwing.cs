@@ -28,6 +28,10 @@ public class SledgehammerSwing : MonoBehaviour
     [Tooltip("Режим работы с объектом: пока он идёт (тряпка, лом), кувалда не бьёт.")]
     public PlayerToolActions toolActions;
 
+    [Tooltip("Выносливость: каждый замах тратит бар и немного утомляет; при одышке замах не начинается, а " +
+             "вымотанный игрок ломать объекты не может (врагов бьёт как обычно). Пусто — без ограничений.")]
+    public PlayerStamina stamina;
+
     [Header("Конфиг")]
     [Tooltip("Если задан — урон и дальность берутся из GameConfig.tools при старте.")]
     public GameConfig config;
@@ -123,6 +127,9 @@ public class SledgehammerSwing : MonoBehaviour
         visual = toolPresenter != null ? toolPresenter.GetVisual(ToolKind.Sledgehammer) : null;
         if (visual == null) return;
 
+        // Одышка — сил на замах нет.
+        if (stamina != null && !stamina.TrySwing()) return;
+
         restPosition = visual.localPosition;
         restRotation = visual.localRotation;
 
@@ -181,15 +188,18 @@ public class SledgehammerSwing : MonoBehaviour
             return;
         }
 
+        // Вымотанный игрок отбиваться может, а работать — нет: кладка и доски только глухо отзываются.
+        bool canWork = stamina == null || !stamina.IsExhausted;
+
         BrickWallSmash wall = hit.collider.GetComponentInParent<BrickWallSmash>();
-        if (wall != null && !wall.IsBroken)
+        if (canWork && wall != null && !wall.IsBroken)
         {
             wall.Hit(point, ray.direction);
             return;
         }
 
         Breakable breakable = hit.collider.GetComponentInParent<Breakable>();
-        if (breakable != null && !breakable.IsBroken)
+        if (canWork && breakable != null && !breakable.IsBroken)
         {
             breakable.Hit(point);
             return;
