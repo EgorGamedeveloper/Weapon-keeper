@@ -78,6 +78,14 @@ public class StoryRadioLine
 /// Нода графа. type: start, quest, radio, trigger, wait, and, action, note — какие поля читаются,
 /// зависит от типа (см. комментарии у полей).
 /// </summary>
+/// <summary>Строка события «Спаун врагов»: тип (enemyId, пусто — тип точки спавна) и количество.</summary>
+[Serializable]
+public class StoryEnemySpawn
+{
+    public string enemyType;
+    public int count = 1;
+}
+
 [Serializable]
 public class StoryNodeData
 {
@@ -120,6 +128,12 @@ public class StoryNodeData
 
     // action
     public string action;
+
+    // action spawnEnemies: где (point — у точки спавна target, player — волной вокруг игрока), кого и сколько
+    public string where = "point";
+    public StoryEnemySpawn[] spawns = Array.Empty<StoryEnemySpawn>();
+    public bool aggro = true;
+    public float radius = 3f;
 
     // cutscene (target — storyId кат-сцены)
     public bool skippable = true;

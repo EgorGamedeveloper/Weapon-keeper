@@ -249,21 +249,27 @@ public class EnemyKilledTrigger : StoryTrigger
         }
         else points.AddRange(Scene.All<EnemySpawnPoint>());
 
-        if (points.Count == 0)
+        // Без конкретной точки считаются и враги сюжетных волн вокруг игрока (событие «Спаун врагов»).
+        bool waves = string.IsNullOrEmpty(Node.target) && Scene.Director != null;
+        if (points.Count == 0 && !waves)
         {
             Scene.Warn(Node.id, $"Триггер «{Node.trigger}» ({Node.id}): нет точки спавна «{Node.target}».");
             return false;
         }
         foreach (EnemySpawnPoint point in points) point.OnEnemyKilled += Handle;
+        if (waves) Scene.Director.OnWaveEnemyKilled += HandleWave;
         return true;
     }
 
     protected override void Unsubscribe()
     {
         foreach (EnemySpawnPoint point in points) if (point != null) point.OnEnemyKilled -= Handle;
+        if (Scene.Director != null) Scene.Director.OnWaveEnemyKilled -= HandleWave;
     }
 
-    private void Handle(EnemySpawnPoint point, Enemy enemy)
+    private void Handle(EnemySpawnPoint point, Enemy enemy) => HandleWave(enemy);
+
+    private void HandleWave(Enemy enemy)
     {
         string type = enemy != null && enemy.data != null ? enemy.data.enemyId : null;
         if (Matches(Node.enemyType, type)) Count();

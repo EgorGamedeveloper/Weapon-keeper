@@ -214,7 +214,13 @@ body.resizing-h, body.resizing-h * { cursor: row-resize !important; }
   position: absolute; right: -6px; bottom: -6px; width: 14px; height: 14px; border-radius: 3px; background: var(--accent);
   border: 2px solid var(--panel); cursor: nwse-resize; opacity: 0; pointer-events: auto;
 }
-.bi.sel .rz, .bi:hover .rz { opacity: 1; }
+.bi .rt {
+  position: absolute; right: -8px; top: -8px; width: 14px; height: 14px; border-radius: 50%; background: var(--panel);
+  border: 2px solid var(--accent); cursor: grab; opacity: 0; pointer-events: auto;
+}
+.bi .rt::after { content: ""; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px; border-radius: 50%; background: var(--accent); }
+.bi.sel .rz, .bi:hover .rz, .bi.sel .rt, .bi:hover .rt { opacity: 1; }
+body.rotating, body.rotating * { cursor: grabbing !important; }
 .bi.group { border: 2px solid var(--gc); border-radius: 10px; background: color-mix(in srgb, var(--gc) 9%, transparent); pointer-events: none; }
 .bi.group .g-head {
   position: absolute; left: -2px; right: -2px; top: -2px; height: 38px; border-radius: 10px 10px 0 0; pointer-events: auto; cursor: grab;
@@ -233,6 +239,19 @@ body.resizing-h, body.resizing-h * { cursor: row-resize !important; }
 .wires path { fill: none; stroke: var(--wire); stroke-width: 2.2; pointer-events: stroke; cursor: pointer; }
 .wires path.hit { stroke: transparent; stroke-width: 14; }
 .wires path.sel { stroke: var(--wire-sel); stroke-width: 3; }
+.wires path.anno { stroke: var(--muted); stroke-width: 1.8; stroke-dasharray: 6 5; }
+.wires path.anno.sel { stroke: var(--wire-sel); stroke-width: 2.6; }
+.wires path.anno-temp { stroke: var(--muted); stroke-width: 1.8; stroke-dasharray: 6 5; pointer-events: none; }
+/* Точки пунктирных связей: у заметок и оформления справа; занятые залиты, последняя — свободная. */
+.aport {
+  position: absolute; right: -7px; width: 12px; height: 12px; border-radius: 50%; box-sizing: border-box; z-index: 2;
+  border: 2px dashed var(--muted); background: var(--panel); cursor: crosshair; pointer-events: auto;
+}
+.aport.used { border-style: solid; background: var(--muted); }
+.aport:hover { border-color: var(--accent); }
+.bi .aport { opacity: 0; }
+.bi.sel .aport, .bi:hover .aport, .bi .aport.used { opacity: 1; }
+.wires path.split { stroke: var(--accent); stroke-width: 4; stroke-dasharray: 8 5; }
 .wires path.temp { stroke: var(--accent); stroke-dasharray: 6 5; pointer-events: none; }
 
 .node {
@@ -253,11 +272,16 @@ body.resizing-h, body.resizing-h * { cursor: row-resize !important; }
   color: #fff; font: 600 14px/1.1 var(--font-head); letter-spacing: .06em; text-transform: uppercase;
 }
 .n-head .n-id { margin-left: 4px; font: 400 11px var(--font-mono); letter-spacing: 0; text-transform: none; opacity: .8; }
-.n-body { padding: 8px 10px 10px; font-size: 12.5px; line-height: 1.4; }
+.n-body {
+  padding: 8px 10px 10px; font-size: 12.5px; line-height: 1.4; max-height: 170px; overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+}
+.n-body::-webkit-scrollbar { width: 6px; }
+.n-body::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+.n-body::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 .n-body .t { font-weight: 600; font-size: 13px; }
 .n-body .m { color: var(--muted); }
-.n-body .q { border-left: 2px solid var(--line); padding-left: 6px; margin-top: 4px; color: var(--muted);
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.n-body .q { border-left: 2px solid var(--line); padding-left: 6px; margin-top: 4px; color: var(--muted); white-space: pre-wrap; }
 .n-body .empty { color: var(--danger); }
 .port {
   position: absolute; top: 9px; width: 14px; height: 14px; border-radius: 50%; background: var(--node);
@@ -428,7 +452,7 @@ body.resizing-h, body.resizing-h * { cursor: row-resize !important; }
       <div id="palItems"></div>
       <input class="hidden-file" type="file" id="fileImages" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" multiple>
       <span class="pal-help" tabindex="0" role="note" aria-label="Подсказка"
-        title="Перетащите ноду из полосы на холст.&#10;Нитка — от правого кружка ноды к левому кружку другой: следующая нода включится, когда эта завершится.&#10;Del — удалить · Ctrl+D — копия · Ctrl+Z — отмена · колесо — масштаб, фон — сдвиг.">?</span>
+        title="Перетащите ноду из полосы на холст (или дважды щёлкните — встанет в центр). Брошенная на нитку — встанет в разрыв.&#10;Нитка — от правого кружка ноды к левому кружку другой: следующая нода включится, когда эта завершится.&#10;Del — удалить · Ctrl+D — копия · Ctrl+Z — отмена · колесо — масштаб, фон — сдвиг.">?</span>
     </aside>
 
     <main class="canvas" id="canvas" aria-label="Граф сюжета">
@@ -647,6 +671,8 @@ const ACTIONS = [
   { id: 'giveXp',        label: 'Дать опыт',          fields: { value: 'Опыт' },   req: ['value'] },
   { id: 'enableObject',  label: 'Включить объект',    fields: { target: 'storyObject' }, req: ['target'] },
   { id: 'disableObject', label: 'Выключить объект',   fields: { target: 'storyObject' }, req: ['target'] },
+  // Свой инспектор (renderSpawnEnemies): где (у точки спавна / волной вокруг игрока), строки «тип × количество».
+  { id: 'spawnEnemies',  label: 'Спаун врагов',       fields: {}, req: [] },
 ];
 
 const CATALOG_LISTS = {
@@ -667,7 +693,7 @@ const state = {
   views: {},      // положение и масштаб холста у каждой линии
   catalog: {},
   view: { x: 60, y: 60, k: 1 },
-  sel: { node: null, link: null, group: null, decor: null },
+  sel: { node: null, link: null, group: null, decor: null, anno: null },
   isExample: false,
   issues: [],
   storage: 'none', // db | local | file (приложение для Mac) | none
@@ -712,6 +738,10 @@ function normalizeGraph(g) {
   });
   g.groups = keep(g.groups);
   g.decor = keep(g.decor);
+  // Пунктирные связи «заметка/оформление → нода»: только для глаз, в игре не участвуют.
+  g.annotations = (Array.isArray(g.annotations) ? g.annotations : [])
+    .filter((a) => a && a.id && a.from && (a.from.kind === 'node' || a.from.kind === 'decor') && a.from.id && a.to)
+    .map((a) => ({ id: String(a.id), from: { kind: a.from.kind, id: String(a.from.id) }, to: String(a.to) }));
   g.images = g.images && typeof g.images === 'object' && !Array.isArray(g.images) ? { ...g.images } : {};
   return g;
 }
@@ -751,7 +781,7 @@ const history = { undo: [], redo: [], pendingTimer: 0, pending: false };
 
 function snapshot() {
   const g = state.graph;
-  return JSON.stringify({ languages: langs(), nodes: [...g.nodes.values()], links: g.links, storylines: g.storylines, groups: g.groups, decor: g.decor });
+  return JSON.stringify({ languages: langs(), nodes: [...g.nodes.values()], links: g.links, storylines: g.storylines, groups: g.groups, decor: g.decor, annotations: g.annotations });
 }
 // Картинки (images) в историю не входят: это библиотека, из неё ничего не удаляется само.
 function restore(json) {
@@ -762,6 +792,7 @@ function restore(json) {
   state.graph.storylines = s.storylines;
   state.graph.groups = s.groups;
   state.graph.decor = s.decor;
+  state.graph.annotations = s.annotations;
   setGraph(state.graph);
   if (state.sel.node && !state.graph.nodes.has(state.sel.node)) state.sel.node = null;
   if (state.sel.group && !state.graph.groups.some((x) => x.id === state.sel.group)) state.sel.group = null;
@@ -840,13 +871,17 @@ function nodeSummary(n) {
       add(title ? 't' : 'empty', title || 'Без названия');
       const qt = QUEST_TYPES.find((q) => q.id === n.questType);
       add('m', `${qt ? qt.label : n.questType} × ${n.targetCount || 1} · ${n.xp || 0} XP · $${n.money || 0}`);
+      const desc = locText(n.description);
+      if (desc) add('q', desc);
       break;
     }
     case 'radio': {
       const who = locText(n.speaker);
       add(who ? 't' : 'empty', who || 'Кто говорит?');
-      const first = n.lines && n.lines[0] ? locText(n.lines[0].text) : '';
-      add('q', first ? `«${first}»` : 'Нет реплик');
+      // Все реплики целиком: длинный разговор листается прокруткой внутри ноды.
+      const lines = (n.lines || []).map((l) => locText(l.text)).filter(Boolean);
+      if (!lines.length) add('q', 'Нет реплик');
+      for (const line of lines) add('q', `«${line}»`);
       add('m', `Реплик: ${(n.lines || []).length}`);
       break;
     }
@@ -862,6 +897,12 @@ function nodeSummary(n) {
     case 'action': {
       const a = ACTIONS.find((x) => x.id === n.action);
       add('t', a ? a.label : n.action);
+      if (n.action === 'spawnEnemies') {
+        const sum = spawnSummary(n);
+        for (const r of sum.rows) add('q', r);
+        add('m', sum.where);
+        break;
+      }
       if (a && a.fields.value) add('m', String(n.value || 0));
       if (a && a.fields.target) add('m', catalogName(TARGETS.storyObject.catalog, n.target) || '—');
       break;
@@ -902,6 +943,7 @@ function buildNodeEl(n) {
   const div = el('div', { class: 'node', 'data-id': n.id, 'data-type': n.type }, head, nodeSummary(n));
   if (t.inPort) div.append(el('div', { class: 'port in', 'data-port': 'in', title: 'Вход' }));
   if (t.outPort) div.append(el('div', { class: 'port out', 'data-port': 'out', title: 'Выход: тяните к следующей ноде' }));
+  if (n.type === 'note') appendAnnoPorts(div, 'node', n.id);
   return div;
 }
 
@@ -948,15 +990,79 @@ function wirePath(a, b) {
   const dx = Math.max(40, Math.abs(b.x - a.x) * 0.5);
   return `M${a.x},${a.y} C${a.x + dx},${a.y} ${b.x - dx},${b.y} ${b.x},${b.y}`;
 }
+// ── Пунктирные связи (annotations) ──
+const ANNO_TOP = 18, ANNO_STEP = 16;
+const annosFrom = (kind, id) => state.graph.annotations.filter((a) => a.from.kind === kind && a.from.id === id);
+function appendAnnoPorts(div, kind, id) {
+  const used = annosFrom(kind, id).length;
+  for (let i = 0; i <= used; i++) {
+    div.append(el('div', { class: 'aport' + (i < used ? ' used' : ''), 'data-akind': kind, 'data-aid': id, 'data-slot': i,
+      style: `top:${ANNO_TOP + i * ANNO_STEP - 6}px`, title: i < used ? 'Пунктирная связь' : 'Тяните к ноде — пунктирная связь (только для глаз)' }));
+  }
+}
+// Точка источника связи номер slot в координатах холста (у повёрнутого оформления — с учётом поворота).
+function annoSource(from, slot) {
+  if (from.kind === 'node') {
+    const n = state.graph.nodes.get(from.id), div = nodeEls.get(from.id);
+    if (!n || !div) return null;
+    return { x: n.x + div.offsetWidth + 1, y: n.y + ANNO_TOP + slot * ANNO_STEP };
+  }
+  const d = state.graph.decor.find((x) => x.id === from.id);
+  if (!d || !inLine(d)) return null;
+  const px = d.x + d.w + 1, py = d.y + ANNO_TOP + slot * ANNO_STEP;
+  const a = (Number(d.rot) || 0) * Math.PI / 180, cx = d.x + d.w / 2, cy = d.y + d.h / 2;
+  return { x: cx + (px - cx) * Math.cos(a) - (py - cy) * Math.sin(a), y: cy + (px - cx) * Math.sin(a) + (py - cy) * Math.cos(a) };
+}
+function annoTarget(nodeId) {
+  const n = state.graph.nodes.get(nodeId), div = nodeEls.get(nodeId);
+  if (!n || !div) return null;
+  return { x: n.x - 1, y: n.y + 16 };
+}
+function renderAnnos() {
+  const slots = new Map();
+  for (const a of state.graph.annotations) {
+    const key = a.from.kind + ':' + a.from.id;
+    const slot = slots.get(key) || 0;
+    slots.set(key, slot + 1);
+    const p = annoSource(a.from, slot), q = annoTarget(a.to);
+    if (!p || !q) continue;
+    const d = wirePath(p, q);
+    const vis = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    vis.setAttribute('d', d);
+    vis.setAttribute('class', 'anno' + (state.sel.anno === a.id ? ' sel' : ''));
+    const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    hit.setAttribute('d', d);
+    hit.setAttribute('class', 'hit');
+    hit.dataset.anno = a.id;
+    wiresSvg.append(vis, hit);
+  }
+  if (drag && drag.kind === 'anno' && drag.to) {
+    const temp = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    temp.setAttribute('d', wirePath(drag.fromPt, drag.to));
+    temp.setAttribute('class', 'anno-temp');
+    wiresSvg.append(temp);
+  }
+}
+function addAnnotation(from, to) {
+  if (from.kind === 'node' && from.id === to) return;
+  if (state.graph.annotations.some((a) => a.from.kind === from.kind && a.from.id === from.id && a.to === to)) return;
+  beginEdit(false);
+  state.graph.annotations.push({ id: uid('a'), from: { ...from }, to });
+  changed(true);
+}
+
 function renderWires() {
   wiresSvg.textContent = '';
+  renderAnnos();
   state.graph.links.forEach((l, i) => {
     const a = portPos(l.from, 'out'), b = portPos(l.to, 'in');
     if (!a || !b) return;
     const d = wirePath(a, b);
     const vis = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     vis.setAttribute('d', d);
+    vis.dataset.vis = i;
     if (state.sel.link === i) vis.setAttribute('class', 'sel');
+    else if (splitHover === i) vis.setAttribute('class', 'split');
     const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     hit.setAttribute('d', d);
     hit.setAttribute('class', 'hit');
@@ -1115,6 +1221,15 @@ function locInput(owner, key, label, multiline, requiredFirst) {
 
 function renderInspector() {
   insp.textContent = '';
+  const selAnno = state.sel.anno && state.graph.annotations.find((a) => a.id === state.sel.anno);
+  if (selAnno) {
+    insp.classList.remove('closed');
+    const src = selAnno.from.kind === 'node' ? nodeTitle(selAnno.from.id) : 'Оформление';
+    insp.append(el('h2', { text: 'Пунктирная связь' }),
+      el('div', { class: 'insp-empty', text: `${src} ⇢ ${nodeTitle(selAnno.to)}. Только для глаз: в игре связь не участвует.` }),
+      el('button', { class: 'btn danger-btn', type: 'button', text: 'Удалить связь (Del)', onclick: deleteSelection }));
+    return;
+  }
   const selGroup = state.sel.group && findItem('group', state.sel.group);
   const selDecor = state.sel.decor && findItem('decor', state.sel.decor);
   if (selGroup || selDecor) {
@@ -1134,7 +1249,7 @@ function renderInspector() {
   }
   if (!n) {
     insp.append(el('h2', { text: 'Свойства' }),
-      el('div', { class: 'insp-empty', text: 'Выберите ноду, рамку или элемент оформления, чтобы изменить. Новое перетащите на холст из полосы внизу: ноды, формы, иконки, картинки (картинку можно бросить и прямо с компьютера).' }));
+      el('div', { class: 'insp-empty', text: 'Выберите ноду, рамку или элемент оформления, чтобы изменить. Новое перетащите на холст из полосы внизу или дважды щёлкните по карточке — встанет в центр. Ноду со входом и выходом можно бросить прямо на нитку — она встанет в разрыв. Картинку можно бросить и прямо с компьютера.' }));
     insp.classList.add('closed');
     return;
   }
@@ -1233,6 +1348,48 @@ function renderRadio(n) {
   insp.append(el('div', { class: 'help', text: 'В игре: «Входящий вызов» → игрок жмёт E → HUD гаснет, в руках рация, реплики идут строкой внизу. E допечатывает и листает.' }));
 }
 
+function ensureSpawnFields(n) {
+  if (n.where !== 'player') n.where = 'point';
+  if (!Array.isArray(n.spawns)) n.spawns = [{ enemyType: '', count: 5 }];
+  if (typeof n.aggro !== 'boolean') n.aggro = true;
+  if (!(Number(n.radius) >= 0)) n.radius = 3;
+  if (typeof n.target !== 'string') n.target = '';
+}
+function renderSpawnEnemies(n) {
+  ensureSpawnFields(n);
+  const where = el('select', { 'aria-label': 'Где' },
+    el('option', { value: 'point', text: 'У точки спавна' }), el('option', { value: 'player', text: 'Волной вокруг игрока (массовая атака)' }));
+  where.value = n.where;
+  where.addEventListener('change', () => { beginEdit(false); n.where = where.value; changed(false); renderInspector(); });
+  insp.append(fieldWrap('Где', where));
+  if (n.where === 'point') {
+    insp.append(catalogInput(n, 'target', 'enemySpawns', TARGETS.spawn.label, true));
+    insp.append(fieldWrap('Разброс вокруг точки, м', textInput(n, 'radius', { number: true, min: 0, step: 0.5 })));
+    insp.append(checkField(n, 'aggro', 'Сразу нападают на игрока'));
+  }
+  const box = el('div', { class: 'lines' });
+  n.spawns.forEach((row, i) => {
+    const card = el('div', { class: 'line-card' });
+    const count = el('input', { type: 'number', min: 1, step: 1, 'aria-label': `Сколько врагов, строка ${i + 1}` });
+    count.value = row.count ?? 1;
+    count.addEventListener('input', () => { beginEdit(true); row.count = Math.max(1, Math.round(Number(count.value) || 1)); changed(false); });
+    const del = el('button', { class: 'mini danger-btn', type: 'button', text: '✕', 'aria-label': 'Удалить строку', disabled: n.spawns.length < 2 ? true : null,
+      onclick: () => { beginEdit(false); n.spawns.splice(i, 1); changed(false); renderInspector(); } });
+    card.append(el('div', { class: 'line-top' }, el('span', { text: 'Сколько' }), count, el('span', { class: 'sp' }, del)));
+    card.append(catalogInput(row, 'enemyType', 'enemyTypes', n.where === 'player' ? 'Тип врага' : 'Тип врага (пусто — тип точки)', n.where === 'player'));
+    box.append(card);
+  });
+  insp.append(el('div', { class: 'field' }, el('div', { class: 'lbl', text: 'Кого спавнить' }), box,
+    el('button', { class: 'btn', type: 'button', text: '+ Тип врага', onclick: () => { beginEdit(false); n.spawns.push({ enemyType: '', count: 3 }); changed(false); renderInspector(); } })));
+  insp.append(el('div', { class: 'help', text: n.where === 'player'
+    ? 'Враги появляются кольцом вокруг игрока там, откуда до него есть путь, и сразу нападают (EnemyWaveSpawner в сцене). Дождаться, пока их перебьют: триггер «Убит враг» без точки спавна, «Сколько раз» = общее число.'
+    : 'Враги появляются у выбранной точки и не возрождаются. Дождаться, пока их перебьют: триггер «Убит враг» с этой же точкой, «Сколько раз» = общее число.' }));
+}
+function spawnSummary(n) {
+  const rows = (n.spawns || []).map((r) => `${r.count || 1} × ${r.enemyType ? catalogName('enemyTypes', r.enemyType) : 'тип точки'}`);
+  return { rows, where: n.where === 'player' ? 'волной вокруг игрока' : 'у ' + (n.target ? catalogName('enemySpawns', n.target) : '—') };
+}
+
 function checkField(n, key, label) {
   const box = el('input', { type: 'checkbox' });
   box.checked = n[key] !== false;
@@ -1261,6 +1418,7 @@ function renderTrigger(n) {
 function renderAction(n) {
   insp.append(fieldWrap('Что сделать', selectInput(n, 'action', ACTIONS)));
   const a = ACTIONS.find((x) => x.id === n.action) || ACTIONS[0];
+  if (a.id === 'spawnEnemies') { renderSpawnEnemies(n); return; }
   if (a.fields.value) insp.append(fieldWrap(a.fields.value + ' *', textInput(n, 'value', { number: true, min: 0 })));
   if (a.fields.target) insp.append(catalogInput(n, 'target', TARGETS.storyObject.catalog, TARGETS.storyObject.label, true));
 }
@@ -1349,7 +1507,15 @@ function validate() {
     if (n.type === 'action') {
       const a = ACTIONS.find((x) => x.id === n.action);
       if (!a) add('err', n.id, `Неизвестное событие «${n.action}».`);
-      else {
+      else if (a.id === 'spawnEnemies') {
+        const rows = Array.isArray(n.spawns) ? n.spawns : [];
+        if (!rows.length) add('err', n.id, 'Не указано, каких врагов спавнить.');
+        if (n.where !== 'player') {
+          if (!n.target) add('err', n.id, 'Не выбрана точка спавна.');
+          else checkCatalog(add, n, 'target', 'enemySpawns', true);
+        } else if (rows.some((r) => !r.enemyType)) add('err', n.id, 'Для волны вокруг игрока укажите тип каждого врага.');
+        for (const r of rows) if (r.enemyType) checkCatalog(add, r === n ? n : { ...r, id: n.id }, 'enemyType', 'enemyTypes', true);
+      } else {
         if (a.fields.value && !(n.value > 0)) add('err', n.id, `«${a.fields.value}» должно быть больше 0.`);
         if (a.fields.target && !n.target) add('err', n.id, 'Не выбран объект сюжета.');
         if (a.fields.target) checkCatalog(add, n, 'target', 'storyObjects', true);
@@ -1528,7 +1694,9 @@ function buildDecorEl(d) {
     const lines = String(d.text || 'Надпись').split('\n').length;
     div.append(el('div', { class: 'txt', style: `font-size:${Math.max(8, (d.h / lines) * 0.78)}px`, text: d.text || 'Надпись' }));
   } else div.append(shapeSvg(d));
-  div.append(el('div', { class: 'rz', title: 'Размер (Shift — с пропорциями)' }));
+  div.append(el('div', { class: 'rz', title: 'Размер (Shift — с пропорциями)' }),
+    el('div', { class: 'rt', title: 'Поворот: тяните по кругу (Shift — шагами по 15°)' }));
+  appendAnnoPorts(div, 'decor', d.id);
   placeItem(div, d);
   boardEls.set('decor:' + d.id, div);
   return div;
@@ -1551,6 +1719,13 @@ function boardPointerDown(e) {
   if (!o) return false;
   if (kind === 'group' && !e.target.closest('.g-head, .rz')) return false; // внутри рамки — как по холсту
   selectItem(kind, id);
+  if (kind === 'decor' && e.target.closest('.rt')) {
+    const r = bi.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    drag = { kind: 'item-rotate', item: o, itemKind: kind, cx, cy, a0: Math.atan2(e.clientY - cy, e.clientX - cx), rot0: Number(o.rot) || 0, moved: false };
+    document.body.classList.add('rotating');
+    return true;
+  }
   if (e.target.closest('.rz')) {
     drag = { kind: 'item-resize', item: o, itemKind: kind, startX: e.clientX, startY: e.clientY, w0: o.w, h0: o.h, moved: false };
     return true;
@@ -1571,6 +1746,18 @@ function boardPointerDown(e) {
   return true;
 }
 function boardPointerMove(e) {
+  if (drag.kind === 'item-rotate') {
+    const a = Math.atan2(e.clientY - drag.cy, e.clientX - drag.cx);
+    let rot = drag.rot0 + (a - drag.a0) * 180 / Math.PI;
+    if (e.shiftKey) rot = Math.round(rot / 15) * 15;
+    rot = Math.round(((rot % 360) + 540) % 360 - 180); // −180…180
+    if (!drag.moved) { if (rot === Math.round(drag.rot0)) return; beginEdit(false); drag.moved = true; }
+    drag.item.rot = rot;
+    const div = boardEls.get('decor:' + drag.item.id);
+    if (div) div.style.transform = `rotate(${rot}deg)`;
+    renderWires();
+    return;
+  }
   const dx = (e.clientX - drag.startX) / state.view.k, dy = (e.clientY - drag.startY) / state.view.k;
   if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 3) return;
   if (!drag.moved) { beginEdit(false); drag.moved = true; }
@@ -1595,7 +1782,7 @@ function boardPointerMove(e) {
     const fresh = drag.itemKind === 'group' ? buildGroupEl(o) : buildDecorEl(o);
     div.replaceWith(fresh);
   }
-  if (drag.kind === 'item-move' && drag.carried.length) renderWires();
+  renderWires(); // нитки нод внутри рамки и пунктирные связи оформления
 }
 
 function addGroup(at) {
@@ -1770,7 +1957,7 @@ function nodeSearchTexts(n) {
   if (Array.isArray(n.lines)) for (const l of n.lines) out.push(...Object.values(l.text || {}));
   if (n.text) out.push(n.text);
   if (n.type === 'trigger') { const t = TRIGGERS.find((x) => x.id === n.trigger); out.push(t && t.label, t && triggerDetail(n, t)); }
-  if (n.type === 'action') { const a = ACTIONS.find((x) => x.id === n.action); out.push(a && a.label); }
+  if (n.type === 'action') { const a = ACTIONS.find((x) => x.id === n.action); out.push(a && a.label); for (const r of n.spawns || []) out.push(r.enemyType); }
   if (n.type === 'cutscene') out.push(catalogName('cutscenes', n.target));
   for (const k of ['target', 'category', 'item', 'zone', 'orderId', 'lootBoxId', 'enemyType', 'skillId', 'portrait']) if (n[k]) out.push(n[k]);
   return out.filter(Boolean).map(String);
@@ -1973,8 +2160,37 @@ canvas.addEventListener('pointerdown', (e) => {
   if (focused && focused.closest && focused.closest('.inspector')) focused.blur();
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pointers.size === 2) { startPinch(); return; }
-  if (e.button === 2) return;
+  // Средняя кнопка — всегда сдвиг холста (ноду за неё не тянем); правая — ничего. Тянуть ноды — только левой.
+  if (e.button === 1) {
+    e.preventDefault();
+    drag = { kind: 'pan', startX: e.clientX, startY: e.clientY, vx: state.view.x, vy: state.view.y, moved: true };
+    canvas.classList.add('panning');
+    canvas.setPointerCapture(e.pointerId);
+    return;
+  }
+  if (e.button !== 0) return;
+  // Полоса прокрутки внутри ноды — её тянет браузер, ноду не двигаем.
+  const bodyHit = e.target.classList && e.target.classList.contains('n-body') ? e.target : null;
+  if (bodyHit && e.offsetX >= bodyHit.clientWidth) return;
 
+  // Точки связей оформления лежат под слоем ниток — ищем их во всей стопке под курсором, а не только сверху.
+  const aport = e.target.closest('.aport') || document.elementsFromPoint(e.clientX, e.clientY).find((x) => x.classList && x.classList.contains('aport'));
+  if (aport) {
+    const from = { kind: aport.dataset.akind, id: aport.dataset.aid };
+    const fromPt = annoSource(from, Number(aport.dataset.slot));
+    if (fromPt) {
+      drag = { kind: 'anno', from, fromPt, to: toWorld(e.clientX, e.clientY) };
+      canvas.setPointerCapture(e.pointerId);
+      return;
+    }
+  }
+  const annoHit = e.target.closest('path.hit[data-anno]');
+  if (annoHit) {
+    state.sel = { node: null, link: null, group: null, decor: null, anno: annoHit.dataset.anno };
+    renderAll();
+    drag = null;
+    return;
+  }
   const port = e.target.closest('.port.out');
   const nodeDiv = e.target.closest('.node');
   const hit = e.target.closest('path.hit');
@@ -2007,7 +2223,7 @@ canvas.addEventListener('pointermove', (e) => {
   if (pointers.has(e.pointerId)) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pinch && pointers.size === 2) { movePinch(); return; }
   if (!drag) return;
-  if (drag.kind === 'item-move' || drag.kind === 'item-resize') { boardPointerMove(e); return; }
+  if (drag.kind === 'item-move' || drag.kind === 'item-resize' || drag.kind === 'item-rotate') { boardPointerMove(e); return; }
   if (drag.kind === 'pan') {
     state.view.x = drag.vx + (e.clientX - drag.startX);
     state.view.y = drag.vy + (e.clientY - drag.startY);
@@ -2021,6 +2237,15 @@ canvas.addEventListener('pointermove', (e) => {
     n.x = Math.round(drag.nx + dx); n.y = Math.round(drag.ny + dy);
     const d = nodeEls.get(n.id);
     d.style.left = n.x + 'px'; d.style.top = n.y + 'px';
+    // Свободную ноду (без ниток) можно бросить на нитку — встанет в разрыв.
+    splitHover = canSplice(n) ? wireAt(e.clientX, e.clientY, n.id) : null;
+    renderWires();
+  } else if (drag.kind === 'anno') {
+    drag.to = toWorld(e.clientX, e.clientY);
+    clearDropHighlight();
+    const over = document.elementFromPoint(e.clientX, e.clientY);
+    const target = over && over.closest('.node');
+    if (target && !(drag.from.kind === 'node' && target.dataset.id === drag.from.id)) target.classList.add('drop');
     renderWires();
   } else if (drag.kind === 'wire') {
     drag.to = toWorld(e.clientX, e.clientY);
@@ -2047,6 +2272,15 @@ function endPointer(e) {
   pointers.delete(e.pointerId);
   if (pinch && pointers.size < 2) { pinch = null; return; }
   if (!drag) return;
+  if (drag.kind === 'anno') {
+    clearDropHighlight();
+    const over = document.elementFromPoint(e.clientX, e.clientY);
+    const target = over && over.closest('.node');
+    const from = drag.from;
+    drag = null;
+    if (target) addAnnotation(from, target.dataset.id); else renderWires();
+    return;
+  }
   if (drag.kind === 'wire') {
     clearDropHighlight();
     const nodeDiv = dropTarget(e.clientX, e.clientY);
@@ -2054,10 +2288,15 @@ function endPointer(e) {
     drag = null;
     renderWires();
   } else if (drag.kind === 'node') {
-    if (drag.moved) changed(false);
+    const splitIdx = splitHover;
+    splitHover = null;
+    if (drag.moved && splitIdx !== null) { spliceIntoLink(splitIdx, drag.id); changed(true); }
+    else if (drag.moved) changed(false);
+    else renderWires();
     drag = null;
-  } else if (drag.kind === 'item-move' || drag.kind === 'item-resize') {
-    if (drag.moved) changed(false);
+  } else if (drag.kind === 'item-move' || drag.kind === 'item-resize' || drag.kind === 'item-rotate') {
+    document.body.classList.remove('rotating');
+    if (drag.moved) changed(true); // true — обновить и поле «Поворот» в инспекторе
     drag = null;
   } else if (drag.kind === 'pan') {
     if (!drag.moved && (state.sel.node || state.sel.link !== null || state.sel.group || state.sel.decor)) { state.sel = { node: null, link: null, group: null, decor: null }; renderAll(); }
@@ -2066,10 +2305,14 @@ function endPointer(e) {
   }
 }
 canvas.addEventListener('pointerup', endPointer);
+canvas.addEventListener('mousedown', (e) => { if (e.button === 1) e.preventDefault(); }); // без автопрокрутки средней кнопкой
 canvas.addEventListener('pointercancel', endPointer);
 
 canvas.addEventListener('wheel', (e) => {
   if (e.target.closest('.sheet')) return;
+  // Колесо над длинной нодой листает её содержимое (Ctrl+колесо — всё равно масштаб).
+  const body = e.target.closest('.n-body');
+  if (body && !e.ctrlKey && body.scrollHeight > body.clientHeight + 1) return;
   e.preventDefault();
   const factor = Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015));
   zoomAt(e.clientX, e.clientY, state.view.k * factor);
@@ -2151,13 +2394,21 @@ function connect(from, to) {
 }
 
 function deleteSelection() {
+  if (state.sel.anno) {
+    beginEdit(false);
+    state.graph.annotations = state.graph.annotations.filter((a) => a.id !== state.sel.anno);
+    state.sel = { node: null, link: null, group: null, decor: null, anno: null };
+    changed(true);
+    return;
+  }
   if (state.sel.group || state.sel.decor) {
     const kind = state.sel.group ? 'group' : 'decor';
     const list = kind === 'group' ? state.graph.groups : state.graph.decor;
     const i = list.findIndex((x) => x.id === (state.sel.group || state.sel.decor));
     if (i < 0) return;
     beginEdit(false);
-    list.splice(i, 1);
+    const [gone] = list.splice(i, 1);
+    if (kind === 'decor') state.graph.annotations = state.graph.annotations.filter((a) => !(a.from.kind === 'decor' && a.from.id === gone.id));
     state.sel = { node: null, link: null, group: null, decor: null };
     changed(true);
     return;
@@ -2174,6 +2425,7 @@ function deleteSelection() {
   beginEdit(false);
   state.graph.nodes.delete(id);
   state.graph.links = state.graph.links.filter((l) => l.from !== id && l.to !== id);
+  state.graph.annotations = state.graph.annotations.filter((a) => a.to !== id && !(a.from.kind === 'node' && a.from.id === id));
   state.sel.node = null;
   changed(true);
 }
@@ -2202,14 +2454,44 @@ function duplicateSelection() {
   changed(true);
 }
 
-// Новая нода — только перетаскиванием из палитры: встаёт туда, где отпустили (at — точка на экране).
-function addNode(type, at) {
+// Новая нода из палитры: встаёт туда, где отпустили (at — точка на экране). splitIdx — нитка, в разрыв которой
+// её бросили: A → B становится A → новая → B.
+function addNode(type, at, splitIdx = null) {
   const w = toWorld(at.x, at.y);
   beginEdit(false);
   const n = newNode(type, w.x - 40, w.y - 12); // курсор — на заголовке новой ноды
   state.graph.nodes.set(n.id, n);
+  if (splitIdx !== null) spliceIntoLink(splitIdx, n.id);
   state.sel = { node: n.id, link: null };
   changed(true);
+}
+
+// ── Вставка ноды в нитку ──
+let splitHover = null; // индекс нитки под курсором, в которую встанет нода
+// В нитку встаёт нода со входом и выходом и без собственных ниток (иначе граф перепутался бы).
+function canSplice(n) {
+  const t = TYPES[n.type];
+  return !!(t && t.inPort && t.outPort) && !state.graph.links.some((l) => l.from === n.id || l.to === n.id);
+}
+function canSpliceType(type) { const t = TYPES[type]; return !!(t && t.inPort && t.outPort); }
+function wireAt(clientX, clientY, excludeId) {
+  const w = toWorld(clientX, clientY);
+  const pt = new DOMPoint(w.x, w.y);
+  for (const hit of wiresSvg.querySelectorAll('path.hit[data-link]')) {
+    const i = Number(hit.dataset.link);
+    const l = state.graph.links[i];
+    if (!l || l.from === excludeId || l.to === excludeId) continue;
+    if (hit.isPointInStroke(pt)) return i;
+  }
+  return null;
+}
+function spliceIntoLink(i, id) {
+  const l = state.graph.links[i];
+  if (!l || l.from === id || l.to === id) return;
+  state.graph.links.splice(i, 1);
+  const has = (from, to) => state.graph.links.some((x) => x.from === from && x.to === to);
+  if (!has(l.from, id)) state.graph.links.push({ from: l.from, fromPort: l.fromPort || 'out', to: id, toPort: 'in' });
+  if (!has(id, l.to)) state.graph.links.push({ from: id, fromPort: 'out', to: l.to, toPort: l.toPort || 'in' });
 }
 
 // Перетаскивание из палитры: призрак ноды идёт за курсором, на холсте — рамка «сюда можно».
@@ -2240,7 +2522,10 @@ function palPointerMove(e) {
   }
   d.ghost.style.left = (e.clientX - 40) + 'px';
   d.ghost.style.top = (e.clientY - 12) + 'px';
-  canvas.classList.toggle('drop', overCanvas(e.clientX, e.clientY));
+  const over = overCanvas(e.clientX, e.clientY);
+  canvas.classList.toggle('drop', over);
+  const split = over && d.payload.node && canSpliceType(d.payload.node) ? wireAt(e.clientX, e.clientY, null) : null;
+  if (split !== splitHover) { splitHover = split; renderWires(); }
 }
 function palPointerUp(e, cancelled) {
   const d = palDrag;
@@ -2248,10 +2533,12 @@ function palPointerUp(e, cancelled) {
   palDrag = null;
   canvas.classList.remove('drop');
   if (d.ghost) d.ghost.remove();
+  const splitIdx = splitHover;
+  if (splitHover !== null) { splitHover = null; renderWires(); }
   if (cancelled || !d.moved) return; // щелчок без перетаскивания ничего не добавляет
   if (!overCanvas(e.clientX, e.clientY)) return;
   const at = { x: e.clientX, y: e.clientY }, p = d.payload;
-  if (p.node) addNode(p.node, at);
+  if (p.node) addNode(p.node, at, splitIdx);
   else if (p.group) addGroup(at);
   else addDecor(p, at);
 }
@@ -2509,7 +2796,8 @@ function toFileFormat() {
   });
   const g = state.graph;
   return { ...(g.extra || {}), version: FILE_VERSION, languages: langs(), nodes, links: g.links.map((l) => ({ ...l })),
-    storylines: g.storylines.map((l) => ({ ...l })), groups: g.groups.map((x) => ({ ...x })), decor: g.decor.map((x) => ({ ...x })), images: { ...g.images } };
+    storylines: g.storylines.map((l) => ({ ...l })), groups: g.groups.map((x) => ({ ...x })), decor: g.decor.map((x) => ({ ...x })),
+    annotations: g.annotations.map((a) => ({ id: a.id, from: { ...a.from }, to: a.to })), images: { ...g.images } };
 }
 
 // Миграции формата: MIGRATIONS[n] переводит файл версии n в n+1. Новые версии редактора открывают старые файлы;
@@ -2535,7 +2823,7 @@ function migrateGraph(data) {
 }
 
 // Поля верхнего уровня, которых этот редактор не знает, сохраняются как есть — чтобы не потерять данные новых версий.
-const KNOWN_TOP = new Set(['version', 'languages', 'nodes', 'links', 'storylines', 'groups', 'decor', 'images']);
+const KNOWN_TOP = new Set(['version', 'languages', 'nodes', 'links', 'storylines', 'groups', 'decor', 'images', 'annotations']);
 
 function fromFileFormat(data) {
   if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('не объект JSON');
@@ -2555,7 +2843,7 @@ function fromFileFormat(data) {
   const languages = Array.isArray(data.languages) && data.languages.length ? data.languages.map(String) : ['ru', 'en'];
   const extra = {};
   for (const [k, v] of Object.entries(data)) if (!KNOWN_TOP.has(k)) extra[k] = v;
-  return normalizeGraph({ languages, nodes, links, extra, storylines: data.storylines, groups: data.groups, decor: data.decor, images: data.images });
+  return normalizeGraph({ languages, nodes, links, extra, storylines: data.storylines, groups: data.groups, decor: data.decor, images: data.images, annotations: data.annotations });
 }
 
 // ───────────────────────── Хранение ─────────────────────────
@@ -2563,7 +2851,7 @@ function fromFileFormat(data) {
 // graph/links — все нитки, graph/meta — языки, graph/catalog — каталог сцены.
 
 const caps = { db: null, downloads: null };
-const saved = { nodes: new Map(), links: null, meta: null, groups: null, decor: null, images: new Set() };
+const saved = { nodes: new Map(), links: null, meta: null, groups: null, decor: null, annotations: null, images: new Set() };
 let syncTimer = 0, syncing = false, syncAgain = false;
 
 function setStatus(stateName, text) { const s = $('status'); s.dataset.state = stateName; s.textContent = text; }
@@ -2617,6 +2905,8 @@ async function syncDb() {
   if (saved.groups !== groups) { await db.doc('graph/groups').set({ groups: state.graph.groups }); saved.groups = groups; }
   const decor = JSON.stringify(state.graph.decor);
   if (saved.decor !== decor) { await db.doc('graph/decor').set({ decor: state.graph.decor }); saved.decor = decor; }
+  const annos = JSON.stringify(state.graph.annotations);
+  if (saved.annotations !== annos) { await db.doc('graph/annotations').set({ annotations: state.graph.annotations }); saved.annotations = annos; }
   // Картинки — по документу на штуку (лимит документа 256 КБ; картинка ужата до 512 px).
   for (const [id, data] of Object.entries(state.graph.images)) {
     if (saved.images.has(id)) continue;
@@ -2651,9 +2941,9 @@ function adoptExample() {
 }
 
 async function loadFromDb(db) {
-  const [nodesSnap, linksDoc, metaDoc, catalogDoc, groupsDoc, decorDoc, imagesSnap] = await Promise.all([
+  const [nodesSnap, linksDoc, metaDoc, catalogDoc, groupsDoc, decorDoc, imagesSnap, annosDoc] = await Promise.all([
     db.collection('nodes').get(), db.doc('graph/links').get(), db.doc('graph/meta').get(), db.doc('graph/catalog').get(),
-    db.doc('graph/groups').get(), db.doc('graph/decor').get(), db.collection('images').get(),
+    db.doc('graph/groups').get(), db.doc('graph/decor').get(), db.collection('images').get(), db.doc('graph/annotations').get(),
   ]);
   const images = {};
   for (const d of imagesSnap.docs) { const v = d.data() || {}; if (v.id && v.data) { images[v.id] = v.data; saved.images.add(v.id); } }
@@ -2673,11 +2963,13 @@ async function loadFromDb(db) {
   const links = linksDoc.exists ? ((linksDoc.data() || {}).links || []).filter((l) => nodes.has(l.from) && nodes.has(l.to)) : [];
   const meta = metaDoc.exists ? metaDoc.data() || {} : {};
   setGraph({ languages: Array.isArray(meta.languages) && meta.languages.length ? [...meta.languages] : ['ru', 'en'], nodes, links: links.map((l) => ({ ...l })),
-    storylines: meta.storylines, groups: groupsDoc.exists ? (groupsDoc.data() || {}).groups : [], decor: decorDoc.exists ? (decorDoc.data() || {}).decor : [], images });
+    storylines: meta.storylines, groups: groupsDoc.exists ? (groupsDoc.data() || {}).groups : [], decor: decorDoc.exists ? (decorDoc.data() || {}).decor : [], images,
+    annotations: annosDoc.exists ? (annosDoc.data() || {}).annotations : [] });
   saved.links = JSON.stringify(state.graph.links);
   saved.meta = JSON.stringify({ languages: langs(), storylines: state.graph.storylines });
   saved.groups = JSON.stringify(state.graph.groups);
   saved.decor = JSON.stringify(state.graph.decor);
+  saved.annotations = JSON.stringify(state.graph.annotations);
   // Ноды, которым нормализация дописала storyline, уйдут в db при первой правке.
   return true;
 }
@@ -3199,9 +3491,20 @@ window.addEventListener('resize', applyLayout);
 // Нижняя полоса: вкладки «Ноды | Формы | Иконки | Картинки». Всё — перетаскиванием на холст.
 let palTab = 'nodes';
 function palItem(cls, title, payload, ...children) {
-  return el('button', { class: 'pal-item ' + cls, type: 'button', title,
+  return el('button', { class: 'pal-item ' + cls, type: 'button', title: title.replace('Перетащите на холст.', 'Перетащите на холст или дважды щёлкните — встанет в центр.'),
     onpointerdown: (e) => palPointerDown(e, payload), onpointermove: palPointerMove,
-    onpointerup: (e) => palPointerUp(e, false), onpointercancel: (e) => palPointerUp(e, true) }, ...children);
+    onpointerup: (e) => palPointerUp(e, false), onpointercancel: (e) => palPointerUp(e, true),
+    ondblclick: () => addAtCenter(payload) }, ...children);
+}
+// Двойной щелчок по палитре: элемент в центр видимой части холста (каждый следующий — чуть сдвинут, чтобы не слипались).
+let centerSeq = 0;
+function addAtCenter(p) {
+  const r = canvas.getBoundingClientRect();
+  const off = (centerSeq++ % 5) * 24;
+  const at = { x: r.left + r.width / 2 - 75 + off, y: r.top + r.height / 2 - 30 + off };
+  if (p.node) addNode(p.node, at);
+  else if (p.group) addGroup(at);
+  else addDecor(p, at);
 }
 function buildPalette() {
   const box = $('palItems');

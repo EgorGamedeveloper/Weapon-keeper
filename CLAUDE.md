@@ -195,3 +195,7 @@
   полку/в кладку — по дуге, «пружинка» и пыль (`Interaction/LandingFeedback`, `FX_DustPuff`). Подсказка у
   прицела появляется/гаснет за ~0.1 с (CanvasGroup в `ItemInfoUI`), тексты — ключи `hud.*` в `strings.csv`.
   «+N XP» у шкалы опыта — `UI/XPGainPopupUI` по `PlayerProgression.OnXPGained`.
+- **Сюжет** (граф квестов/рации/триггеров/кат-сцен, редактор `Tools/StoryEditor/` — страница и приложение для Mac,
+  импорт в Unity `Tools → Weapon Keeper → Story`, рантайм `01_Scripts/Story/`): устройство, формат `story_graph.json`,
+  рецепты «как добавить триггер/ноду/событие» и автотесты `Tools/StoryEditor/tests/run.sh` — в
+  `Docs/Story/STORY_EDITOR_ARCHITECTURE.md`. Прочитать перед любой правкой сюжетной системы.

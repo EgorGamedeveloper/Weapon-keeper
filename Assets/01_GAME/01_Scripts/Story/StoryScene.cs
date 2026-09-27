@@ -22,6 +22,7 @@ public class StoryScene
     public SupplyService Supply { get; private set; }
     public ItemCatalog Items { get; private set; }
     public PlayerSkills Skills { get; private set; }
+    public StoryDirector Director { get; private set; }
 
     private readonly Dictionary<Type, Component[]> cache = new Dictionary<Type, Component[]>();
     private readonly HashSet<string> warned = new HashSet<string>();
@@ -38,6 +39,7 @@ public class StoryScene
             Shipping = Object.FindAnyObjectByType<ShippingService>(),
             Supply = Object.FindAnyObjectByType<SupplyService>(),
             Skills = Object.FindAnyObjectByType<PlayerSkills>(),
+            Director = director,
             Items = director.itemCatalog,
         };
 

@@ -36,6 +36,9 @@ npm run dist    # собрать .dmg в dist/ (только на Mac)
 
 `WK_STORY_USER_DATA=<папка>` — другая папка данных (для автотестов).
 
+Сквозные тесты приложения и редактора — `../tests/run.sh [web|app|all]`. Полное устройство системы сюжета —
+`Docs/Story/STORY_EDITOR_ARCHITECTURE.md`.
+
 Сборку для пользователя делает GitHub Actions (`.github/workflows/story-editor-mac.yml`) при правке этой папки:
 артефакт `WeaponKeeperStory-mac` и релиз `story-editor-v<версия>`. Перед правкой оболочки поднимите `version` в
 `package.json`, иначе новая сборка заменит файл в старом релизе.

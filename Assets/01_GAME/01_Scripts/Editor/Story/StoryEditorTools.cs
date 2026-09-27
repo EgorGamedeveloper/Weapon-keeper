@@ -117,7 +117,7 @@ public static class StoryEditorTools
                                           StoryNodeData.Wait, StoryNodeData.And, StoryNodeData.Action, StoryNodeData.Note,
                                           StoryNodeData.Cutscene };
         var triggerKinds = new HashSet<string>(StoryTrigger.Kinds);
-        var actions = new HashSet<string> { "giveMoney", "giveXp", "enableObject", "disableObject" };
+        var actions = new HashSet<string> { "giveMoney", "giveXp", "enableObject", "disableObject", "spawnEnemies" };
 
         foreach (StoryNodeData node in graph.nodes)
         {
@@ -134,6 +134,11 @@ public static class StoryEditorTools
             }
             if (node.type == StoryNodeData.Trigger && !triggerKinds.Contains(node.trigger)) errors.Add($"{node.id}: неизвестный вид триггера «{node.trigger}».");
             if (node.type == StoryNodeData.Action && !actions.Contains(node.action)) errors.Add($"{node.id}: неизвестное событие «{node.action}».");
+            if (node.type == StoryNodeData.Action && node.action == "spawnEnemies")
+            {
+                if (node.spawns == null || node.spawns.Length == 0) errors.Add($"{node.id}: «Спаун врагов» — не указано, каких врагов.");
+                if (node.where != "player" && string.IsNullOrEmpty(node.target)) errors.Add($"{node.id}: «Спаун врагов» — не выбрана точка спавна.");
+            }
             if (node.type == StoryNodeData.Radio && (node.lines == null || node.lines.Length == 0)) errors.Add($"{node.id}: у рации нет реплик.");
             if (node.type == StoryNodeData.Cutscene && string.IsNullOrEmpty(node.target)) errors.Add($"{node.id}: у кат-сцены не выбрана сцена.");
         }
@@ -241,6 +246,7 @@ public static class StoryEditorTools
         director.radio = radio;
         director.cutscenes = cutscenes;
         if (director.itemCatalog == null) director.itemCatalog = LoadAll<ItemCatalog>().FirstOrDefault();
+        director.enemyTypes = LoadAll<EnemyData>().ToArray();
         SceneSetupUtility.MarkModified(director);
         if (director.questManager == null) report.AppendLine("✖ В сцене нет QuestManager — квесты графа не запустятся.");
 
