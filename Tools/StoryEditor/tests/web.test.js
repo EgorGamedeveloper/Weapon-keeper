@@ -207,6 +207,32 @@ async function dragPal(page, label, dx = 420, dy = 240) {
     await page.locator('.node', { hasText: '7 × zombie_basic' }).locator('.n-head').click();
     await page.keyboard.press('Delete');
   }
+  // Время суток и выживание
+  {
+    await dragPal(page, 'Триггер', 560, 380);
+    const topts = await page.locator('.inspector select').first().locator('option').allTextContents();
+    ok(['Наступила ночь', 'Наступило утро', 'Наступил день №', 'На часах наступил час', 'Сытость ≤', 'Усталость ≥', 'Игрок выдохся', 'Игрок поспал', 'Съедено / выпито'].every((o) => topts.includes(o)), 'триггеры времени суток и выживания в списке');
+    await page.locator('.inspector select').first().selectOption('hourReached');
+    await page.locator('.inspector input[type="number"]').first().fill('25');
+    await page.click('#btnIssues');
+    ok((await page.locator('#issueList').textContent()).includes('Час — от 0 до 23'), 'проверка часа 0–23');
+    await page.click('#sheetIssues [data-close]');
+    await page.locator('.inspector input[type="number"]').first().fill('22');
+    ok((await page.locator('.node.sel .n-body').textContent()).includes('22'), 'на ноде видно час');
+    await page.keyboard.press('Delete');
+    await dragPal(page, 'Событие', 560, 380);
+    const aopts = await page.locator('.inspector select').first().locator('option').allTextContents();
+    ok(['Перевести часы на', 'Промотать время', 'Изменить сытость', 'Изменить усталость', 'Восстановить выносливость', 'Наложить эффект'].every((o) => aopts.includes(o)), 'события времени и выживания в списке');
+    await page.locator('.inspector select').first().selectOption('changeFatigue');
+    await page.locator('.inspector input[type="number"]').first().fill('-30');
+    ok((await page.locator('.node.sel .n-body').textContent()).includes('-30'), 'отрицательное значение допустимо (отдохнул)');
+    await page.click('#btnIssues');
+    ok(!(await page.locator('#issueList').textContent()).includes('должно быть больше 0'), 'знаковое значение не требует > 0');
+    await page.click('#sheetIssues [data-close]');
+    await page.locator('.inspector select').first().selectOption('applyEffect');
+    ok(await page.locator('.inspector label:text("Эффект (StatusEffectData) *"), .inspector .lbl:text("Эффект (StatusEffectData) *")').count() > 0, 'у «Наложить эффект» поле эффекта');
+    await page.keyboard.press('Delete');
+  }
   // Нода «Кат-сцена» и новые триггеры
   await dragPal(page, 'Кат-сцена', 500, 300);
   ok((await page.locator('.node.sel .n-head').textContent()).includes('Кат-сцена'), 'нода «Кат-сцена» добавлена');

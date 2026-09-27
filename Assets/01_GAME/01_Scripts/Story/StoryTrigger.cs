@@ -37,6 +37,17 @@ public abstract class StoryTrigger
         { "itemReceived", () => new ItemReceivedTrigger() },
         { "itemPurchased", () => new ItemPurchasedTrigger() },
         { "skillUnlocked", () => new SkillUnlockedTrigger() },
+        { "nightStarted", () => new NightStartedTrigger() },
+        { "eveningStarted", () => new EveningStartedTrigger() },
+        { "morningStarted", () => new MorningStartedTrigger() },
+        { "dayReached", () => new DayReachedTrigger() },
+        { "hourReached", () => new HourReachedTrigger() },
+        { "satietyBelow", () => new SatietyTrigger(below: true) },
+        { "satietyAbove", () => new SatietyTrigger(below: false) },
+        { "fatigueAbove", () => new FatigueAboveTrigger() },
+        { "playerWinded", () => new PlayerWindedTrigger() },
+        { "playerSlept", () => new PlayerSleptTrigger() },
+        { "itemConsumed", () => new ItemConsumedTrigger() },
     };
 
     /// <summary>Создать триггер вида kind (null — неизвестный вид).</summary>

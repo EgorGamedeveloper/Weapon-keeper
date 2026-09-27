@@ -632,6 +632,7 @@ const TARGETS = {
   spawn:      { catalog: 'enemySpawns',  label: 'Точка спавна врага' },
   storyObject:{ catalog: 'storyObjects', label: 'Объект сюжета (StoryObject)' },
   cutscene:   { catalog: 'cutscenes',    label: 'Кат-сцена (StoryCutscene)' },
+  effect:     { catalog: 'effects',      label: 'Эффект (StatusEffectData)' },
 };
 
 // Что спрашивает квест каждого типа: target — вид цели, required — обязательна ли.
@@ -664,6 +665,18 @@ const TRIGGERS = [
   { id: 'itemPurchased',       label: 'Куплен предмет/инструмент в терминале', fields: { item: 1, count: 1 }, req: [] },
   { id: 'skillUnlocked',       label: 'Открыт навык',           fields: { skillId: 1 }, req: ['skillId'] },
   { id: 'questCompleted',      label: 'Выполнен квест (любой линии или вне графа)', fields: { questId: 1 }, req: ['questId'] },
+  // Время суток и выживание (GameClock, PlayerConsumption, PlayerStamina, SleepService)
+  { id: 'nightStarted',        label: 'Наступила ночь',         fields: {}, req: [] },
+  { id: 'eveningStarted',      label: 'Наступил вечер',         fields: {}, req: [] },
+  { id: 'morningStarted',      label: 'Наступило утро',         fields: { count: 1 }, req: [] },
+  { id: 'dayReached',          label: 'Наступил день №',        fields: { value: 'Номер дня' }, req: ['value'] },
+  { id: 'hourReached',         label: 'На часах наступил час',  fields: { value: 'Час (0–23)' }, req: [] },
+  { id: 'satietyBelow',        label: 'Сытость ≤',              fields: { value: 'Сытость (0–100)' }, req: [] },
+  { id: 'satietyAbove',        label: 'Сытость ≥',              fields: { value: 'Сытость (0–100)' }, req: ['value'] },
+  { id: 'fatigueAbove',        label: 'Усталость ≥',            fields: { value: 'Усталость (0–100)' }, req: ['value'] },
+  { id: 'playerWinded',        label: 'Игрок выдохся',          fields: { count: 1 }, req: [] },
+  { id: 'playerSlept',         label: 'Игрок поспал',           fields: { count: 1 }, req: [] },
+  { id: 'itemConsumed',        label: 'Съедено / выпито',       fields: { item: 1, count: 1 }, req: [] },
 ];
 
 const ACTIONS = [
@@ -673,13 +686,20 @@ const ACTIONS = [
   { id: 'disableObject', label: 'Выключить объект',   fields: { target: 'storyObject' }, req: ['target'] },
   // Свой инспектор (renderSpawnEnemies): где (у точки спавна / волной вокруг игрока), строки «тип × количество».
   { id: 'spawnEnemies',  label: 'Спаун врагов',       fields: {}, req: [] },
+  // Время суток и выживание. signed — значение может быть отрицательным; zeroOk — 0 допустим.
+  { id: 'skipToHour',    label: 'Перевести часы на',  fields: { value: 'Час (0–23)' }, zeroOk: true, help: 'Время идёт вперёд до ближайшего такого часа (как сон: события часов наступят).' },
+  { id: 'skipHours',     label: 'Промотать время',    fields: { value: 'Часов' }, help: 'Время прыгает вперёд на столько игровых часов.' },
+  { id: 'changeSatiety', label: 'Изменить сытость',   fields: { value: 'На сколько (±)' }, signed: true, help: 'Плюс — накормить, минус — проголодаться. Сытость 0–100.' },
+  { id: 'changeFatigue', label: 'Изменить усталость', fields: { value: 'На сколько (±)' }, signed: true, help: 'Плюс — устал, минус — отдохнул. Усталость 0–100.' },
+  { id: 'refillStamina', label: 'Восстановить выносливость', fields: {}, help: 'Бар выносливости — до потолка, одышка снимается.' },
+  { id: 'applyEffect',   label: 'Наложить эффект',    fields: { target: 'effect', value: 'Часов (0 — как у эффекта)' }, zeroOk: true },
 ];
 
 const CATALOG_LISTS = {
   repairPoints: 'Точки ремонта', breakables: 'Разрушаемые', stains: 'Пятна', shelves: 'Полки', categories: 'Категории полок',
   zones: 'Зоны доставки', items: 'Предметы', enemySpawns: 'Точки спавна', enemyTypes: 'Типы врагов', orders: 'Заказы',
   lootBoxes: 'Ящики поставки', storyObjects: 'Объекты сюжета', quests: 'Квесты вне графа', speakers: 'Говорящие',
-  skills: 'Навыки', cutscenes: 'Кат-сцены',
+  skills: 'Навыки', cutscenes: 'Кат-сцены', effects: 'Эффекты',
 };
 
 const FILE_VERSION = 1;
@@ -903,8 +923,8 @@ function nodeSummary(n) {
         add('m', sum.where);
         break;
       }
-      if (a && a.fields.value) add('m', String(n.value || 0));
-      if (a && a.fields.target) add('m', catalogName(TARGETS.storyObject.catalog, n.target) || '—');
+      if (a && a.fields.target) add('m', catalogName((TARGETS[a.fields.target] || TARGETS.storyObject).catalog, n.target) || '—');
+      if (a && a.fields.value) add('m', (a.signed && n.value > 0 ? '+' : '') + String(n.value || 0));
       break;
     }
     case 'note': body.textContent = n.text || 'Пустая заметка'; break;
@@ -1419,8 +1439,10 @@ function renderAction(n) {
   insp.append(fieldWrap('Что сделать', selectInput(n, 'action', ACTIONS)));
   const a = ACTIONS.find((x) => x.id === n.action) || ACTIONS[0];
   if (a.id === 'spawnEnemies') { renderSpawnEnemies(n); return; }
-  if (a.fields.value) insp.append(fieldWrap(a.fields.value + ' *', textInput(n, 'value', { number: true, min: 0 })));
-  if (a.fields.target) insp.append(catalogInput(n, 'target', TARGETS.storyObject.catalog, TARGETS.storyObject.label, true));
+  const tgt = TARGETS[a.fields.target] || TARGETS.storyObject;
+  if (a.fields.target) insp.append(catalogInput(n, 'target', tgt.catalog, tgt.label, true));
+  if (a.fields.value) insp.append(fieldWrap(a.fields.value + ' *', textInput(n, 'value', a.signed ? { number: true } : { number: true, min: 0 })));
+  if (a.help) insp.append(el('div', { class: 'help', text: a.help }));
 }
 
 function nodeTitle(id) {
@@ -1494,6 +1516,8 @@ function validate() {
       else {
         for (const r of t.req) if (!n[r] && n[r] !== 0) add('err', n.id, `Не заполнено поле «${fieldLabel(t, r)}».`);
         if (t.req.includes('value') && !(n.value > 0)) add('err', n.id, `«${t.fields.value}» должно быть больше 0.`);
+        if (n.trigger === 'hourReached' && !(n.value >= 0 && n.value < 24)) add('err', n.id, 'Час — от 0 до 23.');
+        if (['satietyBelow', 'satietyAbove', 'fatigueAbove'].includes(n.trigger) && !(n.value >= 0 && n.value <= 100)) add('err', n.id, 'Значение — от 0 до 100.');
         if (t.fields.target) checkCatalog(add, n, 'target', TARGETS[t.fields.target].catalog, true);
         checkCatalog(add, n, 'category', 'categories', !!t.fields.category);
         checkCatalog(add, n, 'item', 'items', !!t.fields.item);
@@ -1516,9 +1540,12 @@ function validate() {
         } else if (rows.some((r) => !r.enemyType)) add('err', n.id, 'Для волны вокруг игрока укажите тип каждого врага.');
         for (const r of rows) if (r.enemyType) checkCatalog(add, r === n ? n : { ...r, id: n.id }, 'enemyType', 'enemyTypes', true);
       } else {
-        if (a.fields.value && !(n.value > 0)) add('err', n.id, `«${a.fields.value}» должно быть больше 0.`);
-        if (a.fields.target && !n.target) add('err', n.id, 'Не выбран объект сюжета.');
-        if (a.fields.target) checkCatalog(add, n, 'target', 'storyObjects', true);
+        if (a.fields.value && !a.signed && !a.zeroOk && !(n.value > 0)) add('err', n.id, `«${a.fields.value}» должно быть больше 0.`);
+        if (a.signed && !n.value) add('warn', n.id, `«${a.fields.value}» = 0 — событие ничего не изменит.`);
+        if (a.id === 'skipToHour' && !(n.value >= 0 && n.value < 24)) add('err', n.id, 'Час — от 0 до 23.');
+        const tgt = TARGETS[a.fields.target] || TARGETS.storyObject;
+        if (a.fields.target && !n.target) add('err', n.id, `Не выбрано: ${tgt.label}.`);
+        if (a.fields.target) checkCatalog(add, n, 'target', tgt.catalog, true);
       }
     }
     if (n.type === 'and' && (incoming.get(n.id) || []).length < 2) add('warn', n.id, '«И» с одним входом ничего не ждёт — соедините с ней две ноды или больше.');
