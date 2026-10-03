@@ -256,7 +256,10 @@
   `consumedTodayIds`; доставки — `SupplyDeliverySave.remainingHours`. Миграция 3 → 4: часы и сытость «не
   сохранены» (−1 → как в новой игре), секунды доставок ÷ 75. `LootBoxData.deliveryHours` — в игровых часах.
 - **Фонарик** (`Player/PlayerFlashlight` на `Regular_Character`, клавиша G — `GameConfig.input.flashlightKey`;
-  F занята «Использовать»): Spot-свет `Regular_Character/Flashlight` (cookie `06_Materials/Textures/
+  F занята «Использовать»). Его сначала подбирают: `Item_Flashlight` (`ToolKind.Flashlight`, префаб
+  `03_Prefabs/Items/Flashlight`, в `TestScene` — `Flashlight_Pickup`) уходит в экипировку, как другие
+  инструменты, и G работает, пока предмет есть в `EquipmentInventory` (`IsOwned`), — не обязательно активный.
+  Свет: Spot-свет `Regular_Character/Flashlight` (cookie `06_Materials/Textures/
   T_FlashlightCookie`, тёплый, дальность 22 м) догоняет взгляд камеры с инерцией (`followSharpness`),
   включается/гаснет за `fadeDuration` со щелчком. Яркость включённого — `intensity` самого Light (35: у URP
   Spot квадратичный спад, при 5 луча ночью не видно). Батареи нет, состояние не сохраняется. Тени у Light
