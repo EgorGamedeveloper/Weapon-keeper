@@ -419,6 +419,40 @@ public class StoryDirector : MonoBehaviour
                 SpawnEnemies(node);
                 break;
 
+            // ── время суток и выживание ──
+            case "skipToHour":
+                if (scene.Clock != null) scene.Clock.SkipTo(scene.Clock.NextOccurrence(Mathf.Repeat(node.value, 24f)));
+                else scene.Warn(node.id, $"Событие {node.id}: в сцене нет GameClock.");
+                break;
+
+            case "skipHours":
+                if (scene.Clock != null) scene.Clock.SkipTo(scene.Clock.TotalHours + Mathf.Max(0f, node.value));
+                else scene.Warn(node.id, $"Событие {node.id}: в сцене нет GameClock.");
+                break;
+
+            case "changeSatiety":
+                if (scene.Consumption != null) scene.Consumption.AddSatiety(node.value);
+                else scene.Warn(node.id, $"Событие {node.id}: в сцене нет PlayerConsumption.");
+                break;
+
+            case "changeFatigue":
+                if (scene.Stamina == null) { scene.Warn(node.id, $"Событие {node.id}: в сцене нет PlayerStamina."); break; }
+                if (node.value >= 0f) scene.Stamina.AddFatigue(node.value); else scene.Stamina.RelieveFatigue(-node.value);
+                break;
+
+            case "refillStamina":
+                if (scene.Stamina != null) scene.Stamina.RefillBar();
+                else scene.Warn(node.id, $"Событие {node.id}: в сцене нет PlayerStamina.");
+                break;
+
+            case "applyEffect":
+            {
+                StatusEffectData effect = scene.Effects != null ? scene.Effects.FindById(node.target) : null;
+                if (effect != null) scene.Effects.Apply(effect, Mathf.Max(0f, node.value));
+                else scene.Warn(node.id, $"Событие {node.id}: нет PlayerStatusEffects или эффекта «{node.target}» (knownEffects).");
+                break;
+            }
+
             default:
                 scene.Warn(node.id, $"Событие {node.id}: неизвестное действие «{node.action}».");
                 break;

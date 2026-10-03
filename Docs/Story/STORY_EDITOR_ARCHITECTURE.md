@@ -344,6 +344,17 @@ changed(true);              // true — перерисовать всё; false �
 | `itemPurchased` | Куплен предмет/инструмент в терминале | `SupplyService.OnItemPurchased` ← `NotifyItemPurchased(item)` (**магазин инструментов ещё не сделан** — ему нужно вызвать этот метод) | item?, count |
 | `skillUnlocked` | Открыт навык | `PlayerSkills.OnSkillsChanged` + `IsOwned` | skillId |
 | `questCompleted` | Выполнен квест (любой линии или вне графа) | `QuestManager.OnQuestCompleted` | questId |
+| `nightStarted` / `eveningStarted` | Наступила ночь / вечер | `GameClock.OnNightStarted/OnEveningStarted` (+ `IsNight/IsEvening` — сразу) | — |
+| `morningStarted` | Наступило утро | `GameClock.OnDayStarted` | count |
+| `dayReached` | Наступил день № | `GameClock.OnDayStarted` + `Day ≥ value` | value |
+| `hourReached` | На часах наступил час | `GameClock.OnHourChanged == value` | value (0–23) |
+| `satietyBelow` / `satietyAbove` | Сытость ≤ / ≥ | `PlayerConsumption.Satiety`, проверка на `OnHourChanged`/`OnTimeSkipped`/`OnConsumed` | value (0–100) |
+| `fatigueAbove` | Усталость ≥ | `PlayerStamina.Fatigue`, проверка на `OnHourChanged`/`OnTiredChanged`/`OnExhaustedChanged` | value (0–100) |
+| `playerWinded` | Игрок выдохся | `PlayerStamina.OnWindedChanged(true)` | count |
+| `playerSlept` | Игрок поспал | `SleepService.OnWokeUp` | count |
+| `itemConsumed` | Съедено / выпито | `PlayerConsumption.OnConsumed` | item?, count |
+
+События времени и выживания (`StoryDirector.ExecuteAction`): `skipToHour` (`GameClock.SkipTo(NextOccurrence(h))`), `skipHours`, `changeSatiety` (`PlayerConsumption.AddSatiety`, ±), `changeFatigue` (`AddFatigue`/`RelieveFatigue`, ±), `refillStamina` (`RefillBar`), `applyEffect` (`PlayerStatusEffects.Apply(FindById(target), часы)`; эффекты — список `effects` каталога). В редакторе у действий флаги `signed` (± без проверки > 0), `zeroOk`, `help`; `fields.target` — ключ `TARGETS`.
 
 Счётчики `count` считаются с момента, когда триггер начал слушать, и после загрузки сейва начинаются заново.
 

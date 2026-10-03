@@ -23,6 +23,11 @@ public class StoryScene
     public ItemCatalog Items { get; private set; }
     public PlayerSkills Skills { get; private set; }
     public StoryDirector Director { get; private set; }
+    public GameClock Clock { get; private set; }
+    public PlayerStamina Stamina { get; private set; }
+    public PlayerConsumption Consumption { get; private set; }
+    public PlayerStatusEffects Effects { get; private set; }
+    public SleepService Sleep { get; private set; }
 
     private readonly Dictionary<Type, Component[]> cache = new Dictionary<Type, Component[]>();
     private readonly HashSet<string> warned = new HashSet<string>();
@@ -40,6 +45,11 @@ public class StoryScene
             Supply = Object.FindAnyObjectByType<SupplyService>(),
             Skills = Object.FindAnyObjectByType<PlayerSkills>(),
             Director = director,
+            Clock = Object.FindAnyObjectByType<GameClock>(),
+            Stamina = Object.FindAnyObjectByType<PlayerStamina>(),
+            Consumption = Object.FindAnyObjectByType<PlayerConsumption>(),
+            Effects = Object.FindAnyObjectByType<PlayerStatusEffects>(),
+            Sleep = Object.FindAnyObjectByType<SleepService>(),
             Items = director.itemCatalog,
         };
 

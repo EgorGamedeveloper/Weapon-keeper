@@ -109,6 +109,12 @@ public class PlayerConsumption : MonoBehaviour
         Satiety = Mathf.Max(0f, Satiety - satietyDecayPerHour * hours);
     }
 
+    /// <summary>Изменить сытость на amount (минус — голод). Для сюжетных событий; ограничено 0…MaxSatiety.</summary>
+    public void AddSatiety(float amount)
+    {
+        Satiety = Mathf.Clamp(Satiety + amount, 0f, MaxSatiety);
+    }
+
     /// <summary>Сон: отметки «раз в сутки» сбрасываются.</summary>
     public void ResetDaily() => usedToday.Clear();
 

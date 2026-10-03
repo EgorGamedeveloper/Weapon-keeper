@@ -401,3 +401,146 @@ public class SkillUnlockedTrigger : StoryTrigger
     private void Handle() { if (IsSatisfied()) Fire(); }
     protected override bool IsSatisfied() => Scene.Skills.IsOwned(skill);
 }
+
+// ───────────────────────── Время суток и выживание ─────────────────────────
+
+/// <summary>Общая часть триггеров времени: нужен GameClock.</summary>
+public abstract class ClockTrigger : StoryTrigger
+{
+    protected override bool Subscribe()
+    {
+        if (Scene.Clock == null) { Scene.Warn(Node.id, $"Триггер «{Node.trigger}» ({Node.id}): в сцене нет GameClock."); return false; }
+        SubscribeClock(Scene.Clock);
+        return true;
+    }
+    protected override void Unsubscribe() { if (Scene.Clock != null) UnsubscribeClock(Scene.Clock); }
+    protected abstract void SubscribeClock(GameClock clock);
+    protected abstract void UnsubscribeClock(GameClock clock);
+}
+
+/// <summary>Наступила ночь (TimeSettings.nightHour). Если триггер включился уже ночью — срабатывает сразу.</summary>
+public class NightStartedTrigger : ClockTrigger
+{
+    protected override void SubscribeClock(GameClock clock) => clock.OnNightStarted += Fire;
+    protected override void UnsubscribeClock(GameClock clock) => clock.OnNightStarted -= Fire;
+    protected override bool IsSatisfied() => Scene.Clock.IsNight;
+}
+
+/// <summary>Наступил вечер (TimeSettings.eveningHour). Уже вечер или ночь — срабатывает сразу.</summary>
+public class EveningStartedTrigger : ClockTrigger
+{
+    protected override void SubscribeClock(GameClock clock) => clock.OnEveningStarted += Fire;
+    protected override void UnsubscribeClock(GameClock clock) => clock.OnEveningStarted -= Fire;
+    protected override bool IsSatisfied() => Scene.Clock.IsEvening;
+}
+
+/// <summary>Наступило утро нового дня — count раз (считается с момента, когда триггер начал слушать).</summary>
+public class MorningStartedTrigger : ClockTrigger
+{
+    protected override void SubscribeClock(GameClock clock) => clock.OnDayStarted += Handle;
+    protected override void UnsubscribeClock(GameClock clock) => clock.OnDayStarted -= Handle;
+    private void Handle(int day) => Count();
+}
+
+/// <summary>Идёт день № value или позже.</summary>
+public class DayReachedTrigger : ClockTrigger
+{
+    protected override void SubscribeClock(GameClock clock) => clock.OnDayStarted += Handle;
+    protected override void UnsubscribeClock(GameClock clock) => clock.OnDayStarted -= Handle;
+    private void Handle(int day) { if (IsSatisfied()) Fire(); }
+    protected override bool IsSatisfied() => Scene.Clock.Day >= Mathf.RoundToInt(Node.value);
+}
+
+/// <summary>На часах наступил час value (0–23) — ближайший после того, как триггер начал слушать.</summary>
+public class HourReachedTrigger : ClockTrigger
+{
+    protected override void SubscribeClock(GameClock clock) => clock.OnHourChanged += Handle;
+    protected override void UnsubscribeClock(GameClock clock) => clock.OnHourChanged -= Handle;
+    private void Handle(int hour) { if (hour == Mathf.RoundToInt(Node.value) % 24) Fire(); }
+}
+
+/// <summary>Сытость ≤ value (below) или ≥ value. Проверяется каждый игровой час, после еды и сна.</summary>
+public class SatietyTrigger : StoryTrigger
+{
+    private readonly bool below;
+    public SatietyTrigger(bool below) { this.below = below; }
+
+    protected override bool Subscribe()
+    {
+        if (Scene.Consumption == null) { Scene.Warn(Node.id, $"Триггер «{Node.trigger}» ({Node.id}): в сцене нет PlayerConsumption."); return false; }
+        Scene.Consumption.OnConsumed += HandleItem;
+        if (Scene.Clock != null) { Scene.Clock.OnHourChanged += HandleHour; Scene.Clock.OnTimeSkipped += HandleSkip; }
+        return true;
+    }
+    protected override void Unsubscribe()
+    {
+        Scene.Consumption.OnConsumed -= HandleItem;
+        if (Scene.Clock != null) { Scene.Clock.OnHourChanged -= HandleHour; Scene.Clock.OnTimeSkipped -= HandleSkip; }
+    }
+    private void HandleItem(ItemData item) => Check();
+    private void HandleHour(int hour) => Check();
+    private void HandleSkip(double from, double to) => Check();
+    private void Check() { if (IsSatisfied()) Fire(); }
+    protected override bool IsSatisfied() => below ? Scene.Consumption.Satiety <= Node.value : Scene.Consumption.Satiety >= Node.value;
+}
+
+/// <summary>Усталость ≥ value (0–100). Проверяется каждый игровой час и при смене «устал»/«измотан».</summary>
+public class FatigueAboveTrigger : StoryTrigger
+{
+    protected override bool Subscribe()
+    {
+        if (Scene.Stamina == null) { Scene.Warn(Node.id, $"Триггер «{Node.trigger}» ({Node.id}): в сцене нет PlayerStamina."); return false; }
+        Scene.Stamina.OnTiredChanged += HandleFlag;
+        Scene.Stamina.OnExhaustedChanged += HandleFlag;
+        if (Scene.Clock != null) Scene.Clock.OnHourChanged += HandleHour;
+        return true;
+    }
+    protected override void Unsubscribe()
+    {
+        Scene.Stamina.OnTiredChanged -= HandleFlag;
+        Scene.Stamina.OnExhaustedChanged -= HandleFlag;
+        if (Scene.Clock != null) Scene.Clock.OnHourChanged -= HandleHour;
+    }
+    private void HandleFlag(bool on) { if (IsSatisfied()) Fire(); }
+    private void HandleHour(int hour) { if (IsSatisfied()) Fire(); }
+    protected override bool IsSatisfied() => Scene.Stamina.Fatigue >= Node.value;
+}
+
+/// <summary>Игрок выдохся (бар выносливости на нуле) — count раз.</summary>
+public class PlayerWindedTrigger : StoryTrigger
+{
+    protected override bool Subscribe()
+    {
+        if (Scene.Stamina == null) { Scene.Warn(Node.id, $"Триггер «{Node.trigger}» ({Node.id}): в сцене нет PlayerStamina."); return false; }
+        Scene.Stamina.OnWindedChanged += Handle;
+        return true;
+    }
+    protected override void Unsubscribe() => Scene.Stamina.OnWindedChanged -= Handle;
+    private void Handle(bool winded) { if (winded) Count(); }
+}
+
+/// <summary>Игрок поспал и проснулся (в том числе упал без сил) — count раз.</summary>
+public class PlayerSleptTrigger : StoryTrigger
+{
+    protected override bool Subscribe()
+    {
+        if (Scene.Sleep == null) { Scene.Warn(Node.id, $"Триггер «{Node.trigger}» ({Node.id}): в сцене нет SleepService."); return false; }
+        Scene.Sleep.OnWokeUp += Handle;
+        return true;
+    }
+    protected override void Unsubscribe() => Scene.Sleep.OnWokeUp -= Handle;
+    private void Handle(DayReport report) => Count();
+}
+
+/// <summary>Съеден или выпит предмет (item, пусто — любой) — count раз.</summary>
+public class ItemConsumedTrigger : StoryTrigger
+{
+    protected override bool Subscribe()
+    {
+        if (Scene.Consumption == null) { Scene.Warn(Node.id, $"Триггер «{Node.trigger}» ({Node.id}): в сцене нет PlayerConsumption."); return false; }
+        Scene.Consumption.OnConsumed += Handle;
+        return true;
+    }
+    protected override void Unsubscribe() => Scene.Consumption.OnConsumed -= Handle;
+    private void Handle(ItemData item) { if (Matches(Node.item, item != null ? item.itemId : null)) Count(); }
+}

@@ -117,7 +117,8 @@ public static class StoryEditorTools
                                           StoryNodeData.Wait, StoryNodeData.And, StoryNodeData.Action, StoryNodeData.Note,
                                           StoryNodeData.Cutscene };
         var triggerKinds = new HashSet<string>(StoryTrigger.Kinds);
-        var actions = new HashSet<string> { "giveMoney", "giveXp", "enableObject", "disableObject", "spawnEnemies" };
+        var actions = new HashSet<string> { "giveMoney", "giveXp", "enableObject", "disableObject", "spawnEnemies",
+                                            "skipToHour", "skipHours", "changeSatiety", "changeFatigue", "refillStamina", "applyEffect" };
 
         foreach (StoryNodeData node in graph.nodes)
         {
@@ -371,6 +372,7 @@ public static class StoryEditorTools
         public List<CatalogEntry> speakers = new List<CatalogEntry>();
         public List<CatalogEntry> skills = new List<CatalogEntry>();
         public List<CatalogEntry> cutscenes = new List<CatalogEntry>();
+        public List<CatalogEntry> effects = new List<CatalogEntry>();
     }
 
     [MenuItem(MenuRoot + "Export Scene Catalog", priority = 20)]
@@ -426,6 +428,8 @@ public static class StoryEditorTools
         foreach (LootBoxData box in LoadAll<LootBoxData>())
             if (!string.IsNullOrEmpty(box.lootBoxId)) catalog.lootBoxes.Add(Entry(box.lootBoxId, $"{box.title} ({box.lootBoxId})"));
 
+        foreach (StatusEffectData effect in LoadAll<StatusEffectData>())
+            if (!string.IsNullOrEmpty(effect.effectId)) catalog.effects.Add(Entry(effect.effectId, $"{effect.title} ({effect.effectId})"));
         foreach (SkillData skill in LoadAll<SkillData>())
             if (!string.IsNullOrEmpty(skill.skillId)) catalog.skills.Add(Entry(skill.skillId, $"{skill.title} ({skill.skillId})"));
 
