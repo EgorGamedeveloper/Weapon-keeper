@@ -15,6 +15,10 @@
     ],
     "breakables": [
         {
+            "id": "ea23be93c04e4e98a4e31d4d5895f3e8",
+            "name": "Interactables/BrickedDoorway/Bricks"
+        },
+        {
             "id": "434466895a5d4d93bf2e7a077503fa05",
             "name": "Window/WoodPlank_M"
         },
@@ -25,8 +29,32 @@
     ],
     "stains": [
         {
-            "id": "2d221bb7370045b6a2aa1c4bba328a71",
-            "name": "05_Gameplay/Interactables/TestStain"
+            "id": "078f87592c6a49cd8490d8602441795a",
+            "name": "05_Gameplay/Interactables/BloodStain_01"
+        },
+        {
+            "id": "e1e941e9236a45e296a2304fd1565a02",
+            "name": "05_Gameplay/Interactables/BloodStain_02"
+        },
+        {
+            "id": "1e6ffea4bd5d4adc9a3a09546d040784",
+            "name": "05_Gameplay/Interactables/BloodStain_03"
+        },
+        {
+            "id": "a3175bf1e5ea464a9eda45b619ecaa09",
+            "name": "05_Gameplay/Interactables/BloodPool_01"
+        },
+        {
+            "id": "59e2235fb66844428f65b5891779090b",
+            "name": "05_Gameplay/Interactables/BloodPool_02"
+        },
+        {
+            "id": "b6a1e0102564431facb665278852d6d5",
+            "name": "05_Gameplay/Interactables/SootStain_01"
+        },
+        {
+            "id": "de39b9ceeb6e4ee9b4a3c629a48e80e6",
+            "name": "05_Gameplay/Interactables/Graffiti_01"
         }
     ],
     "shelves": [
@@ -85,12 +113,32 @@
             "name": "Кирпич (brick)"
         },
         {
+            "id": "cannedfood",
+            "name": "Тушёнка (cannedfood)"
+        },
+        {
+            "id": "chocolatebar",
+            "name": "Шоколадный батончик (chocolatebar)"
+        },
+        {
+            "id": "coffee",
+            "name": "Кофе (coffee)"
+        },
+        {
             "id": "crowbar",
             "name": "Лом (crowbar)"
         },
         {
             "id": "elevatormotor",
             "name": "Мотор лифта (elevatormotor)"
+        },
+        {
+            "id": "energydrink",
+            "name": "Энергетик (energydrink)"
+        },
+        {
+            "id": "flashlight",
+            "name": "Фонарик (flashlight)"
         },
         {
             "id": "generatorparts",
@@ -105,12 +153,32 @@
             "name": "M16 (m16)"
         },
         {
+            "id": "mop",
+            "name": "Швабра (mop)"
+        },
+        {
+            "id": "mre",
+            "name": "Сухпаёк (mre)"
+        },
+        {
+            "id": "pressurewasher",
+            "name": "Мойка высокого давления (pressurewasher)"
+        },
+        {
             "id": "shippingbox",
             "name": "Коробка для отправки (shippingbox)"
         },
         {
             "id": "sledgehammer",
             "name": "Кувалда (sledgehammer)"
+        },
+        {
+            "id": "stimulant",
+            "name": "Шприц-стимулятор (stimulant)"
+        },
+        {
+            "id": "wirespool",
+            "name": "Катушка провода (wirespool)"
         }
     ],
     "enemySpawns": [
@@ -185,12 +253,32 @@
             "name": "Амуниция (ammo)"
         },
         {
+            "id": "medical",
+            "name": "Медикаменты (medical)"
+        },
+        {
+            "id": "mop",
+            "name": "Швабра (mop)"
+        },
+        {
             "id": "pistols",
             "name": "Пистолеты (pistols)"
         },
         {
+            "id": "pressurewasher",
+            "name": "Мойка высокого давления (pressurewasher)"
+        },
+        {
+            "id": "provisions",
+            "name": "Провизия (provisions)"
+        },
+        {
             "id": "rifles",
             "name": "Винтовки (rifles)"
+        },
+        {
+            "id": "wirespool",
+            "name": "Катушка провода (wirespool)"
         }
     ],
     "storyObjects": [],
@@ -263,8 +351,16 @@
             "name": "Прилежный (cleaner_diligent)"
         },
         {
+            "id": "cleaner_mop",
+            "name": "Лицензия: швабра (cleaner_mop)"
+        },
+        {
             "id": "cleaner_reach",
             "name": "Длинные руки (cleaner_reach)"
+        },
+        {
+            "id": "cleaner_washer",
+            "name": "Лицензия: мойка высокого давления (cleaner_washer)"
         },
         {
             "id": "gunsmith_heavy",
@@ -299,12 +395,40 @@
             "name": "Твёрдая рука (gunsmith_steady)"
         },
         {
+            "id": "survival_coffeeaddict",
+            "name": "Кофеман (survival_coffeeaddict)"
+        },
+        {
+            "id": "survival_hardening1",
+            "name": "Закалка (survival_hardening1)"
+        },
+        {
+            "id": "survival_hardening2",
+            "name": "Закалка II (survival_hardening2)"
+        },
+        {
+            "id": "survival_nightowl",
+            "name": "Сова (survival_nightowl)"
+        },
+        {
             "id": "survival_parkour",
             "name": "Паркур (survival_parkour)"
         },
         {
+            "id": "survival_secondwind",
+            "name": "Второе дыхание (survival_secondwind)"
+        },
+        {
+            "id": "survival_soldiersleep",
+            "name": "Солдатский сон (survival_soldiersleep)"
+        },
+        {
             "id": "survival_sprint",
             "name": "Спринтер (survival_sprint)"
+        },
+        {
+            "id": "survival_strongback",
+            "name": "Крепкая спина (survival_strongback)"
         },
         {
             "id": "survival_tough",
@@ -317,6 +441,10 @@
         {
             "id": "survival_walk",
             "name": "Лёгкий шаг (survival_walk)"
+        },
+        {
+            "id": "survival_wind",
+            "name": "Дыхалка (survival_wind)"
         }
     ],
     "cutscenes": []

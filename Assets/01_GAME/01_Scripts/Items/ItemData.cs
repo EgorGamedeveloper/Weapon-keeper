@@ -16,6 +16,9 @@ public enum ToolKind
     PressureWasher,
     /// <summary>Катушка провода: провод от разъёма к разъёму (WireSpoolTool), одна катушка — одно соединение.</summary>
     WireSpool,
+    /// <summary>Налобный фонарик: не занимает руки — просто открывает переключение клавишей G
+    /// (PlayerFlashlight.IsOwned проверяет наличие такого предмета в экипировке, а не то, активен ли он).</summary>
+    Flashlight,
 }
 
 /// <summary>

@@ -8,8 +8,8 @@
     {
       "id": "n_start",
       "type": "start",
-      "x": -152,
-      "y": 108,
+      "x": -341,
+      "y": 112,
       "storyline": "main"
     },
     {
@@ -148,8 +148,8 @@
     {
       "id": "n_bonus",
       "type": "action",
-      "x": 1583,
-      "y": 120,
+      "x": 1204,
+      "y": 111,
       "action": "spawnEnemies",
       "value": 150,
       "target": "",
@@ -171,6 +171,16 @@
       "y": 290,
       "text": "Пример сюжета: откройте «Каталог» и загрузите scene_catalog.json из Unity — тогда цели выбираются из списков.\n\nТриггер «Сломан объект» ждёт, пока выберете дверь склада.",
       "storyline": "main"
+    },
+    {
+      "id": "n_p79hqg",
+      "type": "cutscene",
+      "x": -49,
+      "y": 100,
+      "storyline": "main",
+      "target": "",
+      "skippable": true,
+      "hideHud": true
     }
   ],
   "links": [
@@ -178,12 +188,6 @@
       "from": "q_cleardebris",
       "fromPort": "out",
       "to": "n_radio2",
-      "toPort": "in"
-    },
-    {
-      "from": "n_start",
-      "fromPort": "out",
-      "to": "n_radio1",
       "toPort": "in"
     },
     {
@@ -196,6 +200,18 @@
       "from": "n_radio2",
       "fromPort": "out",
       "to": "n_bonus",
+      "toPort": "in"
+    },
+    {
+      "from": "n_start",
+      "fromPort": "out",
+      "to": "n_p79hqg",
+      "toPort": "in"
+    },
+    {
+      "from": "n_p79hqg",
+      "fromPort": "out",
+      "to": "n_radio1",
       "toPort": "in"
     }
   ],

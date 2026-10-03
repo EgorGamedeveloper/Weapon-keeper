@@ -82,6 +82,8 @@ crashlytics-build.properties
 /Assets/02_ART/Firearms.meta
 Assets/02_ART/Models
 Assets/02_ART/Models.meta
+Assets/02_ART/01_PSX_ASSETS
+Assets/02_ART/01_PSX_ASSETS.meta
 # Тяжёлые текстуры-исходники (8K, 276 МБ) — только локально
 /Assets/02_ART/Poliigon_BrickWallReclaimed_8320/
 /Assets/02_ART/Poliigon_BrickWallReclaimed_8320.meta
@@ -114,3 +116,7 @@ Assets/02_ART/Models.meta
 /Assets/_Recovery/
 /Assets/_Recovery.meta
 .DS_Store
+
+# Графика PSX — в репозиторий не отправляем
+/Assets/02_ART/01_PSX ASSETS/
+/Assets/02_ART/01_PSX ASSETS.meta

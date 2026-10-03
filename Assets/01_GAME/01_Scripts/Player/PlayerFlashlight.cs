@@ -2,10 +2,15 @@ using DG.Tweening;
 using UnityEngine;
 
 /// <summary>
-/// Налобный фонарик: клавиша G (GameConfig.input.flashlightKey) включает и выключает его со щелчком.
+/// Налобный фонарик: сначала его нужно подобрать как предмет (ItemData.toolKind == Flashlight) — подбор
+/// уводит его прямо в экипировку, как лом или швабру (PlayerItemInteraction.CompletePickup). Дальше
+/// клавиша G (GameConfig.input.flashlightKey) включает и выключает его со щелчком — независимо от того,
+/// какой инструмент сейчас активен в экипировке: фонарик не занимает руки, только числится в списке
+/// (IsOwned проверяет наличие предмета в EquipmentInventory, а не ActiveToolKind).
 /// Свет — Spot-источник рядом с камерой: он поворачивается за взглядом с лёгкой инерцией, а не приклеен к
 /// экрану, — при резком повороте пятно света чуть догоняет взгляд. Батареи нет — просто светит.
-/// Состояние не сохраняется: после загрузки фонарик выключен.
+/// Состояние включения не сохраняется (после загрузки фонарик выключен), а вот факт владения — да, через
+/// обычный сейв экипировки (SaveGameData.equipment).
 ///
 /// Работает в LateUpdate после покачивания камеры (DefaultExecutionOrder), чтобы свет не отставал на кадр.
 /// </summary>
@@ -18,6 +23,9 @@ public class PlayerFlashlight : MonoBehaviour
 
     [Tooltip("Spot-источник фонарика. Его яркость в инспекторе — яркость включённого фонарика.")]
     public Light spotLight;
+
+    [Tooltip("Экипировка игрока: фонарик можно включать, только если там есть предмет с toolKind Flashlight.")]
+    public EquipmentInventory equipmentInventory;
 
     [Header("Конфиг")]
     [Tooltip("Если задан — клавиша берётся из GameConfig.input.flashlightKey при старте.")]
@@ -50,6 +58,11 @@ public class PlayerFlashlight : MonoBehaviour
     /// <summary>Фонарик включён.</summary>
     public bool IsOn { get; private set; }
 
+    /// <summary>Фонарик подобран: в экипировке есть предмет с toolKind Flashlight. Пока не подобран,
+    /// клавиша G не включает свет.</summary>
+    public bool IsOwned => equipmentInventory != null
+        && equipmentInventory.items.Exists(i => i != null && i.itemData != null && i.itemData.toolKind == ToolKind.Flashlight);
+
     private float onIntensity;
     private Tween fadeTween;
 
@@ -59,9 +72,12 @@ public class PlayerFlashlight : MonoBehaviour
         if (spotLight == null) return;
 
         onIntensity = spotLight.intensity;
-        IsOn = startOn;
-        spotLight.enabled = startOn;
-        spotLight.intensity = startOn ? onIntensity : 0f;
+        // startOn имеет смысл, только если фонарик уже подобран (например, восстановлен из сейва
+        // до Start этого компонента) — иначе им нечего включать.
+        bool on = startOn && IsOwned;
+        IsOn = on;
+        spotLight.enabled = on;
+        spotLight.intensity = on ? onIntensity : 0f;
     }
 
     private void OnDisable()
@@ -71,8 +87,9 @@ public class PlayerFlashlight : MonoBehaviour
 
     private void Update()
     {
-        // Курсор свободен — открыто окно или пауза: клавиши игрока не работают.
-        if (Cursor.lockState == CursorLockMode.Locked && Input.GetKeyDown(toggleKey)) Toggle();
+        // Курсор свободен — открыто окно или пауза: клавиши игрока не работают. Без подобранного
+        // фонарика клавиша ничего не делает — включать нечего.
+        if (Cursor.lockState == CursorLockMode.Locked && IsOwned && Input.GetKeyDown(toggleKey)) Toggle();
     }
 
     private void LateUpdate()
@@ -94,6 +111,7 @@ public class PlayerFlashlight : MonoBehaviour
     public void SetOn(bool on)
     {
         if (spotLight == null || IsOn == on) return;
+        if (on && !IsOwned) return;
         IsOn = on;
         SoundPlayer.Play2D(on ? switchOnSound : switchOffSound);
 
