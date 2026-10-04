@@ -52,6 +52,9 @@ public class PlayerItemInteraction : MonoBehaviour
              "детали утомляет. Пусто — без ограничений.")]
     public PlayerStamina stamina;
 
+    [Tooltip("Налобный фонарик: подобранный фонарик не попадает в инвентарь, а «надевается» на игрока.")]
+    public PlayerFlashlight flashlight;
+
     [Header("Конфиг")]
     [Tooltip("Если задан — значения ниже перекрываются из GameConfig при старте. Пусто — работаем на значениях инспектора.")]
     public GameConfig config;
@@ -360,6 +363,10 @@ public class PlayerItemInteraction : MonoBehaviour
         {
             ToolKind scrubTool = toolActions != null ? toolActions.CurrentScrubTool : ToolKind.None;
             string missingKey = stain.MissingToolKey(scrubTool);
+            // Пятно далеко от игрока — сначала подойти (досягаемость — PlayerToolActions.scrubReach).
+            if (missingKey == null && toolActions != null && stain.Raycast(ray, out Vector3 aimOnStain)
+                && !toolActions.IsWithinReach(aimOnStain))
+                missingKey = "hud.stain.too_far";
             if (missingKey == null) currentHoveredStain = stain;
             if (infoUI != null) infoUI.ShowHint(Loc.Get(stain.titleKey), Loc.Get(missingKey ?? "hud.action.scrub"));
             return;
@@ -579,7 +586,9 @@ public class PlayerItemInteraction : MonoBehaviour
     {
         if (inventory == null || itemHolder == null || itemHolder.HeldItemTransform == null) return;
         // Инструмент уходит в экипировку — вместимость инвентаря уборки на него не распространяется.
-        bool isTool = worldItem.itemData != null && worldItem.itemData.IsTool && modeController != null;
+        bool isTool = worldItem.itemData != null && modeController != null && worldItem.itemData.IsTool;
+        // Фонарик тоже мимо инвентаря уборки — вместимость на него не распространяется.
+        if (worldItem.itemData != null && worldItem.itemData.IsFlashlight && flashlight != null) isTool = true;
         if (!isTool && !inventory.CanAddWorldItem(worldItem)) return;
 
         ShelfSlot source = worldItem.GetSourceSlot();
@@ -660,6 +669,14 @@ public class PlayerItemInteraction : MonoBehaviour
 
         if (item.itemData != null) SoundPlayer.Play(item.itemData.pickupSound, item.transform.position);
         if (itemHolder != null) itemHolder.PlayCatchDip();
+
+        // Фонарик — постоянный предмет вне инвентарей: игрок его «надевает», сам предмет исчезает.
+        if (item.itemData != null && item.itemData.IsFlashlight && flashlight != null)
+        {
+            flashlight.Acquire();
+            Destroy(item.gameObject);
+            return;
+        }
 
         // Инструмент — сразу в экипировку (слот 2), без Q.
         if (item.itemData != null && item.itemData.IsTool && modeController != null && modeController.AddToEquipment(item))

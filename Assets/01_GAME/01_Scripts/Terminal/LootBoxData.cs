@@ -1,6 +1,19 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+/// <summary>Раздел каталога терминала, в котором показан ящик. Сериализуется числом — новые значения только в конец.</summary>
+public enum LootBoxCategory
+{
+    /// <summary>Патроны.</summary>
+    Ammo,
+    /// <summary>Оружие.</summary>
+    Weapons,
+    /// <summary>Инструменты уборки и ремонта.</summary>
+    Tools,
+    /// <summary>Провизия, медикаменты и прочее снабжение.</summary>
+    Supplies,
+}
+
 /// <summary>Строка таблицы лута: какой предмет, с каким весом и сколько штук за бросок.</summary>
 [System.Serializable]
 public class LootEntry
@@ -46,6 +59,9 @@ public class LootBoxData : ScriptableObject
 
     [Tooltip("Иконка карточки в терминале.")]
     public Sprite icon;
+
+    [Tooltip("Раздел каталога терминала (плитки сгруппированы по разделам).")]
+    public LootBoxCategory category = LootBoxCategory.Supplies;
 
     [Header("Покупка")]
     [Tooltip("Базовая цена (навык «Оптовик» снижает её).")]

@@ -249,6 +249,7 @@ hud.stain.soot,Следы пожара,Fire soot
 hud.stain.graffiti,Граффити,Graffiti
 hud.stain.need_mop,Нужна швабра,A mop is needed
 hud.stain.need_washer,Нужна мойка высокого давления,A pressure washer is needed
+hud.stain.too_far,Подойдите ближе,Move closer
 hud.socket.generator,Генератор: выход питания,Generator: power outlet
 hud.socket.elevator,Двигатель лифта: вход питания,Elevator motor: power input
 hud.wire.title,Провод,Cable
@@ -312,8 +313,8 @@ item.wirespool.name,Катушка провода,Cable spool
 item.wirespool.desc,25 м провода: подключите к разъёму и протяните до другого. Одна катушка — одно соединение.,25 m of cable: plug into a socket and run it to another one. One spool — one connection.
 item.elevatormotor.name,Мотор лифта,Elevator motor
 item.elevatormotor.desc,"Установите в щиток лифта, чтобы он снова заработал.",Install it in the elevator control box to get it running again.
-item.generatorparts.name,Запчасти генератора,Generator parts
-item.generatorparts.desc,"Нужны, чтобы запустить генератор здания.",Needed to start the building's generator.
+item.generatorparts.name,Аккумулятор,Car battery
+item.generatorparts.desc,"Нужен, чтобы запустить генератор здания.",Needed to start the building's generator.
 item.gun.name,Gun-14F,Gun-14F
 item.gun.desc,"Пистолет модели Gun-14F ",Gun-14F pistol
 item.m16.name,M16,M16
@@ -511,3 +512,53 @@ skill.survival_coffeeaddict.title,Кофеман,Caffeine Addict
 skill.survival_coffeeaddict.desc,"Кофе, энергетики и стимуляторы действуют на 50% дольше, а откат после них вдвое слабее.","Coffee, energy drinks and stimulants last 50% longer, and the crash is half as hard."
 skill.survival_soldiersleep.title,Солдатский сон,Soldier's Sleep
 skill.survival_soldiersleep.desc,Для полного отдыха хватает 6 часов сна вместо 8.,6 hours of sleep are enough for a full rest instead of 8.
+"# Терминал: новый интерфейс (вкладки, каталог, подробности, сводка)",,
+terminal.panel.catalog,КАТАЛОГ,CATALOG
+terminal.panel.summary,СВОДКА,SUMMARY
+terminal.panel.transit,В ПУТИ,IN TRANSIT
+terminal.panel.inbox,ВХОДЯЩИЕ,INBOX
+terminal.panel.active,ТЕКУЩИЙ ЗАКАЗ,CURRENT ORDER
+terminal.tag.crate,ЯЩИК,CRATE
+terminal.tag.order,ЗАКАЗ,ORDER
+terminal.category.ammo,БОЕПРИПАСЫ,AMMO
+terminal.category.weapons,ОРУЖИЕ,WEAPONS
+terminal.category.tools,ИНСТРУМЕНТЫ,TOOLS
+terminal.category.supplies,СНАБЖЕНИЕ,SUPPLIES
+terminal.badge.level,УР.,LVL
+terminal.badge.license,ЛИЦ.,LIC.
+terminal.section.contents,СОДЕРЖИМОЕ · БРОСКОВ: {0},CONTENTS · ROLLS: {0}
+terminal.section.params,ПАРАМЕТРЫ,PARAMETERS
+terminal.section.goods,ТОВАР,GOODS
+terminal.section.reward,НАГРАДА И УСЛОВИЯ,REWARD & REQUIREMENTS
+terminal.stat.price,Цена,Price
+terminal.stat.delivery,Доставка,Delivery
+terminal.stat.license,Лицензия,License
+terminal.stat.purchase,Покупка,Purchase
+terminal.stat.money,Деньги,Money
+terminal.stat.xp,Опыт,XP
+terminal.stat.level,Мин. уровень,Min. level
+terminal.value.none,не нужна,not required
+terminal.value.onetime,разовая,one-time
+terminal.value.repeat,многоразовая,repeatable
+terminal.summary.day,День,Day
+terminal.summary.day_value,{0} · {1},{0} · {1}
+terminal.summary.balance,Баланс,Balance
+terminal.summary.level,Уровень,Level
+terminal.summary.building,Здание,Building
+terminal.summary.shelves,Полки,Shelves
+terminal.top.clock,ДЕНЬ {0} · {1},DAY {0} · {1}
+terminal.transit.empty,НЕТ ДОСТАВОК,NO DELIVERIES
+terminal.inbox.empty,ВХОДЯЩИХ НЕТ — ПОЧТА ПРИХОДИТ В 06:00 И 14:00,INBOX EMPTY — MAIL ARRIVES AT 06:00 AND 14:00
+terminal.order.empty,ВЫБЕРИТЕ ЗАКАЗ ИЗ ВХОДЯЩИХ,SELECT AN ORDER FROM THE INBOX
+terminal.order.reward_short,{0} · +{1} XP,{0} · +{1} XP
+terminal.order.accept_label,ПРИНЯТЬ ЗАКАЗ,ACCEPT ORDER
+terminal.order.unavailable,НЕДОСТУПНО,UNAVAILABLE
+terminal.supply.buy_price,ЗАКАЗАТЬ — {0},ORDER — {0}
+terminal.active.cancel,ОТМЕНИТЬ ЗАКАЗ,CANCEL ORDER
+terminal.hint.select,Выбрать,Select
+terminal.hint.tabs,Вкладки,Tabs
+terminal.hint.confirm,Заказать / принять,Order / accept
+terminal.hint.exit,Выход,Exit
+terminal.system.signal,СВЯЗЬ OK,LINK OK
+terminal.system.power,ПИТАНИЕ: ГЕНЕРАТОР,POWER: GENERATOR
+terminal.system.exit,ВЫХОД,EXIT

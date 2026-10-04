@@ -63,6 +63,20 @@ public class WorldItem : MonoBehaviour
 
     public ItemState State { get; private set; } = ItemState.InWorld;
 
+    /// <summary>
+    /// Слой «в руках» (Tools): всё, что игрок держит, — модели инструментов под HandPoint, предмет в руке,
+    /// оружие. Основной свет фонарика его не освещает (вблизи пересвечивал бы), а освещает слабый
+    /// «ручной» свет (PlayerFlashlight.handLight).
+    /// </summary>
+    public const int HeldLayer = 8;
+
+    /// <summary>Rendering layer для того, что в руках: только NoDecals (бит 1) — пятна-декали на него не ложатся.</summary>
+    public const uint HeldRenderingLayers = 1u << 1;
+
+    // Исходные слой и rendering layers объектов-рендереров (без коллайдеров), пока предмет в руках.
+    private (Renderer renderer, int layer, uint renderingLayers)[] heldRestore;
+    private bool heldLayerApplied;
+
     /// <summary>Опыт за установку этого экземпляра на полку уже выдан (PlayerProgression). Живёт на
     /// самом предмете и сохраняется вместе с ним — иначе после загрузки (предметы спавнятся заново)
     /// «снял с полки — поставил снова» опять приносил бы опыт.</summary>
@@ -120,6 +134,7 @@ public class WorldItem : MonoBehaviour
         KillTweens();
         SetHighlight(false);
         SetPhysicsEnabled(false);
+        SetHeldLayer(true);
         State = ItemState.PickingUp;
     }
 
@@ -130,6 +145,7 @@ public class WorldItem : MonoBehaviour
         transform.localRotation = localRotation;
         SetPhysicsEnabled(false);
         SetVisualEnabled(true);
+        SetHeldLayer(true);
         State = ItemState.HeldVisible;
     }
 
@@ -140,6 +156,7 @@ public class WorldItem : MonoBehaviour
         transform.localRotation = Quaternion.identity;
         SetPhysicsEnabled(false);
         SetVisualEnabled(false);
+        SetHeldLayer(true);
         State = ItemState.CarriedHidden;
     }
 
@@ -154,6 +171,7 @@ public class WorldItem : MonoBehaviour
         transform.localScale = GetShelfLocalScale();
         sourceSlot = slot;
         SetPhysicsEnabled(false);
+        SetHeldLayer(false);
         EnablePlacedColliders();
         SetVisualEnabled(true);
         State = ItemState.PlacedOnShelf;
@@ -177,6 +195,7 @@ public class WorldItem : MonoBehaviour
         SetPhysicsEnabled(false);
         SetCollidersEnabled(false);
         SetVisualEnabled(true);
+        SetHeldLayer(false);
         State = ItemState.PlacedOnShelf;
 
         // worldPositionStays: true — полёт стартует из той точки в мире, где предмет был в руке.
@@ -312,11 +331,38 @@ public class WorldItem : MonoBehaviour
         transform.SetParent(null, true);
         transform.SetPositionAndRotation(position, rotation);
         sourceSlot = null;
+        SetHeldLayer(false);
         SetVisualEnabled(true);
         SetPhysicsEnabled(true);
         if (itemRigidbody != null)
             itemRigidbody.linearVelocity = velocity;
         State = ItemState.InWorld;
+    }
+
+    /// <summary>
+    /// Предмет в руках — его рендереры на слое HeldLayer и без декалей; положили или бросили — исходные
+    /// значения. Меняются объекты с рендерерами (и коллайдер на том же объекте, если есть): в руках коллайдеры
+    /// выключены (SetPhysicsEnabled), а исходный слой возвращается раньше, чем они снова включаются.
+    /// </summary>
+    public void SetHeldLayer(bool held)
+    {
+        if (held == heldLayerApplied) return;
+        if (heldRestore == null)
+        {
+            var list = new System.Collections.Generic.List<(Renderer, int, uint)>();
+            foreach (var r in GetComponentsInChildren<Renderer>(true))
+                if (r != null)
+                    list.Add((r, r.gameObject.layer, r.renderingLayerMask));
+            heldRestore = list.ToArray();
+        }
+
+        heldLayerApplied = held;
+        foreach (var (r, layer, mask) in heldRestore)
+        {
+            if (r == null) continue;
+            r.gameObject.layer = held ? HeldLayer : layer;
+            r.renderingLayerMask = held ? HeldRenderingLayers : mask;
+        }
     }
 
     public void SetVisualEnabled(bool enabled)

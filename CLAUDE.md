@@ -32,7 +32,10 @@
 
 Прочее в `Assets/` — сторонние ассеты, не трогать без причины: `Easy Weapons/` (стрельба),
 `Standard Assets/` (легаси FPS-контроллер), `Ultimate 10 Plus Shaders/` (шейдер-пак, включая неиспользуемый
-пока `Outline.shader`), `TextMesh Pro/`, `02_ART/Firearms/` (арт-пак оружия, исключён из git).
+пока `Outline.shader`), `TextMesh Pro/`, `02_ART/Firearms/` (арт-пак оружия, исключён из git),
+`02_ART/01_PSX ASSETS/` (PSX-паки Mega Pack I/II и др., **исключён из git** — префабы и сцена ссылаются на его
+FBX, без пака на другой машине ссылки будут пустыми). GLB из пака Unity не импортирует (нет glTFast) — брать FBX
+из `…/Models/other-formats/FBX/`.
 
 **Важно:** `.unity`, `.prefab`, `.asset`, `.mat` в этом проекте сериализованы **бинарно**, не как YAML-текст —
 их нельзя читать/грепать как текст, только через редактор Unity (см. `.claudeignore`).
@@ -170,10 +173,26 @@
   блокировщиком `CursorLockController` в `OnDisable` освобождает курсор — для режима работы блокировщик сразу
   захватывает его обратно, иначе режим закрывался в тот же кадр. `LastEndFrame` — чтобы ПКМ выхода не бросила
   предмет. Кольцо прогресса — `UI/HoldProgressUI`, подсказка — `ItemInfoUI.ShowHint`.
+  При оттирании (тряпка, швабра) камера приближается (`scrubZoom` — множитель FOV) и слегка следит за
+  инструментом (`scrubFollow`, поворот самой камеры поверх `MouseRotator`); мышь водит инструмент в осях камеры
+  на момент начала (`workBasis`). По окончании камера возвращается (`cameraReturnDuration`, без масштаба
+  времени), и только потом блокировщик ввода снимается (`IsCameraReturning`); камера смотрит на сглаженную
+  точку, чтобы не трястись от дрожи мыши. Тряпка и швабра без анимаций: разворачиваются по траектории как танк
+  (`SteerTool`: направление усредняется по пути `steerSmoothing`, поворот `SmoothDampAngle` с `turnSmoothTime`
+  и `scrubTurnSpeed`, задний ход с запасом 20°, предел `scrubMaxYaw`).
+  Досягаемость: пятно оттирают только в радиусе `GameConfig.tools.scrubReach` (1.6 м по горизонтали от игрока
+  до точки на пятне, `PlayerToolActions.IsWithinReach`); дальше — подсказка «Подойдите ближе»
+  (`hud.stain.too_far`). Радиус проверяется только при начале: начатое пятно можно тереть по всей площади.
+  Модели в руке лежат на слое `Tools` (8), который фонарик не освещает (вблизи пересвечивал бы); пока инструмент
+  работает на объекте, `PlayerToolActions` переводит его модель на `workLayer` (0) и возвращает слой, когда
+  инструмент снова в руке.
 - **Пятна крови — декали** (`CleanableStain` + URP `DecalProjector`, в URP-рендерере включён Decal Renderer
   Feature): при старте текстура пятна копируется в собственную Texture2D, её альфа — маска; тряпка стирает
   штампами вдоль пути (`ScrubSegment`), при 90% остаток тает, `OnCleaned`. Объект стоит на поверхности,
-  декаль проецирует по +Z. Круглые текстуры `06_Materials/Textures/T_BloodStain_0N` (материалы
+  декаль проецирует по +Z. Декали не ложатся на инструменты в руке: в Decal Renderer Feature включены Decal
+  Layers, декали — на rendering layer `Default` (бит 0), а все рендереры под `HandPoint` (тряпка, швабра, лом,
+  кувалда, мойка, катушка) — только на слое `NoDecals` (бит 1). Новую модель в руку — тоже на `NoDecals`.
+  Light Layers в URP-ассете выключены, поэтому на освещение маска не влияет. Круглые текстуры `06_Materials/Textures/T_BloodStain_0N` (материалы
   `M_StainDecal_0N`) сгенерированы процедурно. Готовые «painter»-ассеты редактора (UV Mask Painter) для
   этого не годятся — они рисуют маски только в Scene view.
 - **Инструменты** (слот 2, листаются колесом): `ItemData.toolKind` (`Crowbar`/`Sledgehammer`/`Mop`/
@@ -207,7 +226,8 @@
   подсказка «Нужна швабра/мойка» — `MissingToolKey`). Кисть (радиус, сила) даёт инструмент
   (`GameConfig.tools`): тряпка и швабра — режим `PlayerToolActions` (у швабры на пятно ложится головка
   модели), мойка — `Player/PressureWasherSpray`: держишь ЛКМ, струя бьёт по прицелу, камера свободна
-  (`ScrubSegment` по пути прицела + `SprayAt` на месте). Звук струи пока не назначен (`loopSource` пуст).
+  (`ScrubSegment` по пути прицела + `SprayAt` на месте). Модель мойки под `HandPoint` повёрнута так, что
+  ствол смотрит в прицел (сопло справа внизу кадра), радиус струи 0.2 м. Звук струи пока не назначен (`loopSource` пуст).
   Пример больших пятен — бетонная стена `05_Gameplay/Interactables/BurntWall` (у тестовой площадки нет стен).
 - **Лицензии и разовые покупки**: инструменты открываются навыками-лицензиями без модификаторов (ветка
   «Уборщик»: `Skill_Cleaner_Mop`, `Skill_Cleaner_Washer`) и заказываются в терминале ящиками
@@ -255,13 +275,62 @@
 - **Сейв версии 4**: `clockTotalHours`, `staminaFatigue`, `satiety`, `statusEffects`, `stimulantsToday`,
   `consumedTodayIds`; доставки — `SupplyDeliverySave.remainingHours`. Миграция 3 → 4: часы и сытость «не
   сохранены» (−1 → как в новой игре), секунды доставок ÷ 75. `LootBoxData.deliveryHours` — в игровых часах.
-- **Фонарик** (`Player/PlayerFlashlight` на `Regular_Character`, клавиша G — `GameConfig.input.flashlightKey`;
-  F занята «Использовать»). Его сначала подбирают: `Item_Flashlight` (`ToolKind.Flashlight`, префаб
-  `03_Prefabs/Items/Flashlight`, в `TestScene` — `Flashlight_Pickup`) уходит в экипировку, как другие
-  инструменты, и G работает, пока предмет есть в `EquipmentInventory` (`IsOwned`), — не обязательно активный.
-  Свет: Spot-свет `Regular_Character/Flashlight` (cookie `06_Materials/Textures/
-  T_FlashlightCookie`, тёплый, дальность 22 м) догоняет взгляд камеры с инерцией (`followSharpness`),
-  включается/гаснет за `fadeDuration` со щелчком. Яркость включённого — `intensity` самого Light (35: у URP
-  Spot квадратичный спад, при 5 луча ночью не видно). Батареи нет, состояние не сохраняется. Тени у Light
-  стоят Soft, но в URP-ассете выключены тени дополнительных источников (`supportsAdditionalLightShadows`) —
-  пока фонарик теней не даёт.
+- **Фонарик** (`Player/PlayerFlashlight` на `Regular_Character`, клавиша — `GameConfig.input.flashlightKey` = 3;
+  F занята «Использовать»): постоянный предмет вне инвентарей. `Item_Flashlight` (`ToolKind.Flashlight`,
+  `ItemData.IsFlashlight`; в `IsTool` не входит) лежит в мире (`Flashlight_Pickup` в `TestScene`);
+  подбор (`PlayerItemInteraction.CompletePickup`) зовёт `PlayerFlashlight.Acquire` и уничтожает предмет.
+  Батарея: полный заряд `batteryMinutes` (10) минут работы, тратится только пока свет включён, села — свет
+  гаснет и не включается до `Recharge(секунды)` (батареек-предметов пока нет). HUD — `UI/FlashlightHudUI` на
+  `03_UI/Canvas/ToolBar`: значок `Light` с цифрой клавиши и шкалой `ChargeBar` появляется только после подбора.
+  Сейв: `flashlightOwned`, `flashlightCharge` (включённость не сохраняется). Свет — Spot-источник
+  `Regular_Character/Flashlight` (cookie `T_FlashlightCookie`, тёплый, 22 м, intensity 35: у URP Spot
+  квадратичный спад), догоняет взгляд с инерцией (`followSharpness`), включается за `fadeDuration`. Два источника:
+  основной не светит на слой «в руках» (`Tools`, 8 — вблизи пересвечивал бы), его дочерний `FlashlightHands`
+  (`PlayerFlashlight.handLight`, intensity 1.2, 2.5 м, 100°, без cookie и теней) светит только на этот слой;
+  оба разгораются и гаснут одной долей яркости (`ApplyBrightness`). **Всё, что в руках, — на слое 8 и
+  rendering layer `NoDecals`**: модели под `HandPoint` (новую модель — тоже туда), предмет уборки
+  (`WorldItem.SetHeldLayer`: `BeginPickup`/`SetHeldVisible`/`SetCarriedHidden` — в руки, `PlaceOnShelf*`/`Drop` —
+  исходные слои; коллайдеры в руках выключены, слой возвращается до их включения), оружие (`EquipmentWeaponBridge`
+  при спавне). Константы — `WorldItem.HeldLayer`, `WorldItem.HeldRenderingLayers`. Тени
+  дополнительных источников в URP-ассете выключены — фонарик теней не даёт.
+- **PSX-визуал предметов и объектов** (модели из `02_ART/01_PSX ASSETS`): у предмета модель — дочерний `Model`
+  (экземпляр FBX, масштаб на нём), пивот корня — низ-центр (полка/стопка/голограмма ставят корень в точку с
+  identity), BoxCollider на корне по bounds модели, дети на слое корня. У FBX предметов включён Read/Write
+  (`AdvancedOutline` клонирует меш и пишет нормали в UV3), у всех используемых FBX Animation Type = None.
+  Префабы правились через экземпляр в preview-сцене + `PrefabUtility.ApplyPrefabInstance` (удаление детей
+  экземпляра применяется как override). Соответствие: AmmoBox — закрытая `ammo_box_mp_2_1` (высота 0.075 ≈ шаг
+  стопки полки), ShippingBox — Open
+  `cardboard_box_2_1` / Sealed `cardboard_box_2` (в паке нет открытой коробки; оба визуала в префабе активны —
+  `WorldItem` кэширует только активные рендереры), SupplyCrate — `wooden_crate_2_a`, GeneratorParts —
+  `car_battery_1` (название «Аккумулятор», id прежний), еда — `canned_food_mp_1`/`jam_jar_mp_1_small`/
+  `package_hr_1`/`syringe_mp_1` (ChocolateBar и EnergyDrink — примитивы, аналогов нет), кровать `Mattress` —
+  `bed_1` + `pillow_mp_1` (+`WakePoint`), терминал — `table_large_3` + `pc_*` (`ScreenOn` подогнан под стекло
+  CRT, у `ScreenOff` рендерер выключен — «выключенный» экран даёт сама модель), лифт — настил `platform_bx_1`,
+  перила, стойки `beam_hc_vertical_1`; пульт на платформе — `button_12`, кнопки вызова `CallBottom`/`CallTop` —
+  `elevator_call_button_1` на южных гранях стоек (у `Platform` масштаб 1, коллайдер пола 2.4×0.15×2.4). Рация
+  радиовызова (`Camera/RadioModel`, её двигает `RadioCallUI`) — `walkie_talkie_1` в дочернем `Model` (антенна
+  вверх, панель к камере); сам `RadioModel` повёрнут на глаз из `raisedLocalPosition`. Рация, как и всё в руках, —
+  на слое 8 (Tools) и rendering layer `NoDecals`.
+- **Кирпичи**: префаб `Brick` и все кирпичи `BrickWall_Damaged`/`BrickedDoorway` используют
+  `06_Materials/Meshes/Mesh_BrickUnit.asset` — меш `brick_1`, нормализованный в куб 1×1×1 с центром в нуле
+  (размер по-прежнему задаёт `localScale`, как требует `BrickWallSmash`). `M_Brick`/`M_BrickDark` — текстура
+  `bricks_1` (Dark — тон 0.62).
+- **Здание из модулей** (`04_Level/Building_Modular`, на месте выключенного блокаута `Building2`): первый этаж из
+  кирпичных модулей PSX по сетке 4 м (начало x = −0.5, z = −61), стены 3 м. Группы `Wing` (крыло
+  x −0.5…59.5, z −61…−41), `Hall` (цех x 35.5…79.5, z −41…−5 + северная часть x 27.5…71.5, z −5…7), `Fence`; внутри
+  `Walls`/`Partitions`/`Pillars`/`Floor`/`Ceiling`/`Details`. Кит — `03_Prefabs/Building/` (варианты FBX с
+  коллайдерами, Static): `Wall_Brick` (Box), `Wall_BrickPlain` (перегородки), `Wall_BrickWindow` (решётка наружу
+  = +Z модуля, доски внутрь), `Wall_BrickDoorway[Wide]` (MeshCollider — проём проходим), `Wall_BrickGate`,
+  `Pillar_Brick`, `Floor_Concrete` (цельная плита, верх на 0; `floor_ceiling_hr_5` не годится — в ней проломы),
+  `Ceiling_Concrete` (на y = 3, годится как пол 2-го этажа), `Fence_Concrete`/`FencePost_Concrete`, `Awning`.
+  Группы `Floor` подняты на 0.03 — верх земли `Environment/Floor` ровно на y = 0 (z-fighting). Освещения внутри
+  нет (под перекрытием темно), здание вне NavMesh Volume.
+- **Окно терминала** (`UI/Terminal/TerminalWindow`, `03_UI/Canvas/TerminalWindow`): **широкий** экран
+  старого монитора в бирюзовом «техническом» стиле, шрифт Play (`02_ART/Fonts/Play`, OFL). Сверху системная
+  строка (связь, питание, часы, кнопка «Выход»), снизу — сводка полоской и подсказки клавиш. Вкладки
+  «Поставки» / «Заказы» (клик или Q/E): слева каталог плиток по `LootBoxData.category` (`TerminalSlotUI`,
+  группы `TerminalCatalogGroupUI`) или входящие (`TerminalListRowUI`), в центре подробности выбранного,
+  справа «В пути» / «Текущий заказ». Стрелки — выбор, Enter — заказать/принять. Строки параметров с
+  точками — `TerminalStatRowUI`, с полосой — `TerminalBarRowUI`. Спрайты со срезанными углами (9-slice) —
+  `03_Prefabs/UI/Terminal/Sprites`, сгенерированы процедурно. Монитор вписывается в экран (`FitToScreen`).
+  Окно игру не ставит на паузу — враги могут напасть, пока оно открыто.

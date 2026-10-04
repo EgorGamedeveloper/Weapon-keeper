@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// Режим работы с объектом: игрок «встаёт» к объекту и работает руками, а мышь управляет не камерой,
@@ -8,6 +9,10 @@ using UnityEngine;
 /// - Тряпка или швабра по пятну (CleanableStain): тряпка (есть всегда) или головка швабры (если швабра —
 ///   активный инструмент) переносится из руки на пятно, мышь водит её по плоскости пятна, и оно стирается
 ///   там, где она прошла. Швабра шире тряпки и моет средние пятна (CleanableStain.CanCleanWith).
+///   Камера чуть приближается (FOV) и слегка следит за тряпкой; после конца работы она плавно
+///   возвращается, и только тогда игроку отдаётся мышь и ходьба. Тряпка и швабра без анимации
+///   разворачиваются по траектории, как танк: плавно поворачиваются к усреднённому направлению движения,
+///   назад едут «задним ходом», не разворачиваясь.
 /// - Лом-рычаг (Breakable.canPry, лом в руках): лом переносится из руки к концу доски, лапка — под
 ///   кромку; мышь вверх-вниз качает рычаг, доска приподнимается и в конце снимается.
 ///
@@ -58,10 +63,14 @@ public class PlayerToolActions : MonoBehaviour
     [Min(0f)] public float ragLift = 0.012f;
 
     [Tooltip("Радиус тряпки, м.")]
-    [Min(0.01f)] public float ragRadius = 0.09f;
+    [Min(0.01f)] public float ragRadius = 0.11f;
 
     [Tooltip("Сколько альфы пятна снимает один штамп тряпки в центре.")]
-    [Range(0.01f, 1f)] public float ragStrength = 0.08f;
+    [Range(0.01f, 1f)] public float ragStrength = 0.14f;
+
+    [Tooltip("Досягаемость тряпки и швабры: радиус вокруг игрока по горизонтали, м. Перекрывается " +
+             "GameConfig.tools.scrubReach, если задан конфиг.")]
+    [Min(0.3f)] public float scrubReach = 1.6f;
 
     [Header("Швабра")]
     [Tooltip("Радиус головки швабры, м.")]
@@ -73,6 +82,35 @@ public class PlayerToolActions : MonoBehaviour
     [Tooltip("Шорох швабры (у тряпки — звук самого пятна).")]
     public SoundCue mopScrubSound;
 
+    [Header("Разворот тряпки и швабры")]
+    [Tooltip("Наибольшая скорость разворота тряпки и швабры по направлению движения, градусы в секунду.")]
+    [FormerlySerializedAs("mopTurnSpeed")]
+    [Min(1f)] public float scrubTurnSpeed = 220f;
+
+    [Tooltip("Насколько тряпка и швабра могут развернуться от направления «от игрока», градусы: черенок " +
+             "швабры всегда остаётся с его стороны.")]
+    [FormerlySerializedAs("mopMaxYaw")]
+    [Range(0f, 90f)] public float scrubMaxYaw = 70f;
+
+    [Tooltip("На каком пути, м, усредняется направление движения: мелкая дрожь мыши не дёргает поворот.")]
+    [Min(0.001f)] public float steerSmoothing = 0.08f;
+
+    [Tooltip("Время сглаживания поворота, с: больше — плавнее и ленивее.")]
+    [Min(0.01f)] public float turnSmoothTime = 0.15f;
+
+    [Header("Камера при оттирании")]
+    [Tooltip("Приближение на время оттирания: множитель угла обзора (1 — без зума).")]
+    [Range(0.3f, 1f)] public float scrubZoom = 0.8f;
+
+    [Tooltip("Насколько взгляд следует за тряпкой: 0 — камера стоит, 1 — смотрит прямо на тряпку.")]
+    [Range(0f, 1f)] public float scrubFollow = 0.3f;
+
+    [Tooltip("Плавность зума и слежения: больше — быстрее.")]
+    [Min(0.1f)] public float cameraSharpness = 6f;
+
+    [Tooltip("За сколько секунд камера возвращается после оттирания (управление отдаётся после этого).")]
+    [Min(0.01f)] public float cameraReturnDuration = 0.35f;
+
     [Header("Лом")]
     [Tooltip("Насколько рычаг сдвигается на единицу движения мыши по вертикали (весь ход — от −1 до 1).")]
     [Min(0.001f)] public float leverSensitivity = 0.08f;
@@ -82,6 +120,12 @@ public class PlayerToolActions : MonoBehaviour
 
     [Tooltip("Суммарный ход рычага, чтобы снять доску. Полный качок вверх-вниз — 4, упор в край ход не даёт.")]
     [Min(0.5f)] public float pryTravelToBreak = 14f;
+
+    [Header("Свет на инструменте")]
+    [Tooltip("Слой модели инструмента, пока он работает на объекте. В руке модели лежат на слое Tools, который " +
+             "фонарик не освещает (иначе вблизи пересвечивает); на пятне или доске инструмент должен освещаться " +
+             "как всё вокруг. После возврата в руку слой восстанавливается.")]
+    public int workLayer = 0;
 
     [Header("Перенос инструмента")]
     [Tooltip("За сколько секунд тряпка или лом долетает из руки до объекта и обратно.")]
@@ -93,6 +137,9 @@ public class PlayerToolActions : MonoBehaviour
     /// <summary>Режим работы сейчас идёт.</summary>
     public bool IsActive => mode != ActionMode.None;
 
+    /// <summary>Режим закончился, но камера ещё возвращается — ввод игроку пока не отдан.</summary>
+    public bool IsCameraReturning => cameraTween != null && cameraTween.IsActive();
+
     /// <summary>Кадр, в котором режим закончился: клик выхода (ПКМ) не должен в том же кадре бросить
     /// предмет из рук (PlayerItemInteraction это проверяет).</summary>
     public int LastEndFrame { get; private set; } = -1;
@@ -102,6 +149,10 @@ public class PlayerToolActions : MonoBehaviour
 
     private readonly Dictionary<Transform, (Vector3 position, Quaternion rotation)> restPoses =
         new Dictionary<Transform, (Vector3, Quaternion)>();
+
+    // Исходные слои объектов модели инструмента (в руке) — возвращаются, когда инструмент снова в руке.
+    private readonly Dictionary<Transform, (GameObject go, int layer)[]> restLayers =
+        new Dictionary<Transform, (GameObject, int)[]>();
 
     private ActionMode mode;
     private CleanableStain stain;
@@ -123,9 +174,23 @@ public class PlayerToolActions : MonoBehaviour
     private float lastLeverDirection;
     private float travelSinceCreak;
     private Vector3 leverAxis;
-    private float ragWobblePhase;
     private string workHint;
     private bool windedHintShown;
+    // Разворот инструмента по траектории: сглаженное направление пути, цель и текущий угол.
+    private Vector3 travelDirection;
+    private float toolYaw;
+    private float yawTarget;
+    private float yawVelocity;
+    // Точка, за которой следит камера: сглаженное положение инструмента (без дрожи мыши).
+    private Vector3 lookPoint;
+
+    // Камера на время оттирания: исходные FOV и поворот, базис осей (на момент начала — мышь водит
+    // тряпку в этих осях, а не в осях подвижной камеры).
+    private bool cameraEngaged;
+    private float baseFov;
+    private Quaternion baseCameraLocalRotation;
+    private Quaternion workBasis;
+    private Tween cameraTween;
 
     private void Awake()
     {
@@ -135,6 +200,7 @@ public class PlayerToolActions : MonoBehaviour
             ragSensitivity = s.ragSensitivity;
             ragRadius = s.ragRadius;
             ragStrength = s.ragStrength;
+            scrubReach = s.scrubReach;
             mopRadius = s.mopRadius;
             mopStrength = s.mopStrength;
             leverSensitivity = s.leverSensitivity;
@@ -152,9 +218,19 @@ public class PlayerToolActions : MonoBehaviour
     private void OnDisable()
     {
         if (IsActive) EndAction();
+        // Выключили посреди возврата камеры — вернуть сразу и отдать ввод.
+        if (IsCameraReturning) cameraTween.Complete();
     }
 
     // ───────────────────────── Вход ─────────────────────────
+
+    /// <summary>Точка на пятне в пределах досягаемости: по горизонтали от ног игрока не дальше scrubReach.</summary>
+    public bool IsWithinReach(Vector3 point)
+    {
+        Vector3 offset = point - transform.position;
+        offset.y = 0f;
+        return offset.sqrMagnitude <= scrubReach * scrubReach;
+    }
 
     /// <summary>Инструмент, которым сейчас трут пятна: швабра, если она в руках, иначе тряпка (None).</summary>
     public ToolKind CurrentScrubTool =>
@@ -164,7 +240,7 @@ public class PlayerToolActions : MonoBehaviour
     /// false — пятно этим инструментом не отмыть (размер, CleanableStain.CanCleanWith).</summary>
     public bool TryBeginScrub(CleanableStain target, Ray aimRay)
     {
-        if (IsActive || target == null || target.IsClean || playerCamera == null) return false;
+        if (IsActive || IsCameraReturning || target == null || target.IsClean || playerCamera == null) return false;
         if (stamina != null && stamina.IsExhausted) return false;
 
         ToolKind tool = CurrentScrubTool;
@@ -172,14 +248,18 @@ public class PlayerToolActions : MonoBehaviour
         Transform visual = tool == ToolKind.Mop ? (toolPresenter != null ? toolPresenter.GetVisual(ToolKind.Mop) : null) : rag;
         if (visual == null) return false;
 
-        target.Raycast(aimRay, out Vector3 point);
+        if (!target.Raycast(aimRay, out Vector3 point) || !IsWithinReach(point)) return false;
         stain = target;
         scrubTool = tool;
         brushRadius = tool == ToolKind.Mop ? mopRadius : ragRadius;
         brushStrength = tool == ToolKind.Mop ? mopStrength : ragStrength;
         mode = ActionMode.Scrub;
+        toolYaw = yawTarget = yawVelocity = 0f;
+        travelDirection = Vector3.zero;
+        EngageCamera();
         visual.gameObject.SetActive(true);
         StartAction(visual, stain.ClampToStain(point, 0f), RagRotation(stain.SurfaceNormal));
+        lookPoint = workPoint;
         ShowHint(Loc.Get(stain.titleKey), Loc.Get("hud.mode.scrub"));
         return true;
     }
@@ -187,7 +267,7 @@ public class PlayerToolActions : MonoBehaviour
     /// <summary>Начать отжимать доску ломом: лапка заходит под конец доски, ближайший к прицелу.</summary>
     public bool TryBeginPry(Breakable target, Vector3 aimPoint)
     {
-        if (IsActive || target == null || target.IsBroken || !target.canPry || playerCamera == null) return false;
+        if (IsActive || IsCameraReturning || target == null || target.IsBroken || !target.canPry || playerCamera == null) return false;
         if (stamina != null && stamina.IsExhausted) return false;
         Transform crowbar = toolPresenter != null ? toolPresenter.GetVisual(ToolKind.Crowbar) : null;
         if (crowbar == null) return false;
@@ -218,6 +298,7 @@ public class PlayerToolActions : MonoBehaviour
     {
         returnTween?.Kill();
         RememberRestPose(visual);
+        SetWorkLayer(visual, true);
         toolVisual = visual;
         workPoint = point;
         workRotation = rotation;
@@ -286,13 +367,13 @@ public class PlayerToolActions : MonoBehaviour
 
         if (flight >= 1f && CanMoveTool)
         {
-            Vector3 right = Vector3.ProjectOnPlane(playerCamera.transform.right, normal).normalized;
+            Vector3 right = Vector3.ProjectOnPlane(Basis * Vector3.right, normal).normalized;
             Vector2 mouse = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y")) * ragSensitivity;
             Vector3 next = stain.ClampToStain(workPoint + right * mouse.x + forward * mouse.y, brushRadius * 0.5f);
 
             float moved = Vector3.Distance(workPoint, next);
+            SteerTool(next - workPoint, forward, normal);
             float progressBefore = stain.Progress;
-            ragWobblePhase += moved * 60f;
             bool cleaned = stain.ScrubSegment(workPoint, next, brushRadius, brushStrength,
                                               scrubTool == ToolKind.Mop ? mopScrubSound : null);
             if (stamina != null) stamina.WorkScrub(moved, stain.Progress - progressBefore);
@@ -305,9 +386,91 @@ public class PlayerToolActions : MonoBehaviour
             }
         }
 
-        // Тряпка чуть «елозит» — поворачивается туда-сюда по мере движения.
-        Quaternion wobble = Quaternion.AngleAxis(Mathf.Sin(ragWobblePhase) * 10f, normal);
-        ApplyToolPose(workPoint + normal * ragLift, wobble * RagRotation(normal));
+        // Без анимаций: тряпка и швабра только разворачиваются по траектории (SteerTool), плавно.
+        toolYaw = Mathf.SmoothDampAngle(toolYaw, yawTarget, ref yawVelocity, turnSmoothTime, scrubTurnSpeed);
+        ApplyToolPose(workPoint + normal * ragLift, Quaternion.AngleAxis(toolYaw, normal) * RagRotation(normal));
+        UpdateScrubCamera();
+    }
+
+    /// <summary>
+    /// Тряпка и швабра как танк: разворачиваются к направлению движения. Направление усредняется по пути
+    /// (steerSmoothing) — дрожь мыши и короткие рывки его не дёргают; пока направление неуверенное (мышь
+    /// мечется), цель не меняется. Движение назад — «задний ход»: на противоположное направление цель
+    /// переходит, только если оно заметно ближе к нынешнему углу. Поворот ограничен scrubMaxYaw.
+    /// </summary>
+    private void SteerTool(Vector3 delta, Vector3 forward, Vector3 normal)
+    {
+        delta = Vector3.ProjectOnPlane(delta, normal);
+        float length = delta.magnitude;
+        if (length < 1e-5f) return;
+
+        travelDirection = Vector3.Lerp(travelDirection, delta / length, Mathf.Clamp01(length / steerSmoothing));
+        if (travelDirection.magnitude < 0.6f) return;
+
+        float ahead = Vector3.SignedAngle(forward, travelDirection, normal);
+        float reverse = Mathf.DeltaAngle(0f, ahead + 180f);
+        float target = Mathf.Abs(Mathf.DeltaAngle(yawTarget, reverse)) + 20f < Mathf.Abs(Mathf.DeltaAngle(yawTarget, ahead))
+            ? reverse : ahead;
+        yawTarget = Mathf.Clamp(target, -scrubMaxYaw, scrubMaxYaw);
+    }
+
+    // ───────────────────────── Камера при оттирании ─────────────────────────
+
+    private void EngageCamera()
+    {
+        Transform cam = playerCamera.transform;
+        if (!cameraEngaged)
+        {
+            baseFov = playerCamera.fieldOfView;
+            baseCameraLocalRotation = cam.localRotation;
+        }
+        cameraTween?.Kill();
+        cameraEngaged = true;
+        workBasis = cam.rotation;
+    }
+
+    /// <summary>Зум к пятну и лёгкое слежение взгляда за тряпкой.</summary>
+    private void UpdateScrubCamera()
+    {
+        if (!cameraEngaged) return;
+        Transform cam = playerCamera.transform;
+        float k = 1f - Mathf.Exp(-cameraSharpness * Time.deltaTime);
+
+        playerCamera.fieldOfView = Mathf.Lerp(playerCamera.fieldOfView, baseFov * scrubZoom, k);
+
+        Vector3 baseForward = workBasis * Vector3.forward;
+        // Камера смотрит на сглаженную точку: следует за тряпкой плавно и не трясётся от дрожи мыши.
+        lookPoint = Vector3.Lerp(lookPoint, workPoint, 1f - Mathf.Exp(-3f * Time.deltaTime));
+        Vector3 toTool = lookPoint - cam.position;
+        Vector3 look = Vector3.Slerp(baseForward, toTool.normalized, scrubFollow);
+        Quaternion world = Quaternion.LookRotation(look, workBasis * Vector3.up);
+        Quaternion local = cam.parent != null ? Quaternion.Inverse(cam.parent.rotation) * world : world;
+        cam.localRotation = Quaternion.Slerp(cam.localRotation, local, k);
+    }
+
+    /// <summary>Вернуть зум и взгляд; ввод отдаётся игроку только когда камера на месте.</summary>
+    private void ReturnCamera()
+    {
+        Transform cam = playerCamera.transform;
+        cameraTween?.Kill();
+        cameraTween = DOTween.Sequence()
+            .Join(cam.DOLocalRotateQuaternion(baseCameraLocalRotation, cameraReturnDuration).SetEase(Ease.InOutSine))
+            .Join(DOTween.To(() => playerCamera.fieldOfView, v => playerCamera.fieldOfView = v, baseFov, cameraReturnDuration)
+                         .SetEase(Ease.InOutSine))
+            // Без масштаба времени: выход в паузу (timeScale 0) не должен оставить камеру и ввод «застрявшими».
+            .SetUpdate(true)
+            .OnComplete(() =>
+            {
+                cameraEngaged = false;
+                cameraTween = null;
+                ReleaseInput();
+            });
+    }
+
+    private void ReleaseInput()
+    {
+        if (inputBlocker != null) inputBlocker.Release(this);
+        LastEndFrame = Time.frameCount;
     }
 
     private void UpdatePry()
@@ -361,11 +524,15 @@ public class PlayerToolActions : MonoBehaviour
                                           Quaternion.SlerpUnclamped(flightFromRotation, rotation, t));
     }
 
+    /// <summary>Оси, в которых мышь водит инструмент: при оттирании — оси камеры на момент начала (сама
+    /// камера в это время следит за тряпкой), иначе — нынешние.</summary>
+    private Quaternion Basis => cameraEngaged ? workBasis : playerCamera.transform.rotation;
+
     /// <summary>«Вперёд» на плоскости: мышь вверх двигает тряпку от игрока (пол) или вверх (стена).</summary>
     private Vector3 PlaneForward(Vector3 normal)
     {
-        Vector3 forward = Vector3.ProjectOnPlane(playerCamera.transform.up, normal);
-        if (forward.sqrMagnitude < 0.01f) forward = Vector3.ProjectOnPlane(playerCamera.transform.forward, normal);
+        Vector3 forward = Vector3.ProjectOnPlane(Basis * Vector3.up, normal);
+        if (forward.sqrMagnitude < 0.01f) forward = Vector3.ProjectOnPlane(Basis * Vector3.forward, normal);
         return forward.normalized;
     }
 
@@ -383,7 +550,18 @@ public class PlayerToolActions : MonoBehaviour
         LastEndFrame = Time.frameCount;
 
         if (ended == ActionMode.Pry && breakable != null && !breakable.IsBroken) breakable.EndPry();
-        if (inputBlocker != null) inputBlocker.Release(this);
+        // После оттирания камера сначала возвращается, и только потом ввод отдаётся игроку.
+        if (cameraEngaged && playerCamera != null && isActiveAndEnabled) ReturnCamera();
+        else
+        {
+            if (cameraEngaged && playerCamera != null)
+            {
+                playerCamera.transform.localRotation = baseCameraLocalRotation;
+                playerCamera.fieldOfView = baseFov;
+                cameraEngaged = false;
+            }
+            if (inputBlocker != null) inputBlocker.Release(this);
+        }
         if (progressUI != null) progressUI.Hide();
         if (infoUI != null) infoUI.Hide();
 
@@ -406,8 +584,24 @@ public class PlayerToolActions : MonoBehaviour
             .Join(visual.DOLocalRotateQuaternion(rest.rotation, flightDuration).SetEase(Ease.InOutCubic))
             .OnComplete(() =>
             {
+                SetWorkLayer(visual, false);
                 if (hideWhenBack && visual != null) visual.gameObject.SetActive(false);
             });
+    }
+
+    /// <summary>На объекте инструмент — на workLayer (его освещает фонарик), в руке — на своих слоях.</summary>
+    private void SetWorkLayer(Transform visual, bool working)
+    {
+        if (visual == null) return;
+        if (!restLayers.TryGetValue(visual, out var layers))
+        {
+            Transform[] all = visual.GetComponentsInChildren<Transform>(true);
+            layers = new (GameObject, int)[all.Length];
+            for (int i = 0; i < all.Length; i++) layers[i] = (all[i].gameObject, all[i].gameObject.layer);
+            restLayers[visual] = layers;
+        }
+        foreach (var (go, layer) in layers)
+            if (go != null) go.layer = working ? workLayer : layer;
     }
 
     private void RememberRestPose(Transform visual)

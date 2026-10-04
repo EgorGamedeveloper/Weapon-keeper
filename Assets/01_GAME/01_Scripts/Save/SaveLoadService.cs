@@ -86,6 +86,9 @@ public class SaveLoadService : MonoBehaviour
     [Tooltip("Выносливость: сохраняется накопленная за день усталость.")]
     public PlayerStamina stamina;
 
+    [Tooltip("Налобный фонарик: подобран ли он и сколько заряда осталось.")]
+    public PlayerFlashlight flashlight;
+
     [Tooltip("Временные эффекты (стимуляторы, «Выспался»): что действует и до какого часа.")]
     public PlayerStatusEffects statusEffects;
 
@@ -632,6 +635,11 @@ public class SaveLoadService : MonoBehaviour
     {
         if (clock != null) data.clockTotalHours = clock.TotalHours;
         if (stamina != null) data.staminaFatigue = stamina.Fatigue;
+        if (flashlight != null)
+        {
+            data.flashlightOwned = flashlight.IsOwned;
+            data.flashlightCharge = flashlight.ChargeSeconds;
+        }
 
         if (consumption != null)
         {
@@ -664,6 +672,7 @@ public class SaveLoadService : MonoBehaviour
     {
         if (clock != null && data.clockTotalHours >= 0.0) clock.RestoreState(data.clockTotalHours);
         if (stamina != null) stamina.RestoreState(data.staminaFatigue);
+        if (flashlight != null) flashlight.RestoreState(data.flashlightOwned, data.flashlightCharge);
         if (consumption != null && data.satiety >= 0f) consumption.RestoreState(data.satiety, data.consumedTodayIds);
 
         if (statusEffects == null) return;

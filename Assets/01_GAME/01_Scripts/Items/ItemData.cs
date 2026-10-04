@@ -16,8 +16,8 @@ public enum ToolKind
     PressureWasher,
     /// <summary>Катушка провода: провод от разъёма к разъёму (WireSpoolTool), одна катушка — одно соединение.</summary>
     WireSpool,
-    /// <summary>Налобный фонарик: не занимает руки — просто открывает переключение клавишей G
-    /// (PlayerFlashlight.IsOwned проверяет наличие такого предмета в экипировке, а не то, активен ли он).</summary>
+    /// <summary>Налобный фонарик: постоянный предмет вне инвентарей. Подбор «надевает» его на игрока
+    /// (PlayerFlashlight.Acquire), сам предмет исчезает; переключается клавишей из GameConfig.input.flashlightKey.</summary>
     Flashlight,
 }
 
@@ -91,8 +91,12 @@ public class ItemData : ScriptableObject
              "остаток пропадает.")]
     [Min(0f)] public float wireLength;
 
-    /// <summary>Предмет — инструмент: при подборе сразу уходит в экипировку (слот 2).</summary>
-    public bool IsTool => toolKind != ToolKind.None;
+    /// <summary>Предмет — инструмент: при подборе сразу уходит в экипировку (слот 2). Фонарик не в счёт —
+    /// он постоянный и в инвентарях не лежит (IsFlashlight).</summary>
+    public bool IsTool => toolKind != ToolKind.None && toolKind != ToolKind.Flashlight;
+
+    /// <summary>Предмет — налобный фонарик: подбор отдаёт его PlayerFlashlight, а не инвентарю.</summary>
+    public bool IsFlashlight => toolKind == ToolKind.Flashlight;
 
     [Header("Выживание")]
     [Tooltip("Еда или стимулятор: что происходит, когда игрок употребляет предмет из рук (клавиша F, " +

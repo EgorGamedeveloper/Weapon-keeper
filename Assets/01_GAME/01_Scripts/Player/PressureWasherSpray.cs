@@ -45,7 +45,7 @@ public class PressureWasherSpray : MonoBehaviour
     [Min(0.5f)] public float range = 6f;
 
     [Tooltip("Радиус пятна от струи, м.")]
-    [Min(0.01f)] public float radius = 0.14f;
+    [Min(0.01f)] public float radius = 0.2f;
 
     [Tooltip("Сколько альфы снимает штамп струи, когда прицел ведут по пятну.")]
     [Range(0.01f, 1f)] public float strength = 0.12f;

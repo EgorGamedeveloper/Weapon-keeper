@@ -130,6 +130,14 @@ public class EquipmentWeaponBridge : MonoBehaviour
             instance.transform.localPosition = Vector3.zero;
             instance.transform.localRotation = Quaternion.identity;
             instance.SetActive(false);
+            // Оружие живёт только в руках: его модель — на слое «в руках» (фонарик светит на неё слабым
+            // ручным светом, а не основным) и без декалей. Объекты с коллайдерами не трогаем.
+            foreach (var r in instance.GetComponentsInChildren<Renderer>(true))
+            {
+                if (r.GetComponent<Collider>() != null) continue;
+                r.gameObject.layer = WorldItem.HeldLayer;
+                r.renderingLayerMask = WorldItem.HeldRenderingLayers;
+            }
             spawnedWeapons[item] = instance;
             weaponComponents[instance] = instance.GetComponent<Weapon>();
         }

@@ -87,6 +87,12 @@ public class SaveGameData
     /// <summary>Накопленная за день усталость (PlayerStamina). Бар не сохраняется — после загрузки он полный.</summary>
     public float staminaFatigue;
 
+    /// <summary>Фонарик подобран (PlayerFlashlight).</summary>
+    public bool flashlightOwned;
+
+    /// <summary>Заряд батареи фонарика, секунды работы (PlayerFlashlight.ChargeSeconds).</summary>
+    public float flashlightCharge;
+
     /// <summary>Сытость 0–100 (PlayerConsumption). −1 — не сохранялась: как в новой игре.</summary>
     public float satiety = -1f;
 

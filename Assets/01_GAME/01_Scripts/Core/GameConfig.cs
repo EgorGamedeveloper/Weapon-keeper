@@ -93,7 +93,7 @@ public class PlayerInputKeys
     public KeyCode useKey = KeyCode.F;
 
     [Tooltip("Включить/выключить налобный фонарик (PlayerFlashlight).")]
-    public KeyCode flashlightKey = KeyCode.G;
+    public KeyCode flashlightKey = KeyCode.Alpha3;
 }
 
 /// <summary>«Видение» предмета в руке — будущая способность игрока. См. PlacementVision.</summary>
@@ -212,10 +212,15 @@ public class ToolSettings
     [Min(0.0001f)] public float ragSensitivity = 0.012f;
 
     [Tooltip("Радиус тряпки, м.")]
-    [Min(0.01f)] public float ragRadius = 0.09f;
+    [Min(0.01f)] public float ragRadius = 0.11f;
 
     [Tooltip("Сколько альфы пятна снимает один штамп тряпки в центре (штампы — каждые ¼ радиуса).")]
-    [Range(0.01f, 1f)] public float ragStrength = 0.08f;
+    [Range(0.01f, 1f)] public float ragStrength = 0.14f;
+
+    [Tooltip("Досягаемость тряпки и швабры: пятно оттирают только в этом радиусе вокруг игрока (по горизонтали " +
+             "от его ног до точки на пятне), м. Дальше — подсказка «Подойдите ближе»; в работе инструмент " +
+             "за этот радиус не выходит.")]
+    [Min(0.3f)] public float scrubReach = 1.6f;
 
     [Header("Швабра")]
     [Tooltip("Радиус головки швабры, м.")]
@@ -229,7 +234,7 @@ public class ToolSettings
     [Min(0.5f)] public float washerRange = 6f;
 
     [Tooltip("Радиус пятна от струи, м.")]
-    [Min(0.01f)] public float washerRadius = 0.14f;
+    [Min(0.01f)] public float washerRadius = 0.2f;
 
     [Tooltip("Сколько альфы снимает штамп струи, когда прицел ведут по пятну.")]
     [Range(0.01f, 1f)] public float washerStrength = 0.12f;
@@ -314,7 +319,7 @@ public class StaminaSettings
     [Min(0f)] public float pryCostPerBoard = 40f;
 
     [Tooltip("Тряпка и швабра: за метр пути по пятну.")]
-    [Min(0f)] public float scrubCostPerMeter = 6f;
+    [Min(0f)] public float scrubCostPerMeter = 2.5f;
 
     [Tooltip("Удар зомби по игроку сбивает дыхание.")]
     [Min(0f)] public float hitCost = 15f;
@@ -327,7 +332,7 @@ public class StaminaSettings
     [Min(0f)] public float swingFatigue = 0.6f;
 
     [Tooltip("Пятно целиком, по прогрессу.")]
-    [Min(0f)] public float scrubFatiguePerStain = 1.5f;
+    [Min(0f)] public float scrubFatiguePerStain = 0.8f;
 
     [Tooltip("Кирпич, уложенный в кладку.")]
     [Min(0f)] public float brickFatigue = 1f;
